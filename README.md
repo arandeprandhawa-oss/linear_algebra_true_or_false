@@ -1,6 +1,6 @@
-# french-quiz
-French quiz 1v1
+# french-midterm 1 practice
+French  1v1
 
-Link to the quiz 
+Link to midterm flashcard
 
 https://arandeprandhawa-oss.github.io/french-quiz/
