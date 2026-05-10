@@ -847,10 +847,14 @@ function listenToMatch(){
 
 function handleStateUpdate(data){
   // p1 sees waiting → playing transition
-  if(role==='p1' && data.status==='playing' && myCards.length===0){
+  if(role === 'p1' && data.status === 'playing' && document.getElementById('screen-waiting').style.display !== 'none'){
     matchLength = data.length || data.cards.length;
     matchCategory = data.category || 'all';
-    myCards = data.cards.map(i=>vocab[i]);
+
+    if(myCards.length === 0){
+      myCards = data.cards.map(i => vocab[i]);
+    }
+
     startGame();
   }
   // Detect resignation
