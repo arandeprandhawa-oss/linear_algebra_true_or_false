@@ -600,21 +600,26 @@ function matchesFilters(card){
   return true;
 }
 
+function getRandomItem(arr){
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 function getNext(){
-  const now=Date.now();
-  const pool=allCards.filter(matchesFilters);
-  if(pool.length===0)return null;
-  const due=pool.filter(c=>c.due<=now);
-  if(due.length===0){
-    const upcoming=pool.slice().sort((a,b)=>a.due-b.due);
-    return upcoming[0]||null;
-  }
-  due.sort((a,b)=>{
-    const order={'learning':0,'new':1,'review':2};
-    if(order[a.state]!==order[b.state])return order[a.state]-order[b.state];
-    return a.due-b.due;
-  });
-  return due[0];
+  const now = Date.now();
+  const pool = allCards.filter(matchesFilters);
+  if(pool.length === 0) return null;
+
+  const learningDue = pool.filter(c => c.state === 'learning' && c.due <= now);
+  if(learningDue.length) return getRandomItem(learningDue);
+
+  const newCards = pool.filter(c => c.state === 'new');
+  if(newCards.length) return getRandomItem(newCards);
+
+  const reviewDue = pool.filter(c => c.state === 'review' && c.due <= now);
+  if(reviewDue.length) return getRandomItem(reviewDue);
+
+  const upcoming = pool.slice().sort((a,b) => a.due - b.due);
+  return upcoming[0] || null;
 }
 function updateStats(){
   const pool=allCards.filter(matchesFilters);
