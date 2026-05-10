@@ -1,101 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>French Flashcards · 1v1 MODL-1101</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+/* CSS variable fallbacks so this works on a plain website (not just Claude) */
 :root{
-  --bg:#FAF9F6;--surface:#FFFFFF;--surface-2:#F1EFE8;
-  --text:#1F1F1E;--text-2:#5F5E5A;--text-3:#888780;
-  --border:rgba(0,0,0,0.10);--border-2:rgba(0,0,0,0.18);
-  --radius:8px;--radius-lg:12px;
+  --color-background-primary:#FFFFFF;
+  --color-background-secondary:#F1EFE8;
+  --color-background-tertiary:#FAF9F6;
+  --color-text-primary:#1F1F1E;
+  --color-text-secondary:#5F5E5A;
+  --color-text-tertiary:#888780;
+  --color-border-primary:rgba(0,0,0,0.20);
+  --color-border-secondary:rgba(0,0,0,0.18);
+  --color-border-tertiary:rgba(0,0,0,0.10);
+  --border-radius-md:8px;
+  --border-radius-lg:12px;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
-.wrap{padding:1.25rem 1rem 3rem;max-width:580px;margin:0 auto}
+body{background:#FAF9F6;margin:0;font-family:var(--font-sans);color:var(--color-text-primary);-webkit-font-smoothing:antialiased}
+.back-bar{max-width:580px;margin:0 auto;padding:12px 16px 0}
+.back-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--color-text-secondary);font-size:14px;padding:8px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);font-family:var(--font-sans)}
+.back-link:hover{background:var(--color-background-secondary)}
+</style>
+<div class="back-bar"><a href="index.html" class="back-link">← Back to 1v1 lobby</a></div>
+<style>
+*{box-sizing:border-box}
 h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
-.app-title{text-align:center;margin-bottom:1.25rem}
-.app-title h1{font-size:18px;font-weight:500;letter-spacing:-0.01em}
-.app-title .sub{font-size:12px;color:var(--text-3);margin-top:2px}
-
-/* ====== LOBBY ====== */
-.lobby{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center}
-.lobby h2{font-size:22px;font-weight:500;margin-bottom:4px}
-.lobby .lobby-sub{font-size:13px;color:var(--text-3);margin-bottom:1.5rem}
-.lobby-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem}
-.lobby-card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:background 0.15s;display:flex;flex-direction:column;justify-content:center;min-height:90px}
-.lobby-card:hover{background:#E8E5DA}
-.lobby-card.primary{background:#185FA5;color:#fff;border-color:#185FA5}
-.lobby-card.primary:hover{background:#0C447C}
-.lobby-card.danger{background:#A32D2D;color:#fff;border-color:#A32D2D}
-.lobby-card.danger:hover{background:#791F1F}
-.lobby-card .label{font-size:12px;opacity:0.85}
-.lobby-card .action{font-size:15px;font-weight:500;margin-top:2px}
-.lobby-card input{width:100%;margin-top:4px;font-size:15px;font-weight:500;padding:6px 8px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface);text-align:center;letter-spacing:0.18em;text-transform:uppercase;color:var(--text);font-family:inherit;outline:none}
-.lobby-card input:focus{border-color:#185FA5;box-shadow:0 0 0 2px rgba(24,95,165,0.2)}
-.lobby-foot{font-size:12px;color:var(--text-3)}
-
-/* Category & length pickers on lobby */
-.picker-section{margin-top:1.25rem;text-align:left}
-.picker-section h3{font-size:12px;font-weight:500;color:var(--text-3);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px}
-.chip-row{display:flex;flex-wrap:wrap;gap:6px}
-.chip{padding:6px 12px;border-radius:20px;border:0.5px solid var(--border-2);background:var(--surface-2);font-size:13px;cursor:pointer;color:var(--text-2);font-family:inherit;transition:background 0.1s}
-.chip:hover{background:#E8E5DA}
-.chip.active{background:#185FA5;color:#fff;border-color:#185FA5}
-.chip.disabled{opacity:0.4;cursor:not-allowed;text-decoration:line-through}
-.chip.disabled:hover{background:var(--surface-2)}
-.length-row{display:flex;gap:6px;flex-wrap:wrap}
-.length-chip{padding:8px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-2);font-family:inherit;min-width:48px;text-align:center}
-.length-chip:hover{background:#E8E5DA}
-.length-chip.active{background:#185FA5;color:#fff;border-color:#185FA5}
-.length-chip.locked{opacity:0.5;cursor:not-allowed;background:var(--surface-2)}
-.length-note{font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic}
-
-/* Mistakes-so-far panel during play */
-.mistakes-panel{margin-top:1.25rem}
-.mistakes-panel-header{font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.mistakes-panel-badge{background:#FCEBEB;color:#A32D2D;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
-.mistake-row{background:var(--surface);border:0.5px solid #F09595;border-radius:var(--radius);padding:8px 12px;margin-bottom:6px;font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
-.mistake-row .mq{font-size:12px;color:var(--text-3);grid-column:1/-1;font-style:italic}
-.mistake-row .mlabel{font-size:11px;color:var(--text-3)}
-.mistake-row .myou{color:#A32D2D}
-.mistake-row .mcorrect{color:#3B6D11;font-weight:500}
-
-/* Auto-advance progress bar */
-.auto-bar-wrap{margin-top:8px;height:3px;background:var(--surface-2);border-radius:2px;overflow:hidden}
-.auto-bar{height:100%;width:100%;background:#185FA5;transform-origin:left;animation:autoBarShrink 2s linear forwards}
-.auto-bar.bad{background:#A32D2D}
-@keyframes autoBarShrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
-
-/* ====== WAITING ROOM ====== */
-.waiting{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center}
-.waiting .label{font-size:13px;color:var(--text-3);margin-bottom:8px}
-.code-display{font-size:42px;font-weight:500;letter-spacing:0.18em;color:#185FA5;margin-bottom:12px;font-family:'SF Mono',Menlo,monospace}
-.share-row{display:inline-flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;justify-content:center}
-.share-btn{padding:8px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
-.share-btn:hover{background:#E8E5DA}
-.share-btn.copied{background:#EAF3DE;color:#27500A;border-color:#639922}
-.status-row{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text-3);margin-bottom:0.75rem}
-.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#BA7517;animation:pulse 1.4s ease-in-out infinite}
-.status-dot.online{background:#639922;animation:none}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.cancel-btn{margin-top:1rem;padding:8px 18px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);font-family:inherit}
-.cancel-btn:hover{background:var(--surface-2)}
-
-/* ====== ERROR / NOTICE ====== */
-.notice{background:#FCEBEB;border:0.5px solid #F09595;color:#791F1F;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:1rem;text-align:center}
-.notice.warn{background:#FAEEDA;border-color:#FAC775;color:#633806}
-.notice.info{background:#E6F1FB;border-color:#B5D4F4;color:#0C447C}
-
-/* ====== GAME ====== */
-.progress-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 4px}
-.progress-row .card-num{font-size:13px;color:var(--text-3)}
-.progress-row .card-num strong{color:var(--text);font-weight:500}
-.opponent-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3)}
-
-.flashcard{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center;margin-bottom:1rem;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center}
+.wrap{padding:1rem 0;max-width:580px;margin:0 auto;font-family:var(--font-sans)}
+.stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:1rem}
+.stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;text-align:center}
+.stat-label{font-size:11px;color:var(--color-text-tertiary);margin-bottom:2px}
+.stat-val{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.stat-val.sn{color:#185FA5}.stat-val.sl{color:#854F0B}.stat-val.sd{color:#3B6D11}.stat-val.sw{color:#A32D2D}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;align-items:center}
+.filters span{font-size:12px;color:var(--color-text-tertiary)}
+.filter-btn{padding:6px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);font-size:13px;cursor:pointer;color:var(--color-text-secondary)}
+.filter-btn.active-all{border-color:#185FA5;background:#E6F1FB;color:#185FA5}
+.filter-btn.active-classroom{border-color:#854F0B;background:#FAEEDA;color:#633806}
+.filter-btn.active-commands{border-color:#BA7517;background:#FAEEDA;color:#633806}
+.filter-btn.active-people{border-color:#534AB7;background:#EEEDFE;color:#3C3489}
+.filter-btn.active-identify{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
+.filter-btn.active-describe{border-color:#D4537E;background:#FBEAF0;color:#72243E}
+.filter-btn.active-colors{border-color:#3B6D11;background:#EAF3DE;color:#27500A}
+.filter-btn.active-clothing{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
+.filter-btn.active-numbers{border-color:#854F0B;background:#FAEEDA;color:#633806}
+.filter-btn.active-greetings{border-color:#534AB7;background:#EEEDFE;color:#3C3489}
+.filter-btn.active-useful{border-color:#3B6D11;background:#EAF3DE;color:#27500A}
+.filter-btn.active-etre{border-color:#A32D2D;background:#FCEBEB;color:#791F1F}
+.filter-btn.active-articles{border-color:#0C447C;background:#E6F1FB;color:#0C447C}
+.filter-btn.active-masc{border-color:#185FA5;background:#185FA5;color:#fff}
+.filter-btn.active-fem{border-color:#D4537E;background:#D4537E;color:#fff}
+.filter-btn.active-both-only{border-color:#534AB7;background:#534AB7;color:#fff}
+.flashcard{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:2rem 1.5rem;text-align:center;margin-bottom:1rem;min-height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .top-badges{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
+.card-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.badge-new{background:#E6F1FB;color:#185FA5}
+.badge-learn{background:#FAEEDA;color:#854F0B}
+.badge-review{background:#EAF3DE;color:#3B6D11}
 .cat-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
 .cb-classroom{background:#FAEEDA;color:#633806}
 .cb-commands{background:#FAEEDA;color:#854F0B}
@@ -109,132 +67,129 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .cb-useful{background:#EAF3DE;color:#27500A}
 .cb-etre{background:#FCEBEB;color:#791F1F}
 .cb-articles{background:#E6F1FB;color:#0C447C}
-.gender-badge{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;letter-spacing:0.02em}
+.gender-badge{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;letter-spacing:.02em}
 .gb-m{background:#185FA5;color:#fff}
 .gb-f{background:#D4537E;color:#fff}
 .gb-both{background:#534AB7;color:#fff}
-.prompt-label{font-size:12px;color:var(--text-3);letter-spacing:0.04em}
-.prompt{font-size:22px;font-weight:500;color:var(--text)}
-.hint{font-size:13px;color:var(--text-2);margin-top:-4px;font-weight:500}
+.prompt-label{font-size:12px;color:var(--color-text-tertiary);letter-spacing:.04em}
+.prompt{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.hint{font-size:13px;color:var(--color-text-secondary);margin-top:-4px;font-weight:500}
 .hint.hint-m{color:#185FA5}
 .hint.hint-f{color:#A32D2D}
 .input-row{display:flex;gap:8px;width:100%}
-.input-row input{flex:1;font-size:15px;padding:10px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface);color:var(--text);outline:none;font-family:inherit}
-.input-row input:focus{border-color:#185FA5;box-shadow:0 0 0 2px rgba(181,212,244,0.5)}
+.input-row input{flex:1;font-size:15px;padding:10px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);outline:none}
+.input-row input:focus{box-shadow:0 0 0 2px #B5D4F4}
 .input-row input.ok{border-color:#639922;background:#EAF3DE;color:#27500A}
 .input-row input.bad{border-color:#E24B4A;background:#FCEBEB;color:#791F1F}
 /* Accent bar */
 .accent-bar{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-bottom:8px;width:100%}
-.accent-btn{min-width:34px;height:34px;padding:0 8px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);color:var(--text);font-size:15px;font-family:Georgia,"Times New Roman",serif;cursor:pointer;line-height:1;transition:background 0.1s;-webkit-tap-highlight-color:transparent}
+.accent-btn{min-width:34px;height:34px;padding:0 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:15px;font-family:Georgia,"Times New Roman",serif;cursor:pointer;line-height:1;transition:background 0.1s;-webkit-tap-highlight-color:transparent}
 .accent-btn:hover{background:#E8E5DA}
 .accent-btn:active{background:#D6D3C8;transform:scale(0.95)}
 .accent-btn:disabled{opacity:0.4;cursor:not-allowed}
-.check-btn{padding:10px 18px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);font-size:15px;cursor:pointer;color:var(--text);font-family:inherit}
-.check-btn:hover:not(:disabled){background:#E8E5DA}
-.check-btn:disabled{opacity:0.5;cursor:default}
-
+.check-btn{padding:10px 18px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);font-size:15px;cursor:pointer;color:var(--color-text-primary)}
 .feedback-area{text-align:center;min-height:52px;margin-bottom:6px}
 .feedback-text{font-size:15px;font-weight:500;margin-bottom:6px}
-.feedback-text.good{color:#3B6D11}
-.feedback-text.bad{color:#A32D2D}
-.answer-box{font-size:14px;padding:7px 14px;border-radius:var(--radius);display:inline-block}
+.feedback-text.good{color:#3B6D11}.feedback-text.bad{color:#A32D2D}
+.answer-box{font-size:14px;padding:7px 14px;border-radius:var(--border-radius-md);display:inline-block}
 .answer-box.good{background:#EAF3DE;color:#27500A}
 .answer-box.bad{background:#FCEBEB;color:#791F1F}
-.next-hint{display:none}
-
-/* Scoreboard below card */
-.scoreboard{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
-.score-tile{background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px}
-.score-tile.you{background:#E6F1FB;border-color:#185FA5;text-align:left}
-.score-tile.them{text-align:right}
-.score-tile .who{font-size:11px;color:var(--text-3)}
-.score-tile.you .who{color:#185FA5}
-.score-tile .num{font-size:22px;font-weight:500}
-.score-tile.you .num{color:#0C447C}
-.score-tile .progress{font-size:11px;color:var(--text-3);margin-top:1px}
-.score-tile.you .progress{color:#185FA5}
-
-.live-row{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:var(--text-3)}
-.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#BA7517}
-.live-dot.green{background:#639922}
-
-/* ====== RESULTS ====== */
-.results{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center}
-.results .label{font-size:13px;color:var(--text-3);margin-bottom:4px}
-.results h2{font-size:28px;font-weight:500;margin-bottom:1.25rem}
-.results h2.win{color:#3B6D11}
-.results h2.lose{color:#A32D2D}
-.results h2.tie{color:#534AB7}
-.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem}
-.result-tile{background:var(--surface-2);border-radius:var(--radius);padding:14px}
-.result-tile.you{background:#E6F1FB}
-.result-tile .who{font-size:11px;color:var(--text-3)}
-.result-tile.you .who{color:#185FA5}
-.result-tile .score{font-size:28px;font-weight:500}
-.result-tile.you .score{color:#0C447C}
-.result-tile .score-total{font-size:14px;color:var(--text-3);font-weight:400}
-.result-tile.you .score-total{color:#185FA5}
-.result-tile .stat{font-size:12px;color:var(--text-3);margin-top:2px}
-.result-tile.you .stat{color:#185FA5}
-.results-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.results-actions button{padding:10px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);font-size:14px;cursor:pointer;font-family:inherit;color:var(--text)}
-.results-actions button.primary{background:#185FA5;color:#fff;border-color:#185FA5}
-.results-actions button.primary:hover{background:#0C447C}
-.results-actions button:not(.primary){background:var(--surface)}
-.results-actions button:not(.primary):hover{background:var(--surface-2)}
-
-.review-section{margin-top:1.5rem;text-align:left}
-.review-section h3{font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px}
-.review-item{background:var(--surface);border:0.5px solid #F09595;border-radius:var(--radius);padding:10px 14px;margin-bottom:6px;font-size:13px}
-.review-item .rq{font-size:12px;color:var(--text-3);margin-bottom:4px;font-style:italic}
-.review-item .ryou{color:#A32D2D}
-.review-item .rcorrect{color:#3B6D11;font-weight:500}
-
-@media (max-width:480px){
-  .wrap{padding:1rem 0.75rem 2rem}
-  .lobby,.waiting,.flashcard,.results{padding:1.5rem 1.25rem}
-  .lobby-grid{grid-template-columns:1fr;gap:8px}
-  .lobby-card{min-height:auto;padding:12px}
-  .code-display{font-size:36px}
-  .prompt{font-size:20px}
-}
+.rating-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:2px}
+.rating-btn{padding:10px 4px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);font-size:13px;cursor:pointer;color:var(--color-text-primary);display:flex;flex-direction:column;align-items:center;gap:2px}
+.rating-btn:hover{background:var(--color-background-secondary)}
+.rating-btn.preselected{outline:2px solid currentColor;outline-offset:2px}
+.rating-btn .ivl{font-size:11px;color:var(--color-text-tertiary)}
+.btn-again{border-color:#E24B4A;color:#A32D2D}
+.btn-hard{border-color:#BA7517;color:#854F0B}
+.btn-good{border-color:#639922;color:#3B6D11}
+.btn-easy{border-color:#185FA5;color:#0C447C}
+.auto-bar{height:4px;border-radius:2px;margin-top:8px;width:100%}
+.auto-bar.again{background:#E24B4A}
+.auto-bar.hard{background:#BA7517}
+.auto-bar.good{background:#639922}
+.auto-bar.easy{background:#185FA5}
+.mistakes-section{margin-top:1.5rem}
+.mistakes-header{font-size:13px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.mbadge{background:#FCEBEB;color:#A32D2D;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.mistake-item{background:var(--color-background-primary);border:0.5px solid #F09595;border-radius:var(--border-radius-md);padding:10px 14px;margin-bottom:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px}
+.mistake-item .mq{font-size:12px;color:var(--color-text-tertiary);grid-column:1/-1;margin-bottom:4px;font-style:italic}
+.mistake-item .mlabel{font-size:11px;color:var(--color-text-tertiary);margin-bottom:1px}
+.mistake-item .myou{color:#A32D2D}
+.mistake-item .mcorrect{color:#3B6D11;font-weight:500}
+.summary-wrap{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:1.5rem;margin-top:1rem}
+.summary-wrap h3{font-size:17px;font-weight:500;margin-bottom:4px}
+.summary-wrap p{font-size:14px;color:var(--color-text-secondary);margin-bottom:1rem}
+.restart-btn{padding:10px 24px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);font-size:15px;cursor:pointer;color:var(--color-text-primary)}
 </style>
-</head>
-<body>
 <div class="wrap">
-<h2 class="sr-only">French Flashcards 1v1 multiplayer quiz</h2>
-
-<div class="app-title">
-  <h1>French Flashcards · 1v1 MODL-1101</h1>
-  <div class="sub">Race a friend, or practice solo</div>
+<h2 class="sr-only">French textbook spaced repetition quiz — strict hyphens and accents</h2>
+<div class="stats-row">
+  <div class="stat"><div class="stat-label">New</div><div class="stat-val sn" id="cnt-new">0</div></div>
+  <div class="stat"><div class="stat-label">Learning</div><div class="stat-val sl" id="cnt-learn">0</div></div>
+  <div class="stat"><div class="stat-label">Due</div><div class="stat-val sd" id="cnt-due">0</div></div>
+  <div class="stat"><div class="stat-label">Mistakes</div><div class="stat-val sw" id="cnt-mistakes">0</div></div>
 </div>
-
-<div id="screen-lobby"></div>
-<div id="screen-waiting" style="display:none"></div>
-<div id="screen-game" style="display:none"></div>
-<div id="screen-results" style="display:none"></div>
-
+<div class="filters">
+  <span>Category:</span>
+  <button class="filter-btn active-all" id="f-all" onclick="setFilter('all')">All</button>
+  <button class="filter-btn" id="f-classroom" onclick="setFilter('classroom')">Classroom objects</button>
+  <button class="filter-btn" id="f-commands" onclick="setFilter('commands')">Commands</button>
+  <button class="filter-btn" id="f-people" onclick="setFilter('people')">People</button>
+  <button class="filter-btn" id="f-identify" onclick="setFilter('identify')">Identifying</button>
+  <button class="filter-btn" id="f-describe" onclick="setFilter('describe')">Describing</button>
+  <button class="filter-btn" id="f-colors" onclick="setFilter('colors')">Colors</button>
+  <button class="filter-btn" id="f-clothing" onclick="setFilter('clothing')">Clothing</button>
+  <button class="filter-btn" id="f-numbers" onclick="setFilter('numbers')">Numbers</button>
+  <button class="filter-btn" id="f-greetings" onclick="setFilter('greetings')">Greetings</button>
+  <button class="filter-btn" id="f-useful" onclick="setFilter('useful')">Useful words</button>
+  <button class="filter-btn" id="f-etre" onclick="setFilter('etre')">Être</button>
+  <button class="filter-btn" id="f-articles" onclick="setFilter('articles')">Articles</button>
 </div>
-
-<!-- Firebase + game logic -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, deleteDoc }
-  from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-
-// ====== FIREBASE CONFIG ======
-const firebaseConfig = {
-  apiKey: "AIzaSyC0CFi4MjcPPUTTTva01UmUB-St27m_3Tw",
-  authDomain: "french-quiz-79a0d.firebaseapp.com",
-  projectId: "french-quiz-79a0d",
-  storageBucket: "french-quiz-79a0d.firebasestorage.app",
-  messagingSenderId: "306085327849",
-  appId: "1:306085327849:web:c48c6e1b606974d4e19178"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// ====== VOCAB DATA ======
+<div class="filters">
+  <span>Gender:</span>
+  <button class="filter-btn active-all" id="g-all" onclick="setGenderFilter('all')">All</button>
+  <button class="filter-btn" id="g-m" onclick="setGenderFilter('m')">Masculine only</button>
+  <button class="filter-btn" id="g-f" onclick="setGenderFilter('f')">Feminine only</button>
+  <button class="filter-btn" id="g-both" onclick="setGenderFilter('both')">Same form / no gender</button>
+</div>
+<div id="quiz-area">
+  <div class="flashcard">
+    <div class="top-badges" id="top-badges"></div>
+    <div class="prompt-label">Translate to French</div>
+    <div class="prompt" id="prompt"></div>
+    <div class="hint" id="hint"></div>
+    <div class="accent-bar" id="accent-bar"></div>
+    <div class="input-row">
+      <input type="text" id="answer-input" placeholder="Type the French…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <button class="check-btn" id="check-btn" onclick="checkAnswer()">Check</button>
+    </div>
+  </div>
+  <div class="feedback-area">
+    <div class="feedback-text" id="feedback"></div>
+    <div id="answer-box-wrap"></div>
+  </div>
+  <div id="rating-wrap" style="display:none">
+    <div class="rating-row">
+      <button class="rating-btn btn-again" id="btn-again" onclick="rate(0)"><span>Again</span><span class="ivl" id="ivl-again"></span></button>
+      <button class="rating-btn btn-hard"  id="btn-hard"  onclick="rate(1)"><span>Hard</span><span class="ivl" id="ivl-hard"></span></button>
+      <button class="rating-btn btn-good"  id="btn-good"  onclick="rate(2)"><span>Good</span><span class="ivl" id="ivl-good"></span></button>
+      <button class="rating-btn btn-easy"  id="btn-easy"  onclick="rate(3)"><span>Easy</span><span class="ivl" id="ivl-easy"></span></button>
+    </div>
+    <div class="auto-bar" id="auto-bar"></div>
+  </div>
+  <div class="mistakes-section" id="mistakes-section" style="display:none">
+    <div class="mistakes-header">Mistakes so far <span class="mbadge" id="mistake-count">0</span></div>
+    <div id="mistakes-list"></div>
+  </div>
+</div>
+<div class="summary-wrap" id="summary-wrap" style="display:none">
+  <h3 id="sum-title"></h3>
+  <p id="sum-msg"></p>
+  <div id="sum-mistakes"></div>
+  <button class="restart-btn" onclick="resetAll()">Start over</button>
+</div>
+</div>
+<script>
 const vocab=[
   // ===== CLASSROOM OBJECTS (Dans la classe de français) =====
   {en:"a classmate (masc.)",    fr:"un camarade de classe",  alts:["un camarade de classe"],  needsHyphen:false, needsAccent:false, gender:"m", category:"classroom"},
@@ -489,43 +444,48 @@ const vocab=[
   {en:"the other class",                fr:"l'autre classe", alts:["l'autre classe"], needsHyphen:false, needsAccent:false, gender:"f", category:"articles"},
 ];
 
-// ====== ANSWER CHECKING (same logic as solo) ======
 const accentMap=[[/[àâä]/g,'a'],[/[éèêë]/g,'e'],[/[îï]/g,'i'],[/[ôö]/g,'o'],[/[ùûü]/g,'u'],[/ç/g,'c'],[/œ/g,'oe']];
-function normaliseBase(s){return s.toLowerCase().trim().replace(/[\u2018\u2019'`]/g,"'").replace(/[?!.\u2026]/g,'').replace(/\s+/g,' ').trim();}
-function stripAccents(s){let r=s;accentMap.forEach(([p,rep])=>r=r.replace(p,rep));return r;}
+
+function normaliseBase(s){
+  return s.toLowerCase().trim()
+    .replace(/[''`]/g,"'")
+    .replace(/[?!.…]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function stripAccents(s){
+  let r=s;
+  accentMap.forEach(([p,rep])=>r=r.replace(p,rep));
+  return r;
+}
+
 function isCorrect(typed,v){
   const t=normaliseBase(typed);
   return v.alts.some(answer=>{
     const a=normaliseBase(answer);
-    const tH=v.needsHyphen?t:t.replace(/-/g,' ');
-    const aH=v.needsHyphen?a:a.replace(/-/g,' ');
+    const tH = v.needsHyphen ? t : t.replace(/-/g,' ');
+    const aH = v.needsHyphen ? a : a.replace(/-/g,' ');
     // STRICT: must match WITH accents intact, not just accent-stripped
     return tH===aH;
   });
 }
-function isWrongArticle(typed,v){
-  if(!v.guessGender)return false;
-  const t=normaliseBase(typed),a=normaliseBase(v.alts[0]);
-  const swaps=[[/^un /,'une '],[/^une /,'un '],[/^le /,'la '],[/^la /,'le ']];
-  for(const[from,to]of swaps){
-    if(from.test(t)){
-      const swapped=t.replace(from,to);
-      if(stripAccents(swapped)===stripAccents(a))return true;
-    }
-  }
-  return false;
-}
+
 function isWrongGender(typed,v){
+  // If this card has a specific gender, check if the user typed a known opposite-gender form.
   if(v.gender!=='m'&&v.gender!=='f')return false;
   const opposite=v.gender==='m'?'f':'m';
   const coreA=v.en.replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase();
-  const idxA=vocab.indexOf(v);
   for(const other of vocab){
     if(other.gender!==opposite)continue;
     if(other.category!==v.category)continue;
     const coreB=other.en.replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase();
+    // Match if English cores are equal, OR English cores share words, OR they are sibling
+    // adjective/article pairs (same category and the user typed exactly the opposite-gender French answer).
     let related=(coreA===coreB);
     if(!related){
+      // Adjacent-card heuristic: many of our masc/fem pairs are listed back-to-back.
+      const idxA=vocab.indexOf(v);
       const idxB=vocab.indexOf(other);
       if(Math.abs(idxA-idxB)<=2)related=true;
     }
@@ -540,8 +500,31 @@ function isWrongGender(typed,v){
   }
   return false;
 }
+
+function isWrongArticle(typed,v){
+  // For single-gender nouns where the user is asked to guess the gender,
+  // detect if they typed the right noun but the wrong article (un vs une, or le vs la).
+  if(!v.guessGender)return false;
+  const t=normaliseBase(typed);
+  const a=normaliseBase(v.alts[0]);
+  // Try swapping common article pairs in the typed answer
+  const swaps=[
+    [/^un /,'une '],[/^une /,'un '],
+    [/^le /,'la '],[/^la /,'le '],
+  ];
+  for(const[from,to]of swaps){
+    if(from.test(t)){
+      const swapped=t.replace(from,to);
+      if(stripAccents(swapped)===stripAccents(a))return true;
+    }
+  }
+  return false;
+}
+
 function getMissing(typed,v){
-  const t=normaliseBase(typed),answer=normaliseBase(v.alts[0]),msgs=[];
+  const t=normaliseBase(typed);
+  const answer=normaliseBase(v.alts[0]);
+  const msgs=[];
   if(isWrongArticle(typed,v)){
     msgs.push(v.gender==='m'?'wrong article — should be MASCULINE (un/le)':'wrong article — should be FEMININE (une/la)');
     return msgs;
@@ -551,486 +534,269 @@ function getMissing(typed,v){
     return msgs;
   }
   if(v.needsHyphen){
-    const tH=(t.match(/-/g)||[]).length,aH=(answer.match(/-/g)||[]).length;
-    if(tH!==aH)msgs.push('missing hyphen(s)');
+    const tHyphens=(t.match(/-/g)||[]).length;
+    const aHyphens=(answer.match(/-/g)||[]).length;
+    if(tHyphens!==aHyphens) msgs.push('missing hyphen(s)');
   }
-  if(stripAccents(t)===stripAccents(answer)&&msgs.length===0)msgs.push('check accents');
+  const tNoAccent=stripAccents(normaliseBase(typed));
+  const aNoAccent=stripAccents(answer);
+  if(tNoAccent===aNoAccent && msgs.length===0){
+    msgs.push('check accents');
+  }
   return msgs;
 }
+
 function escH(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtIvl(m){if(m<60)return m+'m';if(m<1440)return Math.round(m/60)+'h';return Math.round(m/1440)+'d';}
 
-// ====== MATCH STATE ======
-let matchLength = 20;          // set per-match (host's choice for 1v1, or local for solo)
-let matchCategory = 'all';     // set per-match
-const playerId = 'p_' + Math.random().toString(36).slice(2,10);
-let matchId = null;
-let role = null;       // 'p1' or 'p2'
-let myCards = [];      // the card sequence for this match
-let myIndex = 0;
-let myScore = 0;
-let myMistakes = [];
-let myStartTime = 0;
-let myTotalTime = 0;
-let unsubscribe = null;
-let opponentDoneShown = false;
-let autoTimer = null;          // setTimeout for auto-advance
-
-// ====== UTILS ======
-function rand4(){
-  const ch='ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let s='';for(let i=0;i<4;i++)s+=ch[Math.floor(Math.random()*ch.length)];
-  return s;
-}
-function pickMatchCards(category, length){
-  // Build the eligible pool
-  let pool = vocab.slice();
-  if(category && category !== 'all'){
-    pool = pool.filter(v => v.category === category);
+function initCard(v,i){return{id:i,vocab:v,state:'new',interval:0,easeFactor:2.5,step:0,steps:[1,10],due:0,reps:0};}
+function previewIvl(card,r){
+  if(card.state==='new'||card.state==='learning'){
+    if(r===0)return fmtIvl(card.steps[0]);
+    if(r===1)return fmtIvl(card.steps[Math.max(0,card.step-1)]);
+    if(r===2){if(card.step<card.steps.length-1)return fmtIvl(card.steps[card.step+1]);return fmtIvl(Math.max(card.interval,1)*1440);}
+    return fmtIvl(Math.max(card.interval,1)*1440);
   }
-  if(pool.length === 0) pool = vocab.slice(); // safety fallback
-  // For small categories, force length to at least 20 (the user setting)
-  // and allow repeats by cycling
-  const result = [];
-  // First, shuffle the pool
-  const shuffled = pool.slice();
-  for(let i=shuffled.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
-  }
-  // Fill `length` slots, cycling through and reshuffling each pass to avoid back-to-back repeats
-  let cursor = 0;
-  let pass = shuffled.slice();
-  while(result.length < length){
-    if(cursor >= pass.length){
-      // Reshuffle for next pass; ensure first card of new pass != last of previous
-      const last = result[result.length-1];
-      pass = pool.slice();
-      for(let i=pass.length-1;i>0;i--){
-        const j=Math.floor(Math.random()*(i+1));
-        [pass[i],pass[j]]=[pass[j],pass[i]];
-      }
-      // Swap if first equals last
-      if(pass.length > 1 && pass[0] === last){
-        [pass[0],pass[1]] = [pass[1],pass[0]];
-      }
-      cursor = 0;
-    }
-    result.push(pass[cursor++]);
-  }
-  return result.map(v => vocab.indexOf(v));
+  if(r===0)return fmtIvl(card.steps[0]);
+  if(r===1)return fmtIvl(Math.round(card.interval*1.2)*1440);
+  if(r===2)return fmtIvl(Math.round(card.interval*card.easeFactor)*1440);
+  return fmtIvl(Math.round(card.interval*card.easeFactor*1.3)*1440);
 }
-function show(screen){
-  ['lobby','waiting','game','results'].forEach(s=>{
-    document.getElementById('screen-'+s).style.display=(s===screen?'block':'none');
-  });
-}
-
-// ====== LOBBY STATE ======
-let selectedCategory = 'all';
-let selectedLength = 20;
-const LENGTH_OPTIONS = [20, 30, 40, 50, 60, 70, 80];
-const MIN_LENGTH = 20; // small categories always do at least 20 (with repeats)
-
-// Number of cards available per category (computed once)
-const categorySizes = (()=>{
-  const c = {all: vocab.length};
-  for(const v of vocab){c[v.category] = (c[v.category]||0) + 1;}
-  return c;
-})();
-
-const categoryLabels = {
-  all:'Random', classroom:'Classroom', commands:'Commands', people:'People',
-  identify:'Identifying', describe:'Describing', colors:'Colors', clothing:'Clothing',
-  numbers:'Numbers', greetings:'Greetings', useful:'Useful', etre:'Être', articles:'Articles'
-};
-
-// ====== LOBBY SCREEN ======
-function renderLobby(errorMsg){
-  const el=document.getElementById('screen-lobby');
-  const catChips = Object.keys(categoryLabels).map(c=>{
-    const size = categorySizes[c]||0;
-    const active = c===selectedCategory ? ' active' : '';
-    return `<button class="chip${active}" data-cat="${c}">${categoryLabels[c]} <span style="opacity:0.6;font-size:11px;">${size}</span></button>`;
-  }).join('');
-  // Length picker only appears when category is 'all' (Random)
-  let lengthSection = '';
-  if(selectedCategory === 'all'){
-    const lenChips = LENGTH_OPTIONS.map(n=>{
-      const active = n===selectedLength ? ' active' : '';
-      return `<button class="length-chip${active}" data-len="${n}">${n}</button>`;
-    }).join('');
-    lengthSection = `
-      <div class="picker-section">
-        <h3>Match length</h3>
-        <div class="length-row" id="len-chips">${lenChips}</div>
-      </div>`;
+function applyRating(card,r){
+  const now=Date.now();
+  if(card.state==='new'||card.state==='learning'){
+    card.state='learning';
+    if(r===0){card.step=0;card.due=now+card.steps[0]*60000;}
+    else if(r===1){card.step=Math.max(0,card.step-1);card.due=now+card.steps[card.step]*60000;}
+    else if(r===2){if(card.step<card.steps.length-1){card.step++;card.due=now+card.steps[card.step]*60000;}else{card.state='review';card.interval=Math.max(card.interval,1);card.due=now+card.interval*86400000;}}
+    else{card.state='review';card.interval=Math.max(card.interval*card.easeFactor,1);card.due=now+card.interval*86400000;}
   } else {
-    // Show fixed-length notice
-    const catSize = categorySizes[selectedCategory] || 0;
-    let note = '';
-    if(catSize < 20){
-      note = `${categoryLabels[selectedCategory]} only has ${catSize} cards — match length is 20 (cards will repeat).`;
-    } else {
-      note = `Category matches are 20 cards.`;
-    }
-    lengthSection = `
-      <div class="picker-section">
-        <h3>Match length</h3>
-        <div class="length-note">${note}</div>
-      </div>`;
+    if(r===0){card.state='learning';card.step=0;card.due=now+card.steps[0]*60000;card.easeFactor=Math.max(1.3,card.easeFactor-0.2);}
+    else if(r===1){card.interval=Math.round(card.interval*1.2)||1;card.easeFactor=Math.max(1.3,card.easeFactor-0.15);card.due=now+card.interval*86400000;}
+    else if(r===2){card.interval=Math.round(card.interval*card.easeFactor)||1;card.due=now+card.interval*86400000;}
+    else{card.interval=Math.round(card.interval*card.easeFactor*1.3)||1;card.easeFactor=card.easeFactor+0.15;card.due=now+card.interval*86400000;}
   }
-  el.innerHTML = `
-    ${errorMsg?`<div class="notice">${escH(errorMsg)}</div>`:''}
-    <div class="lobby">
-      <h2>Ready to play?</h2>
-      <div class="lobby-sub">Race a friend through the cards</div>
-      <div class="lobby-grid">
-        <div class="lobby-card primary" id="btn-create">
-          <div class="label">New match</div>
-          <div class="action">Create →</div>
-        </div>
-        <div class="lobby-card">
-          <div class="label">Join with code</div>
-          <input type="text" id="join-input" placeholder="ABCD" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
-        </div>
-        <div class="lobby-card danger" id="btn-solo">
-          <div class="label">No opponent</div>
-          <div class="action">Solo →</div>
-        </div>
-      </div>
-      <div class="lobby-foot">After creating, share the code with one friend</div>
-      <div class="picker-section">
-        <h3>Category</h3>
-        <div class="chip-row" id="cat-chips">${catChips}</div>
-      </div>
-      ${lengthSection}
-    </div>`;
-  document.getElementById('btn-create').addEventListener('click',createMatch);
-  document.getElementById('btn-solo').addEventListener('click',startSolo);
-  const inp=document.getElementById('join-input');
-  inp.addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,'');});
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&inp.value.length===4)joinMatch(inp.value);});
-  // Category chips
-  document.querySelectorAll('#cat-chips .chip').forEach(chip=>{
-    chip.addEventListener('click',()=>{
-      selectedCategory = chip.dataset.cat;
-      // Specific category → fixed at 20
-      if(selectedCategory !== 'all') selectedLength = 20;
-      renderLobby(errorMsg);
-    });
-  });
-  // Length chips (only present when Random)
-  document.querySelectorAll('#len-chips .length-chip').forEach(chip=>{
-    chip.addEventListener('click',()=>{
-      selectedLength = parseInt(chip.dataset.len);
-      renderLobby(errorMsg);
-    });
-  });
-  show('lobby');
+  card.reps++;
+}
+function autoRate(card,ok,elapsed){
+  if(!ok)return 0;
+  if(elapsed<3000)return 3;
+  if(elapsed<8000)return 2;
+  return 1;
 }
 
-// ====== CREATE MATCH ======
-async function createMatch(){
-  const code = rand4();
-  // Apply small-category override
-  let length = selectedLength;
-  const catSize = categorySizes[selectedCategory] || 0;
-  if(selectedCategory !== 'all' && catSize < 20) length = 20;
-  if(selectedCategory !== 'all') length = 20; // category matches are always 20
-  matchLength = length;
-  matchCategory = selectedCategory;
-  const cards = pickMatchCards(selectedCategory, length);
-  // p1's local copy is the same set
-  myCards = cards.map(i => vocab[i]);
-  try{
-    await setDoc(doc(db,'matches',code),{
-      createdAt: serverTimestamp(),
-      lastUpdate: serverTimestamp(),
-      status: 'waiting',
-      cards: cards,
-      length: length,
-      category: selectedCategory,
-      p1Joined: true,
-      p2Joined: false,
-      p1Score: 0, p2Score: 0,
-      p1Done: false, p2Done: false,
-      p1Time: 0, p2Time: 0,
-      p1Typing: false, p2Typing: false,
-      currentCard: 0
-    });
-    matchId = code;
-    role = 'p1';
-    listenToMatch();
-    renderWaiting();
-  }catch(e){
-    console.error(e);
-    renderLobby('Could not create match. Check your internet connection.');
+let allCards=vocab.map((v,i)=>initCard(v,i));
+let mistakes=[];
+let current=null;
+let answered=false;
+let cardStartTime=0;
+let autoTimer=null;
+let filter='all';
+let genderFilter='all';
+const autoDelay=1500;
+
+function matchesFilters(card){
+  if(filter!=='all'&&card.vocab.category!==filter)return false;
+  if(genderFilter!=='all'&&card.vocab.gender!==genderFilter)return false;
+  return true;
+}
+
+function getRandomItem(arr){
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function getNext(){
+  const now = Date.now();
+  const pool = allCards.filter(matchesFilters);
+  if(pool.length === 0) return null;
+
+  const learningDue = pool.filter(c => c.state === 'learning' && c.due <= now);
+  if(learningDue.length) return getRandomItem(learningDue);
+
+  const newCards = pool.filter(c => c.state === 'new');
+  if(newCards.length) return getRandomItem(newCards);
+
+  const reviewDue = pool.filter(c => c.state === 'review' && c.due <= now);
+  if(reviewDue.length) return getRandomItem(reviewDue);
+
+  const upcoming = pool.slice().sort((a,b) => a.due - b.due);
+  return upcoming[0] || null;
+}
+function updateStats(){
+  const pool=allCards.filter(matchesFilters);
+  const now=Date.now();
+  document.getElementById('cnt-new').textContent=pool.filter(c=>c.state==='new').length;
+  document.getElementById('cnt-learn').textContent=pool.filter(c=>c.state==='learning').length;
+  document.getElementById('cnt-due').textContent=pool.filter(c=>c.state==='review'&&c.due<=now).length;
+  document.getElementById('cnt-mistakes').textContent=mistakes.length;
+}
+function badgeHTML(g){
+  if(g==='m')return '<span class="gender-badge gb-m">Masculine</span>';
+  if(g==='f')return '<span class="gender-badge gb-f">Feminine</span>';
+  return '<span class="gender-badge gb-both">Same form</span>';
+}
+function categoryBadge(cat){
+  const labels={
+    classroom:'Classroom',commands:'Command',people:'Person',identify:'Identifying',
+    describe:'Describing',colors:'Color',clothing:'Clothing',numbers:'Number',
+    greetings:'Greeting',useful:'Useful',etre:'Être',articles:'Article'
+  };
+  return '<span class="cat-badge cb-'+cat+'">'+(labels[cat]||cat)+'</span>';
+}
+function showCard(card){
+  current=card;answered=false;cardStartTime=Date.now();
+  const badges=document.getElementById('top-badges');
+  const tb=document.createElement('span');
+  tb.className='card-badge '+(card.state==='new'?'badge-new':card.state==='learning'?'badge-learn':'badge-review');
+  tb.textContent=card.state==='new'?'New':card.state==='learning'?'Learning':'Review';
+  badges.innerHTML='';badges.appendChild(tb);
+  badges.insertAdjacentHTML('beforeend',categoryBadge(card.vocab.category));
+  if(!card.vocab.guessGender){
+    badges.insertAdjacentHTML('beforeend',badgeHTML(card.vocab.gender));
   }
-}
-
-// ====== JOIN MATCH ======
-async function joinMatch(code){
-  code=code.toUpperCase();
-  try{
-    const ref=doc(db,'matches',code);
-    const snap=await getDoc(ref);
-    if(!snap.exists()){renderLobby('Match code not found. Check with your friend.');return;}
-    const data=snap.data();
-    if(data.status==='done'){renderLobby('That match is already over. Ask for a new code.');return;}
-    if(data.status==='resigned'){renderLobby('That match was ended by the host. Ask for a new code.');return;}
-    if(data.p2Joined){renderLobby('That match already has two players.');return;}
-    await updateDoc(ref,{p2Joined:true,status:'playing',lastUpdate:serverTimestamp()});
-    matchId=code;
-    role='p2';
-    matchLength = data.length || data.cards.length;
-    matchCategory = data.category || 'all';
-    myCards=data.cards.map(i=>vocab[i]);
-    listenToMatch();
-    startGame();
-  }catch(e){
-    console.error(e);
-    renderLobby('Could not join match. Check your internet connection or the code.');
+  document.getElementById('prompt').textContent=card.vocab.en;
+  const hints=[];
+  if(!card.vocab.guessGender){
+    if(card.vocab.gender==='m') hints.push('use the MASCULINE form');
+    else if(card.vocab.gender==='f') hints.push('use the FEMININE form');
   }
-}
-
-// ====== WAITING ROOM ======
-function renderWaiting(){
-  const el=document.getElementById('screen-waiting');
-  const url=window.location.origin+window.location.pathname+'?code='+matchId;
-  el.innerHTML = `
-    <div class="waiting">
-      <div class="label">Share this code with your friend</div>
-      <div class="code-display">${matchId}</div>
-      <div class="share-row">
-        <button class="share-btn" id="copy-code">Copy code</button>
-        <button class="share-btn" id="copy-link">Copy invite link</button>
-      </div>
-      <div class="status-row">
-        <span class="status-dot"></span>
-        <span id="wait-status">Waiting for opponent to join…</span>
-      </div>
-      <button class="cancel-btn" id="cancel-match">Cancel match</button>
-    </div>`;
-  document.getElementById('copy-code').addEventListener('click',e=>copyText(matchId,e.target));
-  document.getElementById('copy-link').addEventListener('click',e=>copyText(url,e.target));
-  document.getElementById('cancel-match').addEventListener('click',cancelMatch);
-  show('waiting');
-}
-async function copyText(text,btn){
-  try{
-    await navigator.clipboard.writeText(text);
-    const orig=btn.textContent;btn.textContent='Copied ✓';btn.classList.add('copied');
-    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},1500);
-  }catch(e){
-    prompt('Copy this:',text);
-  }
-}
-async function cancelMatch(){
-  if(unsubscribe){unsubscribe();unsubscribe=null;}
-  if(matchId){try{await deleteDoc(doc(db,'matches',matchId));}catch(e){}}
-  matchId=null;role=null;myCards=[];myIndex=0;myScore=0;myMistakes=[];
-  renderLobby();
-}
-
-// ====== FIREBASE LISTENER ======
-function listenToMatch(){
-  if(unsubscribe)unsubscribe();
-  unsubscribe = onSnapshot(doc(db,'matches',matchId),(snap)=>{
-    if(!snap.exists()){
-      // match was deleted
-      if(unsubscribe){unsubscribe();unsubscribe=null;}
-      renderLobby('The other player left the match.');
-      return;
-    }
-    const data=snap.data();
-    handleStateUpdate(data);
-  },(err)=>{
-    console.error('snapshot error',err);
-  });
-}
-
-function handleStateUpdate(data){
-  // p1 sees waiting → playing transition
-  if(role === 'p1' && data.status === 'playing' && document.getElementById('screen-waiting').style.display !== 'none'){
-    matchLength = data.length || data.cards.length;
-    matchCategory = data.category || 'all';
-
-    if(myCards.length === 0){
-      myCards = data.cards.map(i => vocab[i]);
-    }
-
-    startGame();
-  }
-  // Detect resignation
-  if(data.status==='resigned' && !opponentDoneShown){
-    opponentDoneShown=true;
-    if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
-    if(unsubscribe){unsubscribe();unsubscribe=null;}
-    showResignedScreen(data);
-    return;
-  }
-  // Update the live opponent score & status
-  updateLiveScoreboard(data);
-  // Detect both players finished — but ONLY if game has actually started
-  // and we have local cards loaded. Use `=== true` (not truthy) to avoid undefined glitches.
-  if(data.status === 'playing' && myCards.length > 0){
-    const oppDone = (role==='p1' ? data.p2Done : data.p1Done) === true;
-    const meDone  = (role==='p1' ? data.p1Done : data.p2Done) === true;
-    if(oppDone && meDone){
-      showResults(data);
-    }
-  }
-}
-
-async function resignMatch(){
-  if(!matchId) return;
-  if(!confirm('Resign this match? Your opponent will be told you left.')) return;
-  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
-  try{
-    await updateDoc(doc(db,'matches',matchId),{
-      status:'resigned',
-      resignedBy: role,
-      lastUpdate: serverTimestamp()
-    });
-  }catch(e){console.error(e);}
-  // The snapshot listener will trigger showResignedScreen
-}
-
-function showResignedScreen(data){
-  const youResigned = data.resignedBy === role;
-
-  const myKey = role;
-  const oppKey = role === 'p1' ? 'p2' : 'p1';
-
-  const myFinalScore = data[myKey + 'Score'] || myScore || 0;
-  const oppFinalScore = data[oppKey + 'Score'] || 0;
-
-  const title = youResigned ? 'You resigned' : 'You won!';
-  const message = youResigned
-    ? 'You left the match.'
-    : 'Your opponent resigned, so you win.';
-
-  const el = document.getElementById('screen-results');
-
-  el.innerHTML = `
-    <div class="results">
-      <div class="label">Match ended</div>
-
-      <h2 class="${youResigned ? 'lose' : 'win'}">${title}</h2>
-
-      <p style="font-size:13px;color:var(--text-2);margin-bottom:1.25rem">
-        ${message}
-      </p>
-
-      <div class="results-grid">
-        <div class="result-tile you">
-          <div class="who">You</div>
-          <div class="score">${myFinalScore}<span class="score-total">/${matchLength}</span></div>
-          <div class="stat">${youResigned ? 'Resigned' : 'Winner'}</div>
-        </div>
-
-        <div class="result-tile">
-          <div class="who">Opponent</div>
-          <div class="score">${oppFinalScore}<span class="score-total">/${matchLength}</span></div>
-          <div class="stat">${youResigned ? 'Winner' : 'Resigned'}</div>
-        </div>
-      </div>
-
-      <div class="results-actions">
-        <button class="primary" id="back-lobby">Back to lobby</button>
-      </div>
-
-      ${myMistakes.length ? renderMistakesReview() : ''}
-    </div>`;
-
-  document.getElementById('back-lobby').addEventListener('click', backToLobby);
-  show('results');
-}
-
-// ====== START GAME ======
-function startGame(){
-  myIndex=0;myScore=0;myMistakes=[];myTotalTime=0;
-  opponentDoneShown=false;
-  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
-  renderGame();
-  show('game');
-}
-
-function renderGame(){
-  const el=document.getElementById('screen-game');
-  el.innerHTML = `
-    <div class="progress-row">
-      <div class="card-num">Card <strong id="g-cardnum">1</strong>/<span>${matchLength}</span></div>
-      <div class="opponent-status" id="opp-status">
-        <span class="live-dot green"></span><span id="opp-name-text">Opponent · online</span>
-      </div>
-    </div>
-    <div class="flashcard">
-      <div class="top-badges" id="top-badges"></div>
-      <div class="prompt-label">Translate to French</div>
-      <div class="prompt" id="prompt"></div>
-      <div class="hint" id="hint"></div>
-      <div class="accent-bar" id="accent-bar"></div>
-      <div class="input-row">
-        <input type="text" id="answer-input" placeholder="Type the French…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-        <button class="check-btn" id="check-btn">Check</button>
-      </div>
-    </div>
-    <div class="feedback-area">
-      <div class="feedback-text" id="feedback"></div>
-      <div id="answer-box-wrap"></div>
-    </div>
-    <div class="scoreboard">
-      <div class="score-tile you">
-        <div class="who">You</div>
-        <div class="num" id="you-score">0</div>
-        <div class="progress" id="you-prog">Card 1/${matchLength}</div>
-      </div>
-      <div class="score-tile them">
-        <div class="who">Opponent</div>
-        <div class="num" id="them-score">0</div>
-        <div class="progress" id="them-prog">Card 1/${matchLength}</div>
-      </div>
-    </div>
-    <div class="live-row" id="live-row"><span class="live-dot green"></span><span id="live-text">Game on</span></div>
-    <div class="mistakes-panel" id="mistakes-panel" style="display:none">
-      <div class="mistakes-panel-header">Mistakes so far <span class="mistakes-panel-badge" id="mistakes-panel-count">0</span></div>
-      <div id="mistakes-panel-list"></div>
-    </div>
-    <div style="text-align:center;margin-top:1.5rem">
-      <button class="cancel-btn" id="btn-resign">Resign match</button>
-    </div>`;
-  document.getElementById('check-btn').addEventListener('click',checkAnswer);
+  if(card.vocab.needsHyphen) hints.push('hyphen required');
+  const hintEl=document.getElementById('hint');
+  hintEl.textContent=hints.length?'Note: '+hints.join(' • '):'';
+  hintEl.className='hint'+(!card.vocab.guessGender&&card.vocab.gender==='m'?' hint-m':!card.vocab.guessGender&&card.vocab.gender==='f'?' hint-f':'');
   const inp=document.getElementById('answer-input');
-  inp.addEventListener('keydown',e=>{
-    if(e.key==='Enter' && !answered) checkAnswer();
-  });
-  inp.addEventListener('input',()=>setTyping(true));
-  // Resign button
-  document.getElementById('btn-resign').addEventListener('click',resignMatch);
-  // Build accent bar
-  buildAccentBar(inp);
-  showCard();
+  inp.value='';inp.className='';inp.disabled=false;
+  document.querySelectorAll('.accent-btn').forEach(b=>b.disabled=false);
+  document.getElementById('check-btn').disabled=false;
+  document.getElementById('feedback').textContent='';
+  document.getElementById('feedback').className='feedback-text';
+  document.getElementById('answer-box-wrap').innerHTML='';
+  document.getElementById('rating-wrap').style.display='none';
+  document.getElementById('auto-bar').style.width='0';
+  ['btn-again','btn-hard','btn-good','btn-easy'].forEach(id=>document.getElementById(id).classList.remove('preselected'));
+  updateStats();
+  setTimeout(()=>inp.focus(),50);
 }
-
+function showRatingAndAutoAdvance(ok,elapsed){
+  const suggested=autoRate(current,ok,elapsed);
+  document.getElementById('ivl-again').textContent=previewIvl(current,0);
+  document.getElementById('ivl-hard').textContent=previewIvl(current,1);
+  document.getElementById('ivl-good').textContent=previewIvl(current,2);
+  document.getElementById('ivl-easy').textContent=previewIvl(current,3);
+  document.getElementById('rating-wrap').style.display='block';
+  const ids=['btn-again','btn-hard','btn-good','btn-easy'];
+  const cls=['again','hard','good','easy'];
+  ids.forEach(id=>document.getElementById(id).classList.remove('preselected'));
+  document.getElementById(ids[suggested]).classList.add('preselected');
+  const bar=document.getElementById('auto-bar');
+  bar.className='auto-bar '+cls[suggested];bar.style.width='100%';
+  let step=0,steps=60;
+  autoTimer=setInterval(()=>{
+    step++;bar.style.width=Math.max(0,100-Math.round(step/steps*100))+'%';
+    if(step>=steps){clearInterval(autoTimer);autoTimer=null;rate(suggested);}
+  },autoDelay/steps);
+}
+function revealResult(ok,displayAnswer,extraMsg){
+  const fb=document.getElementById('feedback');
+  fb.textContent=ok?'Correct!':(extraMsg?'Wrong — '+extraMsg:'Wrong!');
+  fb.className='feedback-text '+(ok?'good':'bad');
+  const box=document.createElement('div');
+  box.className='answer-box '+(ok?'good':'bad');
+  box.textContent='Answer: '+displayAnswer;
+  document.getElementById('answer-box-wrap').innerHTML='';
+  document.getElementById('answer-box-wrap').appendChild(box);
+}
+function addMistake(question,typed,correct){
+  mistakes.push({question,typed,correct});
+  document.getElementById('mistakes-section').style.display='block';
+  document.getElementById('mistake-count').textContent=mistakes.length;
+  const item=document.createElement('div');item.className='mistake-item';
+  item.innerHTML='<div class="mq">'+escH(question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(correct)+'</div></div>';
+  document.getElementById('mistakes-list').appendChild(item);
+}
+function checkAnswer(){
+  if(answered||!current)return;
+  const typed=document.getElementById('answer-input').value.trim();
+  if(!typed)return;
+  answered=true;
+  const elapsed=Date.now()-cardStartTime;
+  const ok=isCorrect(typed,current.vocab);
+  const inp=document.getElementById('answer-input');
+  inp.disabled=true;inp.classList.add(ok?'ok':'bad');
+  document.querySelectorAll('.accent-btn').forEach(b=>b.disabled=true);
+  document.getElementById('check-btn').disabled=true;
+  let extraMsg='';
+  if(!ok){
+    const missing=getMissing(typed,current.vocab);
+    if(missing.length)extraMsg=missing.join(', ');
+  }
+  revealResult(ok,current.vocab.fr,extraMsg);
+  if(!ok)addMistake(current.vocab.en,typed,current.vocab.fr);
+  showRatingAndAutoAdvance(ok,elapsed);
+  updateStats();
+}
+function rate(r){
+  if(!current)return;
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  applyRating(current,r);
+  const next=getNext();
+  if(!next){showSummary();return;}
+  showCard(next);
+}
+function showSummary(){
+  document.getElementById('quiz-area').style.display='none';
+  document.getElementById('summary-wrap').style.display='block';
+  const total=allCards.reduce((a,c)=>a+c.reps,0);
+  document.getElementById('sum-title').textContent=mistakes.length===0?'Perfect session!':mistakes.length<=3?'Great work!':'Session complete!';
+  document.getElementById('sum-msg').textContent=total+' card'+(total===1?'':'s')+' reviewed, '+mistakes.length+' mistake'+(mistakes.length===1?'':'s')+'.';
+  const sm=document.getElementById('sum-mistakes');sm.innerHTML='';
+  if(mistakes.length===0){
+    sm.innerHTML='<p style="color:var(--color-text-secondary);font-size:14px;margin-bottom:1rem">No mistakes this session!</p>';
+  } else {
+    const h=document.createElement('div');
+    h.style.cssText='font-size:13px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px';
+    h.textContent='Mistakes to review ('+mistakes.length+'):';sm.appendChild(h);
+    mistakes.forEach(m=>{
+      const item=document.createElement('div');item.className='mistake-item';
+      item.innerHTML='<div class="mq">'+escH(m.question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(m.typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(m.correct)+'</div></div>';
+      sm.appendChild(item);
+    });
+  }
+}
+function resetAll(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  allCards=vocab.map((v,i)=>initCard(v,i));mistakes=[];
+  document.getElementById('mistakes-list').innerHTML='';
+  document.getElementById('mistakes-section').style.display='none';
+  document.getElementById('mistake-count').textContent='0';
+  document.getElementById('summary-wrap').style.display='none';
+  document.getElementById('quiz-area').style.display='block';
+  const n=getNext();if(n)showCard(n);updateStats();
+}
+function setFilter(f){
+  filter=f;
+  ['all','classroom','commands','people','identify','describe','colors','clothing','numbers','greetings','useful','etre','articles'].forEach(k=>{
+    document.getElementById('f-'+k).className='filter-btn'+(k===f?' active-'+k:'');
+  });
+  resetAll();
+}
+function setGenderFilter(g){
+  genderFilter=g;
+  const map={'all':'active-all','m':'active-masc','f':'active-fem','both':'active-both-only'};
+  ['all','m','f','both'].forEach(k=>{
+    document.getElementById('g-'+k).className='filter-btn'+(k===g?' '+map[g]:'');
+  });
+  resetAll();
+}
+document.getElementById('answer-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(!answered)checkAnswer();
+    else{if(autoTimer){clearInterval(autoTimer);autoTimer=null;}const pre=document.querySelector('.rating-btn.preselected');if(pre)pre.click();}
+  }
+});
 // Accent bar — clickable buttons that insert the character at the cursor position
 const ACCENT_CHARS = ['à','â','ä','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü'];
-function buildAccentBar(inputEl){
-  const bar = document.getElementById('accent-bar');
-  if(!bar) return;
-  bar.innerHTML = '';
-  ACCENT_CHARS.forEach(ch=>{
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'accent-btn';
-    btn.textContent = ch;
-    btn.tabIndex = -1; // don't steal Tab focus during typing
-    btn.addEventListener('mousedown', e => e.preventDefault()); // keep input focus
-    btn.addEventListener('click', () => insertAccent(inputEl, ch));
-    bar.appendChild(btn);
-  });
-}
-function insertAccent(inputEl, ch){
+function insertAccentChar(inputEl, ch){
   if(!inputEl || inputEl.disabled) return;
   const start = inputEl.selectionStart ?? inputEl.value.length;
   const end = inputEl.selectionEnd ?? inputEl.value.length;
@@ -1040,267 +806,23 @@ function insertAccent(inputEl, ch){
   const newPos = start + ch.length;
   inputEl.setSelectionRange(newPos, newPos);
   inputEl.focus();
-  // Manually fire 'input' event so the typing indicator still updates
   inputEl.dispatchEvent(new Event('input', {bubbles:true}));
 }
-
-let answered=false;
-let typingTimer=null;
-async function setTyping(t){
-  if(!matchId)return;
-  try{
-    const update={};update[role+'Typing']=t;update.lastUpdate=serverTimestamp();
-    await updateDoc(doc(db,'matches',matchId),update);
-  }catch(e){}
-  if(t){
-    if(typingTimer)clearTimeout(typingTimer);
-    typingTimer=setTimeout(()=>setTyping(false),2000);
-  }
-}
-
-function showCard(){
-  if(myIndex>=myCards.length){finishMatch();return;}
-  answered=false;
-  const v=myCards[myIndex];
-  myStartTime=Date.now();
-  document.getElementById('g-cardnum').textContent=myIndex+1;
-  document.getElementById('you-prog').textContent=`Card ${myIndex+1}/${matchLength}`;
-  const badges=document.getElementById('top-badges');
-  badges.innerHTML='';
-  const labels={classroom:'Classroom',commands:'Command',people:'Person',identify:'Identifying',describe:'Describing',colors:'Color',clothing:'Clothing',numbers:'Number',greetings:'Greeting',useful:'Useful',etre:'Être',articles:'Article'};
-  badges.innerHTML += `<span class="cat-badge cb-${v.category}">${labels[v.category]||v.category}</span>`;
-  if(!v.guessGender){
-    const g=v.gender;
-    const gLabel=g==='m'?'Masculine':g==='f'?'Feminine':'Same form';
-    const gClass=g==='m'?'gb-m':g==='f'?'gb-f':'gb-both';
-    badges.innerHTML += `<span class="gender-badge ${gClass}">${gLabel}</span>`;
-  }
-  document.getElementById('prompt').textContent=v.en;
-  const hints=[];
-  if(!v.guessGender){
-    if(v.gender==='m')hints.push('use the MASCULINE form');
-    else if(v.gender==='f')hints.push('use the FEMININE form');
-  }
-  if(v.needsHyphen)hints.push('hyphen required');
-  const hintEl=document.getElementById('hint');
-  hintEl.textContent=hints.length?'Note: '+hints.join(' • '):'';
-  hintEl.className='hint'+(!v.guessGender&&v.gender==='m'?' hint-m':!v.guessGender&&v.gender==='f'?' hint-f':'');
-  const inp=document.getElementById('answer-input');
-  inp.value='';inp.className='';inp.disabled=false;
-  document.querySelectorAll('.accent-btn').forEach(b=>b.disabled=false);
-  document.getElementById('check-btn').disabled=false;
-  document.getElementById('feedback').textContent='';
-  document.getElementById('feedback').className='feedback-text';
-  document.getElementById('answer-box-wrap').innerHTML='';
-  setTimeout(()=>inp.focus(),50);
-}
-
-async function checkAnswer(){
-  if(answered)return;
-  const typed=document.getElementById('answer-input').value.trim();
-  if(!typed)return;
-  answered=true;
-  const elapsed=Date.now()-myStartTime;
-  myTotalTime+=elapsed;
-  const v=myCards[myIndex];
-  const ok=isCorrect(typed,v);
-  const inp=document.getElementById('answer-input');
-  inp.disabled=true;inp.classList.add(ok?'ok':'bad');
-  document.querySelectorAll('.accent-btn').forEach(b=>b.disabled=true);
-  document.getElementById('check-btn').disabled=true;
-  let extraMsg='';
-  if(!ok){
-    const missing=getMissing(typed,v);
-    if(missing.length)extraMsg=missing.join(', ');
-    myMistakes.push({question:v.en,typed,correct:v.fr});
-    appendMistakeRow(v.en,typed,v.fr);
-  }
-  if(ok)myScore++;
-  const fb=document.getElementById('feedback');
-  fb.textContent=ok?'Correct!':(extraMsg?'Wrong — '+extraMsg:'Wrong!');
-  fb.className='feedback-text '+(ok?'good':'bad');
-  const box=document.createElement('div');
-  box.className='answer-box '+(ok?'good':'bad');
-  box.textContent='Answer: '+v.fr;
-  document.getElementById('answer-box-wrap').appendChild(box);
-  // Add the auto-advance progress bar
-  const barWrap=document.createElement('div');
-  barWrap.className='auto-bar-wrap';
-  barWrap.innerHTML=`<div class="auto-bar${ok?'':' bad'}"></div>`;
-  document.getElementById('answer-box-wrap').appendChild(barWrap);
-  document.getElementById('you-score').textContent=myScore;
-  // Push update to Firebase (multiplayer only)
-  if(matchId){
-    try{
-      const update={};
-      update[role+'Score']=myScore;
-      update[role+'Typing']=false;
-      update.currentCard=myIndex+1;
-      update.lastUpdate=serverTimestamp();
-      await updateDoc(doc(db,'matches',matchId),update);
-    }catch(e){console.error(e);}
-  }
-  // Auto-advance after 2 seconds
-  if(autoTimer){clearTimeout(autoTimer);}
-  autoTimer = setTimeout(()=>{autoTimer=null;nextCard();}, 2000);
-}
-
-// Show a mistake row in the running panel below the scoreboard
-function appendMistakeRow(question, typed, correct){
-  const panel = document.getElementById('mistakes-panel');
-  if(!panel) return;
-  panel.style.display='block';
-  document.getElementById('mistakes-panel-count').textContent = myMistakes.length;
-  const row=document.createElement('div');
-  row.className='mistake-row';
-  row.innerHTML = `<div class="mq">${escH(question)}</div>
-    <div><div class="mlabel">You wrote</div><div class="myou">${escH(typed||'—')}</div></div>
-    <div><div class="mlabel">Correct answer</div><div class="mcorrect">${escH(correct)}</div></div>`;
-  document.getElementById('mistakes-panel-list').appendChild(row);
-}
-
-function nextCard(){
-  myIndex++;
-  if(myIndex>=myCards.length){finishMatch();return;}
-  showCard();
-}
-
-async function finishMatch(){
-  // Hide the input area, show "waiting for opponent" if they're not done
-  const el=document.getElementById('screen-game');
-  el.innerHTML = `
-    <div class="flashcard">
-      <div class="prompt">You're done!</div>
-      <div class="hint">Score: ${myScore}/${matchLength}</div>
-    </div>
-    <div class="scoreboard">
-      <div class="score-tile you">
-        <div class="who">You</div>
-        <div class="num">${myScore}</div>
-        <div class="progress">Done · ${(myTotalTime/1000).toFixed(1)}s total</div>
-      </div>
-      <div class="score-tile them">
-        <div class="who">Opponent</div>
-        <div class="num" id="them-score">—</div>
-        <div class="progress" id="them-prog">Still playing…</div>
-      </div>
-    </div>
-    <div class="live-row"><span class="live-dot"></span><span>Waiting for opponent to finish…</span></div>`;
-  // Mark me as done
-  try{
-    const update={};
-    update[role+'Done']=true;
-    update[role+'Score']=myScore;
-    update[role+'Time']=myTotalTime;
-    update.lastUpdate=serverTimestamp();
-    await updateDoc(doc(db,'matches',matchId),update);
-  }catch(e){console.error(e);}
-}
-
-function updateLiveScoreboard(data){
-  const oppKey = role==='p1' ? 'p2' : 'p1';
-  const oppScore = data[oppKey+'Score'] || 0;
-  const oppTyping = data[oppKey+'Typing'] || false;
-  const oppDone = data[oppKey+'Done'] || false;
-  const oppCard = data.currentCard || 0; // not perfect — both write to it
-  const themScoreEl=document.getElementById('them-score');
-  if(themScoreEl)themScoreEl.textContent=oppScore;
-  const themProgEl=document.getElementById('them-prog');
-  if(themProgEl)themProgEl.textContent = oppDone ? 'Done' : `playing…`;
-  const liveText=document.getElementById('live-text');
-  if(liveText){
-    if(oppDone) liveText.textContent='Opponent finished — keep going!';
-    else if(oppTyping) liveText.textContent='Opponent is typing…';
-    else liveText.textContent='Game on';
-  }
-}
-
-// ====== RESULTS ======
-function showResults(data){
-  if(opponentDoneShown)return;
-  opponentDoneShown=true;
-  if(unsubscribe){unsubscribe();unsubscribe=null;}
-  const myKey=role,oppKey=role==='p1'?'p2':'p1';
-  const myFinalScore=data[myKey+'Score']||0;
-  const oppFinalScore=data[oppKey+'Score']||0;
-  const myTime=data[myKey+'Time']||myTotalTime;
-  const oppTime=data[oppKey+'Time']||0;
-  let outcome='tie';
-  if(myFinalScore>oppFinalScore)outcome='win';
-  else if(myFinalScore<oppFinalScore)outcome='lose';
-  else if(myTime<oppTime)outcome='win';   // tiebreak by speed
-  else if(myTime>oppTime)outcome='lose';
-  const heading={win:'You won! 🏆',lose:'You lost',tie:'It\'s a tie!'};
-  const myAvg=(myTime/1000/matchLength).toFixed(1);
-  const oppAvg=oppTime?((oppTime/1000)/matchLength).toFixed(1):'—';
-  const el=document.getElementById('screen-results');
-  el.innerHTML = `
-    <div class="results">
-      <div class="label">Match complete</div>
-      <h2 class="${outcome}">${heading[outcome]}</h2>
-      <div class="results-grid">
-        <div class="result-tile you">
-          <div class="who">You</div>
-          <div class="score">${myFinalScore}<span class="score-total">/${matchLength}</span></div>
-          <div class="stat">avg ${myAvg}s per card</div>
-        </div>
-        <div class="result-tile">
-          <div class="who">Opponent</div>
-          <div class="score">${oppFinalScore}<span class="score-total">/${matchLength}</span></div>
-          <div class="stat">avg ${oppAvg}s per card</div>
-        </div>
-      </div>
-      <div class="results-actions">
-        <button class="primary" id="rematch">Rematch</button>
-        <button id="new-match">New match</button>
-      </div>
-      ${myMistakes.length?renderMistakesReview():''}
-    </div>`;
-  document.getElementById('rematch').addEventListener('click',rematch);
-  document.getElementById('new-match').addEventListener('click',backToLobby);
-  show('results');
-}
-
-function renderMistakesReview(){
-  return `<div class="review-section">
-    <h3>Your mistakes (${myMistakes.length})</h3>
-    ${myMistakes.map(m=>`<div class="review-item">
-      <div class="rq">${escH(m.question)}</div>
-      <div>You wrote <span class="ryou">${escH(m.typed||'—')}</span></div>
-      <div>Correct answer <span class="rcorrect">${escH(m.correct)}</span></div>
-    </div>`).join('')}
-  </div>`;
-}
-
-async function rematch(){
-  // p1 creates a new match, p2 has to rejoin via code (simpler)
-  // For symmetry, just go back to lobby
-  await backToLobby();
-}
-async function backToLobby(){
-  if(unsubscribe){unsubscribe();unsubscribe=null;}
-  if(matchId && role==='p1'){
-    try{await updateDoc(doc(db,'matches',matchId),{status:'done',lastUpdate:serverTimestamp()});}catch(e){}
-  }
-  matchId=null;role=null;myCards=[];myIndex=0;myScore=0;myMistakes=[];opponentDoneShown=false;
-  renderLobby();
-}
-
-// ====== SOLO MODE — redirect to full solo experience ======
-function startSolo(){
-  // Navigate to the solo file in the same tab (so browser back button returns to lobby)
-  window.location.href = 'solo.html';
-}
-
-// ====== INIT ======
-const params = new URLSearchParams(window.location.search);
-const codeFromUrl = params.get('code');
-if(codeFromUrl && /^[A-Z]{4}$/.test(codeFromUrl.toUpperCase())){
-  joinMatch(codeFromUrl);
-} else {
-  renderLobby();
-}
-
+(function buildAccentBar(){
+  const bar = document.getElementById('accent-bar');
+  const inp = document.getElementById('answer-input');
+  if(!bar || !inp) return;
+  bar.innerHTML = '';
+  ACCENT_CHARS.forEach(ch=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'accent-btn';
+    btn.textContent = ch;
+    btn.tabIndex = -1;
+    btn.addEventListener('mousedown', e => e.preventDefault());
+    btn.addEventListener('click', () => insertAccentChar(inp, ch));
+    bar.appendChild(btn);
+  });
+})();
+const first=getNext();if(first)showCard(first);updateStats();
 </script>
-</body>
-</html>
