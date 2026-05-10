@@ -894,17 +894,52 @@ async function resignMatch(){
 
 function showResignedScreen(data){
   const youResigned = data.resignedBy === role;
-  const el=document.getElementById('screen-results');
+
+  const myKey = role;
+  const oppKey = role === 'p1' ? 'p2' : 'p1';
+
+  const myFinalScore = data[myKey + 'Score'] || myScore || 0;
+  const oppFinalScore = data[oppKey + 'Score'] || 0;
+
+  const title = youResigned ? 'You resigned' : 'You won!';
+  const message = youResigned
+    ? 'You left the match.'
+    : 'Your opponent resigned, so you win.';
+
+  const el = document.getElementById('screen-results');
+
   el.innerHTML = `
     <div class="results">
       <div class="label">Match ended</div>
-      <h2 class="${youResigned?'lose':'win'}">${youResigned ? 'You resigned' : 'Opponent resigned'}</h2>
-      <p style="font-size:13px;color:var(--text-2);margin-bottom:1.25rem">${youResigned ? 'Match ended by you.' : 'Your opponent left the match.'}</p>
+
+      <h2 class="${youResigned ? 'lose' : 'win'}">${title}</h2>
+
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:1.25rem">
+        ${message}
+      </p>
+
+      <div class="results-grid">
+        <div class="result-tile you">
+          <div class="who">You</div>
+          <div class="score">${myFinalScore}<span class="score-total">/${matchLength}</span></div>
+          <div class="stat">${youResigned ? 'Resigned' : 'Winner'}</div>
+        </div>
+
+        <div class="result-tile">
+          <div class="who">Opponent</div>
+          <div class="score">${oppFinalScore}<span class="score-total">/${matchLength}</span></div>
+          <div class="stat">${youResigned ? 'Winner' : 'Resigned'}</div>
+        </div>
+      </div>
+
       <div class="results-actions">
         <button class="primary" id="back-lobby">Back to lobby</button>
       </div>
+
+      ${myMistakes.length ? renderMistakesReview() : ''}
     </div>`;
-  document.getElementById('back-lobby').addEventListener('click',backToLobby);
+
+  document.getElementById('back-lobby').addEventListener('click', backToLobby);
   show('results');
 }
 
