@@ -1047,16 +1047,9 @@ function insertAccent(inputEl, ch){
 }
 
 let answered=false;
-let typingTimer=null;
-function setTyping(t){
-  if(!matchId)return;
-  const update={};update[role+'Typing']=t;update.lastUpdate=serverTimestamp();
-  updateDoc(doc(db,'matches',matchId),update).catch(()=>{});
-  if(t){
-    if(typingTimer)clearTimeout(typingTimer);
-    typingTimer=setTimeout(()=>setTyping(false),2000);
-  }
-}
+// Typing indicator removed to reduce Firestore writes.
+// Opponent activity is shown via score updates instead.
+function setTyping(t){ /* no-op — disabled to save quota */ }
 
 function showCard(){
   if(myIndex>=myCards.length){finishMatch();return;}
@@ -1134,12 +1127,11 @@ async function checkAnswer(){
   autoTimer = setTimeout(()=>{autoTimer=null;nextCard();}, 2000);
   // Push update to Firebase (multiplayer only) — fire-and-forget, do NOT await
   // If the network is slow or fails, the game still advances locally.
+  // Only send essentials to minimize quota usage.
   if(matchId){
     const update={};
     update[role+'Score']=myScore;
-    update[role+'Typing']=false;
     update.currentCard=myIndex+1;
-    update.lastUpdate=serverTimestamp();
     updateDoc(doc(db,'matches',matchId),update).catch(e=>console.error('score update failed',e));
   }
 }
@@ -1199,9 +1191,7 @@ async function finishMatch(){
 function updateLiveScoreboard(data){
   const oppKey = role==='p1' ? 'p2' : 'p1';
   const oppScore = data[oppKey+'Score'] || 0;
-  const oppTyping = data[oppKey+'Typing'] || false;
   const oppDone = data[oppKey+'Done'] || false;
-  const oppCard = data.currentCard || 0; // not perfect — both write to it
   const themScoreEl=document.getElementById('them-score');
   if(themScoreEl)themScoreEl.textContent=oppScore;
   const themProgEl=document.getElementById('them-prog');
@@ -1209,7 +1199,6 @@ function updateLiveScoreboard(data){
   const liveText=document.getElementById('live-text');
   if(liveText){
     if(oppDone) liveText.textContent='Opponent finished — keep going!';
-    else if(oppTyping) liveText.textContent='Opponent is typing…';
     else liveText.textContent='Game on';
   }
 }
