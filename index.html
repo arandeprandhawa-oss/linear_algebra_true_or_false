@@ -446,9 +446,12 @@ const vocab=[
   {en:"He's fine / not well.",  fr:"Il va bien/mal.",  alts:["Il va bien/mal","Il va bien/mal.","Il va bien","Il va mal"], needsHyphen:false, needsAccent:false, gender:"m", category:"useful"},
   {en:"She's fine / not well.", fr:"Elle va bien/mal.", alts:["Elle va bien/mal","Elle va bien/mal.","Elle va bien","Elle va mal"], needsHyphen:false, needsAccent:false, gender:"f", category:"useful"},
   {en:"What color is...?",      fr:"De quelle couleur est... ?", alts:["De quelle couleur est...","De quelle couleur est","De quelle couleur est ?"], needsHyphen:false, needsAccent:false, gender:"both", category:"useful"},
-  {en:"Is this a...?",          fr:"Est-ce que c'est un/une... ?", alts:["Est-ce que c'est un/une...","Est-ce que c'est un/une","Est-ce que c'est un/une ?"], needsHyphen:true, needsAccent:false, gender:"both", category:"useful"},
-  {en:"Yes, it's a...",         fr:"Oui, c'est un/une...", alts:["Oui, c'est un/une...","Oui, c'est un/une"], needsHyphen:false, needsAccent:false, gender:"both", category:"useful"},
-  {en:"No, it's not a...",      fr:"Non, ce n'est pas un/une...", alts:["Non, ce n'est pas un/une...","Non, ce n'est pas un/une"], needsHyphen:false, needsAccent:false, gender:"both", category:"useful"},
+  {en:"Is this a... ? (masc.)",          fr:"Est-ce que c'est un... ?", alts:["Est-ce que c'est un...","Est-ce que c'est un","Est-ce que c'est un ?"], needsHyphen:true, needsAccent:false, gender:"m", category:"useful"},
+  {en:"Is this a... ? (fem.)",           fr:"Est-ce que c'est une... ?", alts:["Est-ce que c'est une...","Est-ce que c'est une","Est-ce que c'est une ?"], needsHyphen:true, needsAccent:false, gender:"f", category:"useful"},
+  {en:"Yes, it's a... (masc.)",          fr:"Oui, c'est un...", alts:["Oui, c'est un...","Oui, c'est un"], needsHyphen:false, needsAccent:false, gender:"m", category:"useful"},
+  {en:"Yes, it's a... (fem.)",           fr:"Oui, c'est une...", alts:["Oui, c'est une...","Oui, c'est une"], needsHyphen:false, needsAccent:false, gender:"f", category:"useful"},
+  {en:"No, it's not a... (masc.)",       fr:"Non, ce n'est pas un...", alts:["Non, ce n'est pas un...","Non, ce n'est pas un"], needsHyphen:false, needsAccent:false, gender:"m", category:"useful"},
+  {en:"No, it's not a... (fem.)",        fr:"Non, ce n'est pas une...", alts:["Non, ce n'est pas une...","Non, ce n'est pas une"], needsHyphen:false, needsAccent:false, gender:"f", category:"useful"},
   {en:"isn't it?, right?",      fr:"n'est-ce pas ?",   alts:["n'est-ce pas","n'est-ce pas ?","n'est-ce pas?"], needsHyphen:true, needsAccent:false, gender:"both", category:"useful"},
 
   // ===== ÊTRE conjugation =====
@@ -496,7 +499,8 @@ function isCorrect(typed,v){
     const a=normaliseBase(answer);
     const tH=v.needsHyphen?t:t.replace(/-/g,' ');
     const aH=v.needsHyphen?a:a.replace(/-/g,' ');
-    return stripAccents(tH)===stripAccents(aH);
+    // STRICT: must match WITH accents intact, not just accent-stripped
+    return tH===aH;
   });
 }
 function isWrongArticle(typed,v){
