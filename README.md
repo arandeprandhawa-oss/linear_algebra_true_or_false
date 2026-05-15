@@ -1,5 +1,7 @@
 # French Flashcards · Étape platform
 
+https://arandeprandhawa-oss.github.io/french-quiz/  
+
 A small multi-étape flashcards app. Two modes per étape: **1v1 multiplayer** (Firestore-backed)
 and **solo** (local spaced-repetition). The architecture is built so adding Étape 3, 4, … later
 is a copy-paste-and-config job, not a code rewrite.
