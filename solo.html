@@ -400,8 +400,8 @@ function applyRating(card,r){
 }
 function autoRate(card,ok,elapsed){
   if(!ok)return 0;
-  if(elapsed<12000)return 3;
-  if(elapsed<18000)return 2;
+  if(elapsed<18000)return 3;
+  if(elapsed<25000)return 2;
   return 1;
 }
 
