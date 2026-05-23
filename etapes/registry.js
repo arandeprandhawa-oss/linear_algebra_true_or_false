@@ -46,4 +46,4 @@ window.ETAPES = [
   }
 ];
 
-window.DEFAULT_ETAPE = 'e2';
+window.DEFAULT_ETAPE = 'e3';
