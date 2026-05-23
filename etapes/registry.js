@@ -4,10 +4,10 @@
 // HOW TO ADD A NEW ÉTAPE (e.g. Étape 3):
 //   1. Create /etapes/etape3.js with the same shape as etape1.js / etape2.js:
 //        - window.ETAPE_DATA = {
-//            vocab: [...],          // your vocab entries
-//            categoryLabels: {...}, // category id -> display label
+//            vocab: [...],
+//            categoryLabels: {...},
 //          };
-//   2. Add a new entry to the ETAPES array below (just one object).
+//   2. Add a new entry to the ETAPES array below.
 //   3. If etape3 introduces new category ids that aren't already in the
 //      Firestore rules whitelist, add them to firestore.rules and redeploy.
 //   4. Done. The tab bar, lobby, solo page, and category chips all read
@@ -22,7 +22,7 @@ window.ETAPES = [
     label: 'Étape 1',
     sublabel: '1ʳᵉ',
     titleMulti: 'French Flashcards · 1v1 MODL-1101 1st midterm',
-    titleSolo:  'French Flashcards · Solo · MODL-1101 1st midterm',
+    titleSolo: 'French Flashcards · Solo · MODL-1101 1st midterm',
     sub: 'Race a friend, or practice solo',
     file: 'etapes/etape1.js'
   },
@@ -31,7 +31,7 @@ window.ETAPES = [
     label: 'Étape 2',
     sublabel: '2ᵉ',
     titleMulti: 'French Flashcards · 1v1 MODL-1101 2nd midterm',
-    titleSolo:  'French Flashcards · Solo · MODL-1101 2nd midterm',
+    titleSolo: 'French Flashcards · Solo · MODL-1101 2nd midterm',
     sub: 'Race a friend, or practice solo',
     file: 'etapes/etape2.js'
   },
@@ -40,7 +40,7 @@ window.ETAPES = [
     label: 'Étape 3',
     sublabel: '3ᵉ',
     titleMulti: 'French Flashcards · 1v1 MODL-1101 Étape 3',
-    titleSolo:  'French Flashcards · Solo · MODL-1101 Étape 3',
+    titleSolo: 'French Flashcards · Solo · MODL-1101 Étape 3',
     sub: 'Race a friend, or practice solo',
     file: 'etapes/etape3.js'
   }
