@@ -214,10 +214,12 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 </div>
 <script src="etapes/registry.js"></script>
 <script>
+<script>
 (function bootEtape(){
   window.CURRENT_ETAPE_ID = 'e3';
   window.ETAPE_SOLO_MAP  = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
   window.ETAPE_LOBBY_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
+
   const tabsEl = document.getElementById('etape-tabs');
   if(tabsEl){
     tabsEl.innerHTML = window.ETAPES.map(e => {
@@ -229,6 +231,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
       return `<a class="etape-tab" href="${href}">${e.label} <span class="e-num">${e.sublabel}</span></a>`;
     }).join('');
   }
+
   const me = window.ETAPES.find(e => e.id === window.CURRENT_ETAPE_ID);
   if(me){
     const h1 = document.getElementById('app-title-h1');
@@ -237,6 +240,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     if(sub) sub.textContent = 'Solo practice mode';
     document.title = me.titleSolo;
   }
+
   const back = document.getElementById('back-link');
   if(back) back.href = window.ETAPE_LOBBY_MAP[window.CURRENT_ETAPE_ID] || 'index.html';
 })();
