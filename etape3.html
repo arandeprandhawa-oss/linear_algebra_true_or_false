@@ -231,6 +231,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <!-- Load registry and the active étape's vocab BEFORE the game module -->
 <script src="etapes/etape3.js"></script>
 <script>
+<script>
 (function bootEtape(){
   // This page is the Étape 3 page.
   // Map each étape id -> the file that hosts its 1v1 multiplayer lobby.
@@ -238,10 +239,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   window.ETAPE_PAGE_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
   window.ETAPE_SOLO_MAP = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
 
-  // Render the tab bar from the registry. Adding Étape 3 later means:
-  //   1. add an entry to registry.js
-  //   2. add 'e3' to ETAPE_PAGE_MAP and ETAPE_SOLO_MAP in each shell
-  //   3. create etape3.html and solo3.html (copies of these shells with one line changed)
+  // Render the tab bar from the registry.
   const tabsEl = document.getElementById('etape-tabs');
   tabsEl.innerHTML = window.ETAPES.map(e => {
     const isActive = e.id === window.CURRENT_ETAPE_ID;
@@ -252,7 +250,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     return `<a class="etape-tab" href="${href}">${e.label} <span class="e-num">${e.sublabel}</span></a>`;
   }).join('');
 
-  // Set the title from the registry
+  // Set the title from the registry.
   const me = window.ETAPES.find(e => e.id === window.CURRENT_ETAPE_ID);
   if(me){
     document.getElementById('app-title-h1').textContent = me.titleMulti;
