@@ -9,7 +9,7 @@
 :root{
   --bg:#FAF9F6;--surface:#FFFFFF;--surface-2:#F1EFE8;
   --text:#1F1F1E;--text-2:#5F5E5A;--text-3:#888780;
-  --border:rgba(0,0,0,0.10);--border-2:rgba(0,0,0,0.18);h
+  --border:rgba(0,0,0,0.10);--border-2:rgba(0,0,0,0.18);
   --radius:8px;--radius-lg:12px;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
@@ -96,7 +96,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 .flashcard{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center;margin-bottom:1rem;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center}
 .top-badges{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
-.cat-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.cat-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:var(--surface-2);color:var(--text-2)}
 .cb-classroom{background:#FAEEDA;color:#633806}
 .cb-commands{background:#FAEEDA;color:#854F0B}
 .cb-people{background:#EEEDFE;color:#3C3489}
@@ -109,6 +109,25 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .cb-useful{background:#EAF3DE;color:#27500A}
 .cb-etre{background:#FCEBEB;color:#791F1F}
 .cb-articles{background:#E6F1FB;color:#0C447C}
+/* Étape 3 / Chapitre 1 category badge colours */
+.cb-family{background:#FBEAF0;color:#72243E}
+.cb-relationships{background:#EEEDFE;color:#3C3489}
+.cb-family_phrases{background:#FBEAF0;color:#72243E}
+.cb-description{background:#E6F1FB;color:#0C447C}
+.cb-cognates{background:#E6F1FB;color:#0C447C}
+.cb-personality{background:#EEEDFE;color:#3C3489}
+.cb-possessives{background:#FAEEDA;color:#633806}
+.cb-possession{background:#FAEEDA;color:#633806}
+.cb-activities{background:#EAF3DE;color:#27500A}
+.cb-er_verbs{background:#EAF3DE;color:#27500A}
+.cb-preference{background:#EAF3DE;color:#27500A}
+.cb-venir{background:#FCEBEB;color:#791F1F}
+.cb-countries{background:#E6F1FB;color:#0C447C}
+.cb-languages{background:#E6F1FB;color:#0C447C}
+.cb-prepositions{background:#FAEEDA;color:#633806}
+.cb-dates{background:#FAEEDA;color:#633806}
+.cb-personal_info{background:#EEEDFE;color:#3C3489}
+.cb-oral_description{background:#FBEAF0;color:#72243E}
 .gender-badge{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;letter-spacing:0.02em}
 .gb-m{background:#185FA5;color:#fff}
 .gb-f{background:#D4537E;color:#fff}
@@ -228,7 +247,9 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 </div>
 
-<!-- Load registry and the active étape's vocab BEFORE the game module --><script src="etapes/registry.js"></script><script src="etapes/etape3.js"></script>
+<!-- Load registry and the active étape's vocab BEFORE the game module -->
+<script src="etapes/registry.js"></script>
+<script src="etapes/etape3.js"></script>
 <script>
 (function bootEtape(){
   // This page is the Étape 3 page.
@@ -237,8 +258,17 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   window.ETAPE_PAGE_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
   window.ETAPE_SOLO_MAP = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
 
-  // Render the tab bar from the registry.
   const tabsEl = document.getElementById('etape-tabs');
+
+  // Defensive: if registry.js failed to load, don't crash the whole page.
+  if(!window.ETAPES || !Array.isArray(window.ETAPES)){
+    console.error('registry.js did not load — window.ETAPES is missing. Check that etapes/registry.js is reachable.');
+    tabsEl.innerHTML = '';
+    // Page still works without tabs; leave the default title in place.
+    return;
+  }
+
+  // Render the tab bar from the registry.
   tabsEl.innerHTML = window.ETAPES.map(e => {
     const isActive = e.id === window.CURRENT_ETAPE_ID;
     const href = window.ETAPE_PAGE_MAP[e.id] || '#';
@@ -862,7 +892,8 @@ function showCard(){
   document.getElementById('you-prog').textContent=`Card ${myIndex+1}/${matchLength}`;
   const badges=document.getElementById('top-badges');
   badges.innerHTML='';
-  const labels={classroom:'Classroom',commands:'Command',people:'Person',identify:'Identifying',describe:'Describing',colors:'Color',clothing:'Clothing',numbers:'Number',greetings:'Greeting',useful:'Useful',etre:'Être',articles:'Article'};
+  // Use the étape's own category labels so badges read correctly for any étape.
+  const labels = categoryLabels;
   badges.innerHTML += `<span class="cat-badge cb-${v.category}">${labels[v.category]||v.category}</span>`;
   if(!v.guessGender){
     const g=v.gender;
