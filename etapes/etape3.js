@@ -386,16 +386,16 @@ window.CHAPITRE1_DATA = {
     // ==================================================================
     // ORAL DESCRIPTION STRUCTURE — Présenter une personne
     // ==================================================================
-    {en:"His name is... (introducing a man)", fr:"Il s'appelle",          alts:["Il s'appelle"],                                needsHyphen:true,  needsAccent:false, gender:"m", category:"oral_description"},
-    {en:"Her name is... (introducing a woman)", fr:"Elle s'appelle",      alts:["Elle s'appelle"],                              needsHyphen:true,  needsAccent:false, gender:"f", category:"oral_description"},
-    {en:"He lives in...",                    fr:"Il habite à",            alts:["Il habite à"],                                 needsHyphen:false, needsAccent:true,  gender:"m", category:"oral_description"},
-    {en:"She lives in...",                   fr:"Elle habite à",          alts:["Elle habite à"],                               needsHyphen:false, needsAccent:true,  gender:"f", category:"oral_description"},
-    {en:"He is ... years old.",              fr:"Il a ... ans.",          alts:["Il a ... ans","Il a ... ans."],                needsHyphen:false, needsAccent:false, gender:"m", category:"oral_description"},
-    {en:"She is ... years old.",             fr:"Elle a ... ans.",        alts:["Elle a ... ans","Elle a ... ans."],            needsHyphen:false, needsAccent:false, gender:"f", category:"oral_description"},
-    {en:"He speaks...",                      fr:"Il parle",               alts:["Il parle"],                                    needsHyphen:false, needsAccent:false, gender:"m", category:"oral_description"},
-    {en:"She speaks...",                     fr:"Elle parle",             alts:["Elle parle"],                                  needsHyphen:false, needsAccent:false, gender:"f", category:"oral_description"},
-    {en:"He is... (nationality)",            fr:"Il est",                 alts:["Il est"],                                      needsHyphen:false, needsAccent:false, gender:"m", category:"oral_description"},
-    {en:"She is... (nationality)",           fr:"Elle est",               alts:["Elle est"],                                    needsHyphen:false, needsAccent:false, gender:"f", category:"oral_description"},
+    {en:"His name is (introducing a man)",   fr:"Il s'appelle",           alts:["Il s'appelle"],                                needsHyphen:true,  needsAccent:false, gender:"m", category:"oral_description"},
+    {en:"Her name is (introducing a woman)", fr:"Elle s'appelle",         alts:["Elle s'appelle"],                              needsHyphen:true,  needsAccent:false, gender:"f", category:"oral_description"},
+    {en:"He lives in",                       fr:"Il habite à",            alts:["Il habite à"],                                 needsHyphen:false, needsAccent:true,  gender:"m", category:"oral_description"},
+    {en:"She lives in",                      fr:"Elle habite à",          alts:["Elle habite à"],                               needsHyphen:false, needsAccent:true,  gender:"f", category:"oral_description"},
+    {en:"He is (a number of) years old.",    fr:"Il a ans.",              alts:["Il a ans","Il a ans."],                        needsHyphen:false, needsAccent:false, gender:"m", category:"oral_description"},
+    {en:"She is (a number of) years old.",   fr:"Elle a ans.",            alts:["Elle a ans","Elle a ans."],                    needsHyphen:false, needsAccent:false, gender:"f", category:"oral_description"},
+    {en:"He speaks",                         fr:"Il parle",               alts:["Il parle"],                                    needsHyphen:false, needsAccent:false, gender:"m", category:"oral_description"},
+    {en:"She speaks",                        fr:"Elle parle",             alts:["Elle parle"],                                  needsHyphen:false, needsAccent:false, gender:"f", category:"oral_description"},
+    {en:"He is (nationality)",               fr:"Il est",                 alts:["Il est"],                                      needsHyphen:false, needsAccent:false, gender:"m", category:"oral_description"},
+    {en:"She is (nationality)",              fr:"Elle est",               alts:["Elle est"],                                    needsHyphen:false, needsAccent:false, gender:"f", category:"oral_description"},
   ],
   categoryLabels: {
     all:"Random",
