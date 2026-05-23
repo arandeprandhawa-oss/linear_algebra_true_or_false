@@ -215,9 +215,9 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <script src="etapes/registry.js"></script>
 <script>
 (function bootEtape(){
-  window.CURRENT_ETAPE_ID = 'e1';
-  window.ETAPE_SOLO_MAP  = { e1: 'solo1.html', e2: 'solo.html' };
-  window.ETAPE_LOBBY_MAP = { e1: 'etape1.html', e2: 'index.html' };
+  window.CURRENT_ETAPE_ID = 'e3';
+  window.ETAPE_SOLO_MAP  = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
+  window.ETAPE_LOBBY_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
   const tabsEl = document.getElementById('etape-tabs');
   if(tabsEl){
     tabsEl.innerHTML = window.ETAPES.map(e => {
@@ -241,11 +241,11 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   if(back) back.href = window.ETAPE_LOBBY_MAP[window.CURRENT_ETAPE_ID] || 'index.html';
 })();
 </script>
-<script src="etapes/etape1.js"></script>
+<script src="etapes/etape3.js"></script>
 <script>
 // ====== VOCAB DATA (loaded from etapes/etape*.js via window.ETAPE_DATA) ======
 if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
-  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape1.js</code> is reachable.</div>';
+  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape3.js</code> is reachable.</div>';
   throw new Error('ETAPE_DATA not loaded');
 }
 const vocab = window.ETAPE_DATA.vocab;
