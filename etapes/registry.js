@@ -34,6 +34,15 @@ window.ETAPES = [
     titleSolo:  'French Flashcards · Solo · MODL-1101 2nd midterm',
     sub: 'Race a friend, or practice solo',
     file: 'etapes/etape2.js'
+  },
+  {
+    id: 'e3',
+    label: 'Étape 3',
+    sublabel: '3ᵉ',
+    titleMulti: 'French Flashcards · 1v1 MODL-1101 Étape 3',
+    titleSolo:  'French Flashcards · Solo · MODL-1101 Étape 3',
+    sub: 'Race a friend, or practice solo',
+    file: 'etapes/etape3.js'
   }
 ];
 
