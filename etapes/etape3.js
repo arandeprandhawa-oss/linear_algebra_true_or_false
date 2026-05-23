@@ -7,7 +7,7 @@
 //          and feminine separated and individually labelled.
 // =====================================================================
 
-window.CHAPITRE1_DATA = {
+window.ETAPE_DATA = {
   vocab: [
 
     // ==================================================================
