@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>French Flashcards · 1v1 MODL-1101 1st midterm</title>
+<title>French Flashcards · 1v1 MODL-1101 Étape 3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -232,11 +232,11 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <script src="etapes/registry.js"></script>
 <script>
 (function bootEtape(){
-  // This page is the Étape 2 (default) page. The other étape lives in etape1.html.
+  // This page is the Étape 3 page.
   // Map each étape id -> the file that hosts its 1v1 multiplayer lobby.
-  window.CURRENT_ETAPE_ID = 'e1';
-  window.ETAPE_PAGE_MAP = { e1: 'etape1.html', e2: 'index.html' };
-  window.ETAPE_SOLO_MAP = { e1: 'solo1.html', e2: 'solo.html' };
+  window.CURRENT_ETAPE_ID = 'e3';
+  window.ETAPE_PAGE_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
+  window.ETAPE_SOLO_MAP = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
 
   // Render the tab bar from the registry. Adding Étape 3 later means:
   //   1. add an entry to registry.js
@@ -261,7 +261,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   }
 })();
 </script>
-<script src="etapes/etape1.js"></script>
+<script src="etapes/etape3.js"></script>
 
 
 <!-- Firebase + game logic -->
@@ -284,7 +284,7 @@ const db = getFirestore(app);
 
 // ====== VOCAB DATA (loaded from etapes/etape*.js via window.ETAPE_DATA) ======
 if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
-  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape1.js</code> is reachable.</div>';
+  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape3.js</code> is reachable.</div>';
   throw new Error('ETAPE_DATA not loaded');
 }
 const vocab = window.ETAPE_DATA.vocab;
