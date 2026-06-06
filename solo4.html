@@ -213,30 +213,49 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 </div>
 </div>
 <script src="etapes/registry.js"></script>
+
 <script>
 (function bootEtape(){
-  window.CURRENT_ETAPE_ID = 'e3';
-  window.ETAPE_SOLO_MAP  = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
-  window.ETAPE_LOBBY_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
+  window.CURRENT_ETAPE_ID = 'e4';
+
+  window.ETAPE_SOLO_MAP = {
+    e1: 'solo1.html',
+    e2: 'solo.html',
+    e3: 'solo3.html',
+    e4: 'solo4.html'
+  };
+
+  window.ETAPE_LOBBY_MAP = {
+    e1: 'etape1.html',
+    e2: 'index.html',
+    e3: 'etape3.html',
+    e4: 'etape4.html'
+  };
 
   const tabsEl = document.getElementById('etape-tabs');
+
   if(tabsEl){
     tabsEl.innerHTML = window.ETAPES.map(e => {
       const isActive = e.id === window.CURRENT_ETAPE_ID;
       const href = window.ETAPE_SOLO_MAP[e.id] || '#';
+
       if(isActive){
         return `<span class="etape-tab active" aria-current="page">${e.label} <span class="e-num">${e.sublabel}</span></span>`;
       }
+
       return `<a class="etape-tab" href="${href}">${e.label} <span class="e-num">${e.sublabel}</span></a>`;
     }).join('');
   }
 
   const me = window.ETAPES.find(e => e.id === window.CURRENT_ETAPE_ID);
+
   if(me){
     const h1 = document.getElementById('app-title-h1');
     const sub = document.getElementById('app-title-sub');
+
     if(h1) h1.textContent = me.titleSolo;
     if(sub) sub.textContent = 'Solo practice mode';
+
     document.title = me.titleSolo;
   }
 
@@ -244,7 +263,8 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   if(back) back.href = window.ETAPE_LOBBY_MAP[window.CURRENT_ETAPE_ID] || 'index.html';
 })();
 </script>
-<script src="etapes/etape3.js"></script>
+
+<script src="etapes/etape4.js"></script>
 <script>
 // ====== VOCAB DATA (loaded from etapes/etape*.js via window.ETAPE_DATA) ======
 if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
