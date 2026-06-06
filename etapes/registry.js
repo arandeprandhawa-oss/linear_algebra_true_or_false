@@ -43,7 +43,17 @@ window.ETAPES = [
     titleSolo: 'French Flashcards · Solo · MODL-1101 Étape 3',
     sub: 'Race a friend, or practice solo',
     file: 'etapes/etape3.js'
+  },
+{
+    id: 'e4',
+    label: 'Étape 4',
+    sublabel: '4ᵉ',
+    titleMulti: 'French Flashcards · 1v1 MODL-1101 Étape 4',
+    titleSolo: 'French Flashcards · Solo · MODL-1101 Étape 4',
+    sub: 'Race a friend, or practice solo',
+    file: 'etapes/etape4.js'
   }
+  
 ];
 
 window.DEFAULT_ETAPE = 'e3';
