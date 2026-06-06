@@ -255,8 +255,19 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   // This page is the Étape 3 page.
   // Map each étape id -> the file that hosts its 1v1 multiplayer lobby.
   window.CURRENT_ETAPE_ID = 'e3';
-  window.ETAPE_PAGE_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
-  window.ETAPE_SOLO_MAP = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
+  window.ETAPE_PAGE_MAP = {
+  e1: 'etape1.html',
+  e2: 'index.html',
+  e3: 'etape3.html',
+  e4: 'etape4.html'
+};
+
+window.ETAPE_SOLO_MAP = {
+  e1: 'solo1.html',
+  e2: 'solo.html',
+  e3: 'solo3.html',
+  e4: 'solo4.html'
+};
 
   const tabsEl = document.getElementById('etape-tabs');
 
