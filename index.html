@@ -235,9 +235,19 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   // This page is the Étape 2 (default) page. The other étape lives in etape1.html.
   // Map each étape id -> the file that hosts its 1v1 multiplayer lobby.
   window.CURRENT_ETAPE_ID = 'e2';
-  window.ETAPE_PAGE_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html' };
-window.ETAPE_SOLO_MAP = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html' };
+  window.ETAPE_PAGE_MAP = {
+  e1: 'etape1.html',
+  e2: 'index.html',
+  e3: 'etape3.html',
+  e4: 'etape4.html'
+};
 
+window.ETAPE_SOLO_MAP = {
+  e1: 'solo1.html',
+  e2: 'solo.html',
+  e3: 'solo3.html',
+  e4: 'solo4.html'
+};
   // Render the tab bar from the registry. Adding Étape 3 later means:
   //   1. add an entry to registry.js
   //   2. add 'e3' to ETAPE_PAGE_MAP and ETAPE_SOLO_MAP in each shell
