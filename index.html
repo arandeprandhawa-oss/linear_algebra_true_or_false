@@ -235,7 +235,6 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="audio-announce-inner">
     <span class="aa-icon">🔊</span>
     <span class="aa-text">Audio pronunciation added!<span class="aa-sub"> Hear every card read aloud in Solo and 1v1 modes.</span></span>
-    <button class="audio-dismiss" onclick="dismissAnnounce()" title="Dismiss">✕</button>
   </div>
 </div>
 <div class="app-title">
@@ -1167,12 +1166,9 @@ function toggleMute(){
 
 // ====== AUDIO ANNOUNCEMENT BANNER ======
 (function(){
-  const KEY = 'fq-audio-banner-done';
-  const el  = document.getElementById('audio-announce');
+  const el = document.getElementById('audio-announce');
   if(!el) return;
-  if(localStorage.getItem(KEY)){ el.style.display='none'; return; }
   window.dismissAnnounce = function(){
-    localStorage.setItem(KEY,'1');
     el.style.opacity='0';
     el.style.transition='opacity .25s';
     setTimeout(()=>{ el.style.display='none'; },260);
