@@ -1,255 +1,410 @@
-[read.md](https://github.com/user-attachments/files/28659044/read.md)
-# french-quiz — Maintenance & Local Setup Guide
+# french-quiz — Maintenance Guide
 
-Practical how-to for the [french-quiz](https://arandeprandhawa-oss.github.io/french-quiz/) app.
+Live site: <https://arandeprandhawa-oss.github.io/french-quiz/>
+
+Everything below is **copy-paste PowerShell**. No local server, no manual file hunting.
+After every change: push → wait ~1 min → **Ctrl + F5** to see it live.
 
 ---
 
-## File map (what touches what)
+## Setup — run once
+
+```powershell
+cd C:\Users\Gurda\Downloads\french-quiz-repo
+```
+
+> This is your repo folder. Run every command in this guide from here.
+
+---
+
+## File map
 
 ```
-index.html        ← Étape 2 (default landing) · 1v1 lobby
-etape1.html       ← Étape 1 · 1v1 lobby
-etape3.html       ← Étape 3 · 1v1 lobby
-solo.html         ← Étape 2 · Solo (spaced repetition)
-solo1.html        ← Étape 1 · Solo
-solo3.html        ← Étape 3 · Solo
+index.html          <- Etape 2 (default landing) · 1v1 lobby
+etape1.html         <- Etape 1 · 1v1 lobby
+etape3.html         <- Etape 3 · 1v1 lobby
+etape4.html         <- Etape 4 · 1v1 lobby
+solo.html           <- Etape 2 · Solo (spaced repetition + audio)
+solo1.html          <- Etape 1 · Solo
+solo3.html          <- Etape 3 · Solo
+solo4.html          <- Etape 4 · Solo
 etapes/
-  registry.js     ← single source of truth: which étapes exist
-  etape1.js        ← Étape 1 vocab + category labels
-  etape2.js        ← Étape 2 vocab + category labels
-  etape3.js        ← Étape 3 vocab + category labels
-  etape4.js        ← Étape 4 vocab (not yet wired into registry)
+  registry.js       <- single source of truth: which etapes exist
+  etape1.js         <- Etape 1 vocab + category labels
+  etape2.js         <- Etape 2 vocab + category labels
+  etape3.js         <- Etape 3 vocab + category labels
+  etape4.js         <- Etape 4 vocab + category labels
+audio/              <- pre-generated mp3 files (one per French card)
+audio-manifest.json <- maps French text to audio filename
+generate-audio.js   <- Node script to regenerate mp3s via Google TTS
 ```
-
-Each étape has **three** moving parts: a vocab file (`etapes/etapeN.js`), a registry entry
-(`registry.js`), and a pair of HTML shells (`etapeN.html` + `soloN.html`).
 
 ---
 
-## 1a. Adding new cards to an existing étape
+## 1. Adding new cards — full workflow
 
-Open the relevant `etapes/etapeN.js` and add an object to the `vocab` array. The shape:
+---
+
+### Step 1 — open the vocab file in Notepad
+
+```powershell
+notepad etapes\etape2.js
+```
+
+Change `etape2` to `etape1`, `etape3`, or `etape4` depending on which midterm the card belongs to.
+
+---
+
+### Step 2 — find the right spot in the file
+
+The file is organised into category blocks that look like this:
+
+```
+// ===== CLASSROOM OBJECTS — Étape 2 additions (Page 22, 32) =====
+{en:"a notebook",  fr:"un cahier",  alts:["un cahier"],  needsHyphen:false, needsAccent:false, gender:"m", guessGender:true, category:"classroom"},
+{en:"a pencil",    fr:"un crayon",  alts:["un crayon"],  needsHyphen:false, needsAccent:false, gender:"m", guessGender:true, category:"classroom"},
+...
+
+// ===== USEFUL EXPRESSIONS =====
+{en:"There is/are a...", fr:"Il y a un...", ...},
+...
+```
+
+**Scroll to the category your card belongs to** and paste your new card on a new line
+directly below the last card in that block, before the next `// =====` comment.
+
+The end of the entire vocab list looks like this — do **not** paste below this point:
+
+```
+    {en:"last existing card",  fr:"...",  ...},   ← paste above here, inside the list
+  ],                                               ← this closes the vocab array — stop here
+  categoryLabels: {
+```
+
+---
+
+### Step 3 — format the card correctly
+
+Every card is one line. Copy this template and fill in your values:
 
 ```js
-{
-  en: "a book",            // English prompt
-  fr: "un livre",          // canonical French answer (shown when revealed)
-  alts: ["un livre"],      // every accepted answer (add punctuation/no-punctuation variants)
-  needsHyphen: false,      // true if the answer contains a required hyphen (e.g. Levez-vous.)
-  needsAccent: false,      // true if the answer contains a required accent (é, ç, etc.)
-  gender: "m",             // "m", "f", or "both"
-  guessGender: true,       // optional — prompts the learner to supply the article's gender
-  category: "classroom"    // MUST match a key in categoryLabels (see 1b)
+{en:"ENGLISH PROMPT", fr:"FRENCH ANSWER", alts:["FRENCH ANSWER"], needsHyphen:false, needsAccent:false, gender:"m", guessGender:true, category:"classroom"},
+```
+
+**Field-by-field guide:**
+
+| Field | What to put | Example |
+|---|---|---|
+| `en` | English prompt exactly as you want it shown | `"to study"` |
+| `fr` | The canonical French answer shown on reveal | `"étudier"` |
+| `alts` | All accepted spellings the checker should accept | `["étudier"]` |
+| `needsHyphen` | `true` only if the answer contains a required hyphen | `true` → `quatre-vingts` |
+| `needsAccent` | `true` only if the answer contains é ç ê î ô û etc. | `true` → `étudier` |
+| `gender` | `"m"` masculine · `"f"` feminine · `"both"` same form | `"f"` |
+| `guessGender` | `true` = learner must type the article (un/une/le/la) | `true` |
+| `category` | Must exactly match a key in `categoryLabels` at the bottom of the file | `"classroom"` |
+
+**`alts` tips — include every form a learner might reasonably type:**
+
+```js
+// Simple word — one alt is fine
+alts:["étudier"]
+
+// Sentence with optional trailing punctuation
+alts:["Qu'est-ce que c'est", "Qu'est-ce que c'est ?", "Qu'est-ce que c'est?"]
+
+// Sentence with exclamation space variants
+alts:["Écoutez", "Écoutez !", "Écoutez!"]
+```
+
+**Real examples to copy from:**
+
+```js
+// Simple noun, masculine, learner guesses article
+{en:"a book", fr:"un livre", alts:["un livre"], needsHyphen:false, needsAccent:false, gender:"m", guessGender:true, category:"classroom"},
+
+// Accented word, feminine, learner guesses article
+{en:"a student (f.)", fr:"une étudiante", alts:["une étudiante"], needsHyphen:false, needsAccent:true, gender:"f", guessGender:true, category:"classroom"},
+
+// Number with required hyphen
+{en:"eighty", fr:"quatre-vingts", alts:["quatre-vingts","quatre vingts"], needsHyphen:true, needsAccent:false, gender:"both", category:"numbers"},
+
+// Question with punctuation variants
+{en:"What is it?", fr:"Qu'est-ce que c'est ?", alts:["Qu'est-ce que c'est","Qu'est-ce que c'est ?","Qu'est-ce que c'est?"], needsHyphen:false, needsAccent:false, gender:"both", category:"identify"},
+```
+
+**Save the file** (Ctrl + S), then close Notepad.
+
+---
+
+### Step 4 — push to GitHub
+
+```powershell
+git add -A
+git commit -m "etape2: add new cards"
+git push
+```
+
+Cards appear on the live site automatically — no HTML changes needed.
+
+---
+
+### Optional — add audio for the new cards
+
+```powershell
+node generate-audio.js
+git add audio\ audio-manifest.json
+git commit -m "add audio for new cards"
+git push
+```
+
+---
+
+### Or — skip Notepad entirely and inject with PowerShell
+
+If you don't want to open the file at all, paste this block and run it.
+Edit only the top section.
+
+```powershell
+# ── CHANGE THESE TWO THINGS ──────────────────────────────────────────────
+$etape = "etape2"   # etape1 / etape2 / etape3 / etape4
+
+$newCards = @"
+    {en:"a book", fr:"un livre", alts:["un livre"], needsHyphen:false, needsAccent:false, gender:"m", guessGender:true, category:"classroom"},
+    {en:"a student (f.)", fr:"une etudiante", alts:["une etudiante"], needsHyphen:false, needsAccent:true, gender:"f", guessGender:true, category:"classroom"},
+"@
+# ── DO NOT EDIT BELOW THIS LINE ──────────────────────────────────────────
+
+$file    = "etapes\$etape.js"
+$content = Get-Content $file -Raw -Encoding UTF8
+$anchor  = "`n  ],`n  categoryLabels:"
+$content = $content.Replace($anchor, "`n$newCards$anchor")
+[System.IO.File]::WriteAllText((Resolve-Path $file), $content, [System.Text.UTF8Encoding]::new($false))
+Write-Host "Cards added to $file" -ForegroundColor Green
+
+git add -A
+git commit -m "${etape}: add new cards"
+git push
+```
+
+> This inserts your cards at the **end of the vocab array**, just before `categoryLabels`.
+> If you want cards under a specific category comment, use the Notepad method instead.
+
+
+## 1b. Adding a new category
+
+Run this if a card uses a `category` value that does not exist yet.
+
+```powershell
+# ── CHANGE THESE ─────────────────────────────────────────────────────────
+$etape    = "etape2"
+$catKey   = "weather"    # used in the card's category: field
+$catLabel = "Weather"    # display name shown on the filter chip
+# ── DO NOT EDIT BELOW THIS LINE ──────────────────────────────────────────
+
+$file = "etapes\$etape.js"
+$c    = Get-Content $file -Raw -Encoding UTF8
+$c    = $c -replace 'all:"Random"', "all:`"Random`", $catKey`:`"$catLabel`""
+[System.IO.File]::WriteAllText((Resolve-Path $file), $c, [System.Text.UTF8Encoding]::new($false))
+Write-Host "Category '$catKey' added to $file" -ForegroundColor Green
+
+git add -A
+git commit -m "${etape}: add $catKey category"
+git push
+```
+
+---
+
+## 2. Adding audio for new cards
+
+After adding cards, generate their mp3 files. Existing files are skipped automatically.
+
+```powershell
+node generate-audio.js
+
+git add audio\ audio-manifest.json
+git commit -m "add audio for new cards"
+git push
+```
+
+> Requires Node.js and a Google Cloud TTS key configured in `generate-audio.js`.
+> If you skip this step, new cards just show no audio — everything else still works.
+
+---
+
+## 3. Changing the auto-advance timer speed (solo mode)
+
+Changes the timer speed across all four solo pages at once.
+
+```powershell
+# ── CHANGE THIS ───────────────────────────────────────────────────────────
+$ms = 3000   # milliseconds: 3000 = 3 sec, 5000 = 5 sec, 1500 = 1.5 sec
+# ── DO NOT EDIT BELOW THIS LINE ───────────────────────────────────────────
+
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+foreach ($f in @("solo.html","solo1.html","solo3.html","solo4.html")) {
+    $c = Get-Content $f -Raw -Encoding UTF8
+    $c = $c -replace 'const autoDelay\s*=\s*\d+', "const autoDelay = $ms"
+    [System.IO.File]::WriteAllText((Resolve-Path $f), $c, $utf8)
+    Write-Host "Updated $f" -ForegroundColor Green
+}
+
+git add -A
+git commit -m "set auto-advance timer to ${ms}ms"
+git push
+```
+
+---
+
+## 4. Changing the default landing tab
+
+Sets which etape tab is active when someone first opens the site.
+
+```powershell
+# ── CHANGE THIS ───────────────────────────────────────────────────────────
+$defaultEtape = "e2"   # e1 / e2 / e3 / e4
+# ── DO NOT EDIT BELOW THIS LINE ───────────────────────────────────────────
+
+$file = "etapes\registry.js"
+$c = Get-Content $file -Raw -Encoding UTF8
+$c = $c -replace "window\.DEFAULT_ETAPE\s*=\s*'e\d+'", "window.DEFAULT_ETAPE = '$defaultEtape'"
+[System.IO.File]::WriteAllText((Resolve-Path $file), $c, [System.Text.UTF8Encoding]::new($false))
+Write-Host "Default etape set to $defaultEtape" -ForegroundColor Green
+
+git add -A
+git commit -m "set default etape to $defaultEtape"
+git push
+```
+
+---
+
+## 5. Adding a whole new etape (end-to-end)
+
+Change the variables at the top. The script creates all files and updates all maps automatically.
+
+```powershell
+# ── CHANGE THESE ─────────────────────────────────────────────────────────
+$N          = "5"
+$id         = "e5"
+$label      = "Etape 5"
+$sublabel   = "5e"
+$titleMulti = "French Flashcards · 1v1 MODL-1101 Etape 5"
+$titleSolo  = "French Flashcards · Solo · MODL-1101 Etape 5"
+$copyFrom   = "4"       # etape number to copy the HTML shells from
+# ── DO NOT EDIT BELOW THIS LINE ──────────────────────────────────────────
+
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+
+# 1. Vocab file — opens in Notepad for you to fill in
+Copy-Item "etapes\etape$copyFrom.js" "etapes\etape$N.js"
+Write-Host "Created etapes\etape$N.js — replace the vocab then save and close Notepad" -ForegroundColor Yellow
+notepad "etapes\etape$N.js"
+
+# 2. HTML shells
+Copy-Item "etape$copyFrom.html" "etape$N.html"
+Copy-Item "solo$copyFrom.html"  "solo$N.html"
+
+$c = Get-Content "etape$N.html" -Raw -Encoding UTF8
+$c = $c -replace "window\.CURRENT_ETAPE_ID\s*=\s*'e\d+'", "window.CURRENT_ETAPE_ID = '$id'"
+$c = $c -replace "etapes/etape$copyFrom\.js", "etapes/etape$N.js"
+[System.IO.File]::WriteAllText((Resolve-Path "etape$N.html"), $c, $utf8)
+
+$c = Get-Content "solo$N.html" -Raw -Encoding UTF8
+$c = $c -replace "etapes/etape$copyFrom\.js", "etapes/etape$N.js"
+[System.IO.File]::WriteAllText((Resolve-Path "solo$N.html"), $c, $utf8)
+
+# 3. Update ETAPE_PAGE_MAP and ETAPE_SOLO_MAP in every shell
+$allShells = @("index.html","etape1.html","etape3.html","etape4.html","etape$N.html",
+               "solo.html","solo1.html","solo3.html","solo4.html","solo$N.html")
+foreach ($f in $allShells) {
+    $c = Get-Content $f -Raw -Encoding UTF8
+    $c = $c -replace "(e$copyFrom\s*:\s*'etape$copyFrom\.html'`n\};)", "e$copyFrom`: 'etape$copyFrom.html',`n  $id`: 'etape$N.html'`n};"
+    $c = $c -replace "(e$copyFrom\s*:\s*'solo$copyFrom\.html'`n\};)",  "e$copyFrom`: 'solo$copyFrom.html',`n  $id`: 'solo$N.html'`n};"
+    [System.IO.File]::WriteAllText((Resolve-Path $f), $c, $utf8)
+    Write-Host "Updated page maps in $f" -ForegroundColor Cyan
+}
+
+# 4. Add entry to registry.js
+$regEntry = @"
+
+  {
+    id: '$id',
+    label: '$label',
+    sublabel: '${N}e',
+    titleMulti: '$titleMulti',
+    titleSolo: '$titleSolo',
+    sub: 'Race a friend, or practice solo',
+    file: 'etapes/etape$N.js'
+  }
+"@
+$reg = Get-Content "etapes\registry.js" -Raw -Encoding UTF8
+$reg = $reg.Replace("`n];", "$regEntry`n];")
+[System.IO.File]::WriteAllText((Resolve-Path "etapes\registry.js"), $reg, $utf8)
+
+Write-Host ""
+Write-Host "Files created. After saving the vocab file, run:" -ForegroundColor Yellow
+Write-Host "  node generate-audio.js" -ForegroundColor White
+Write-Host "  git add -A && git commit -m 'add etape$N' && git push" -ForegroundColor White
+```
+
+After filling in the vocab in Notepad and saving:
+
+```powershell
+node generate-audio.js
+git add -A
+git commit -m "add etape$N with vocab, shells, audio"
+git push
+```
+
+---
+
+## 6. Updating Firestore security rules
+
+The 1v1 mode writes to Cloud Firestore (project `french-quiz-79a0d`).
+Update the rules whenever you add etapes or change what the client writes.
+
+### Via the Firebase console (easiest)
+
+1. [Firebase Console](https://console.firebase.google.com/) → `french-quiz-79a0d`
+2. **Firestore Database → Rules** → edit → **Publish**
+
+Current rules:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rooms/{roomId} {
+      allow read, write: if true;
+    }
+  }
 }
 ```
 
-Tips:
+### Via PowerShell (CLI)
 
-- **`alts` should include every reasonable form** the learner might type — with and without
-  trailing punctuation, with/without spaces before `!` or `?`. Look at existing command
-  entries (`Écoutez !`) for the pattern: `alts:["Écoutez","Écoutez !","Écoutez!"]`.
-- Group new entries under the matching `// ===== CATEGORY =====` comment block to keep the
-  file readable.
-- That's it — the lobby, solo page, and category chips read the vocab automatically. No HTML
-  edit needed for new cards in an existing étape.
-
-## 1b. Adding a new category to an étape
-
-Categories drive the filter chips. If a card uses a `category` value that isn't yet known,
-add it to the `categoryLabels` map at the bottom of the same `etapeN.js`:
-
-```js
-categoryLabels: {
-  all: "Random", classroom: "Classroom", commands: "Commands", people: "People",
-  // add your new one:
-  weather: "Weather"
-}
+```powershell
+npm install -g firebase-tools
+firebase login
+firebase deploy --only firestore:rules
 ```
 
-The key (`weather`) must exactly match the `category:` string on the cards. The value is the
-display label. `all` is special (the "Random" chip) — leave it in.
+To check which collections the app writes to:
+
+```powershell
+Select-String -Path "*.html" -Pattern "setDoc|doc\(db," | Select-Object Line
+```
 
 ---
 
-## 2. Updating the registry (adding a whole new étape)
+## Quick reference
 
-`etapes/registry.js` is the single source of truth for which étapes exist. To wire up a new
-one (e.g. Étape 4):
-
-1. **Create the vocab file** `etapes/etape4.js` with the same shape as the others:
-   ```js
-   window.ETAPE_DATA = {
-     vocab: [ /* ...cards... */ ],
-     categoryLabels: { all: "Random", /* ... */ }
-   };
-   ```
-
-2. **Add an entry** to the `window.ETAPES` array in `registry.js`:
-   ```js
-   {
-     id: 'e4',
-     label: 'Étape 4',
-     sublabel: '4ᵉ',
-     titleMulti: 'French Flashcards · 1v1 MODL-1101 Étape 4',
-     titleSolo:  'French Flashcards · Solo · MODL-1101 Étape 4',
-     sub: 'Race a friend, or practice solo',
-     file: 'etapes/etape4.js'
-   }
-   ```
-
-3. **Create the two HTML shells.** Copy an existing pair (e.g. `etape3.html` → `etape4.html`
-   and `solo3.html` → `solo4.html`). In each new shell change the one identifying line:
-   - In `etape4.html`: `window.CURRENT_ETAPE_ID = 'e4';`
-   - Load the right vocab file: `<script src="etapes/etape4.js"></script>`
-
-4. **Register the new pages in the page maps.** Every shell contains these two objects — add
-   the `e4` key to **all** of them (in `index.html`, `etape1.html`, `etape3.html`, and the
-   new `etape4.html`, plus the solo shells):
-   ```js
-   window.ETAPE_PAGE_MAP = { e1:'etape1.html', e2:'index.html', e3:'etape3.html', e4:'etape4.html' };
-   window.ETAPE_SOLO_MAP = { e1:'solo1.html', e2:'solo.html', e3:'solo3.html', e4:'solo4.html' };
-   ```
-
-5. **(Optional) change the default landing tab** with `window.DEFAULT_ETAPE = 'e4';` in
-   `registry.js`.
-
-After this the tab bar renders the new étape automatically from the registry.
-
----
-
-## 3. Updating Firestore security rules
-
-The 1v1 mode writes game/lobby documents to Cloud Firestore (project `french-quiz-79a0d`).
-The Firebase config lives inline in the `<script type="module">` block of each lobby HTML.
-
-When you add étapes or change which collections/fields the client writes, the Firestore
-**rules** must allow it, or writes will be silently rejected.
-
-1. In the **Firebase console** → Firestore Database → **Rules** tab, edit the ruleset. A
-   minimal pattern for this app (game rooms keyed by a short room code) looks like:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       // game/lobby rooms — open read/write so two anonymous players can sync
-       match /rooms/{roomId} {
-         allow read, write: if true;
-       }
-     }
-   }
-   ```
-   Adjust the collection name (`rooms`) to match what the client actually writes — check the
-   `setDoc`/`doc(db, "...")` calls in the module script of the lobby pages.
-
-2. If any étape introduces a **new category id or new collection** that the rules whitelist by
-   name, add it to the rules before relying on it.
-
-3. **Deploy the rules.** Either click **Publish** in the console, or from the CLI:
-   ```bash
-   npm install -g firebase-tools
-   firebase login
-   firebase deploy --only firestore:rules
-   ```
-   (CLI deploy requires a `firestore.rules` file and a `firebase.json` in the project root.)
-
-> Note: the rules above are wide-open, which is fine for a casual classroom game but means
-> anyone can read/write rooms. Tighten them (e.g. validate document shape, limit field sizes,
-> add expiry) if you want stricter control.
-
----
-
-## 4. Download and run it locally (Windows + PowerShell)
-
-The app is plain static HTML/JS — no build step. You just need the files and a local web
-server. Opening the HTML by double-clicking **won't work**, because the scripts use ES
-modules, which browsers block over the `file://` protocol. You have to serve it over
-`http://`.
-
-### Prerequisites — install these first
-
-You only need **one** of Git or Python, but installing both is easiest.
-
-1. **Git for Windows** (to download the repo with one command):
-   - Download from <https://git-scm.com/download/win> and run the installer (accept the
-     defaults).
-   - To verify, open PowerShell and run:
-     ```powershell
-     git --version
-     ```
-     You should see something like `git version 2.x.x`.
-
-2. **Python 3** (to run the local web server — simplest option on Windows):
-   - Install from the Microsoft Store (search "Python 3.12") or from
-     <https://www.python.org/downloads/>. If you use the python.org installer, **check the box
-     "Add Python to PATH"** on the first screen.
-   - To verify:
-     ```powershell
-     python --version
-     ```
-     You should see `Python 3.x.x`. (If `python` does nothing, try `py --version`.)
-
-> A modern web browser (Edge, Chrome, Firefox) is the only other thing you need.
-
-### Step by step in PowerShell
-
-Open PowerShell (Start menu → type "PowerShell" → Enter), then run these one at a time:
-
-1. **Go to where you want the project to live** (e.g. your Documents folder):
-   ```powershell
-   cd $HOME\Documents
-   ```
-
-2. **Download the repo.**
-
-   *Option A — with Git (recommended):*
-   ```powershell
-   git clone https://github.com/arandeprandhawa-oss/french-quiz.git
-   ```
-
-   *Option B — without Git (download the ZIP):* go to the repo page in your browser, click the
-   green **Code** button → **Download ZIP**, then unzip it into `Documents`. The folder may be
-   named `french-quiz-main`.
-
-3. **Move into the project folder:**
-   ```powershell
-   cd french-quiz
-   ```
-   (If you used the ZIP, the folder is probably `french-quiz-main`, so run
-   `cd french-quiz-main` instead.)
-
-4. **Start a local web server in this folder:**
-   ```powershell
-   python -m http.server 8000
-   ```
-   If `python` isn't recognized, use:
-   ```powershell
-   py -m http.server 8000
-   ```
-   PowerShell will print something like `Serving HTTP on :: port 8000`. Leave this window
-   **open** — it's running the server. (If Windows Firewall pops up asking for permission,
-   "Allow access" on private networks is fine.)
-
-5. **Open the app in your browser.** Go to:
-   ```
-   http://localhost:8000/
-   ```
-   The default landing page is Étape 2 (`index.html`). Use the tab bar to switch étapes, or go
-   straight to a page like `http://localhost:8000/solo.html`.
-
-6. **To stop the server**, click back into the PowerShell window and press **Ctrl + C**.
-
-7. **To run it again later**, just reopen PowerShell and repeat steps 3–5 (no need to
-   re-download). To get the latest updates first, run `git pull` inside the folder before
-   starting the server.
-
-### Notes for local use
-
-- **Solo mode works fully offline** once the page is loaded — spaced repetition runs in the
-  browser, no network needed.
-- **1v1 multiplayer needs the internet** because it talks to the live Firebase project. It
-  will work locally as long as `localhost` is allowed in Firebase. If multiplayer fails
-  locally, add `localhost` under Firebase console → Authentication → Settings →
-  **Authorized domains**.
-- No API keys to set up — the Firebase web config is public by design and already embedded in
-  the HTML.
+| Task | Command |
+|---|---|
+| Go to repo | `cd C:\Users\Gurda\Downloads\french-quiz-repo` |
+| Push all changes | `git add -A && git commit -m "message" && git push` |
+| Check what changed | `git status` |
+| See recent commits | `git log --oneline -10` |
+| Undo unsaved file edit | `git checkout -- filename.html` |
+| Generate audio | `node generate-audio.js` |
+| Search all files for text | `Select-String -Path "*" -Pattern "your text"` |
