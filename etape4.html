@@ -254,6 +254,13 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .etape-tab .e-num{font-size:10px;font-weight:500;color:var(--text-3);background:rgba(0,0,0,0.06);padding:2px 7px;border-radius:999px;letter-spacing:0.02em}
 .etape-tab.active .e-num{color:#fff;background:#185FA5}
 
+.audio-announce{max-width:700px;margin:0 auto 1rem;padding:0 1rem}
+.audio-announce-inner{display:flex;align-items:center;gap:10px;background:#EAF4E8;border:0.5px solid #A8D5A2;border-radius:10px;padding:10px 14px;font-size:13px;color:#2D6B27}
+.audio-announce-inner .aa-icon{font-size:1.3em;flex-shrink:0}
+.audio-announce-inner .aa-text{flex:1;font-weight:500}
+.audio-announce-inner .aa-sub{font-weight:400;opacity:0.8;margin-left:4px}
+.audio-dismiss{background:none;border:none;cursor:pointer;font-size:16px;color:#2D6B27;opacity:0.6;padding:0 2px;line-height:1;flex-shrink:0}
+.audio-dismiss:hover{opacity:1}
 </style>
 </head>
 <body>
@@ -267,6 +274,13 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="sub" id="app-title-sub">Race a friend, or practice solo</div>
 </div>
 
+<div class="audio-announce" id="audio-announce">
+  <div class="audio-announce-inner">
+    <span class="aa-icon">🔊</span>
+    <span class="aa-text">Audio pronunciation added!<span class="aa-sub">Hear every card read aloud in Solo mode.</span></span>
+    <button class="audio-dismiss" onclick="dismissAnnounce()" title="Dismiss">✕</button>
+  </div>
+</div>
 <div id="screen-lobby"></div>
 <div id="screen-waiting" style="display:none"></div>
 <div id="screen-game" style="display:none"></div>
@@ -1151,7 +1165,21 @@ if(codeFromUrl && /^[A-Z]{4}$/.test(codeFromUrl.toUpperCase())){
 }
 
 </script>
-  <script src="pronunciation-google.js"></script>
+  <script src="pronunciation-google.js">
+// ====== AUDIO ANNOUNCEMENT BANNER ======
+(function(){
+  const key = 'fq-audio-announce-dismissed';
+  const el = document.getElementById('audio-announce');
+  if(!el) return;
+  if(localStorage.getItem(key)) { el.style.display='none'; return; }
+})();
+function dismissAnnounce(){
+  localStorage.setItem('fq-audio-announce-dismissed','1');
+  const el=document.getElementById('audio-announce');
+  if(el){ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.style.display='none',300); }
+}
+
+</script>
 </body>
 </html>
 

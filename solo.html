@@ -57,10 +57,14 @@ body{background:#FAF9F6;margin:0;font-family:var(--font-sans);color:var(--color-
 .speaker-btn:hover{opacity:1;background:var(--color-background-secondary)}
 .answer-box{display:inline-flex;align-items:center;gap:4px}
 .mcorrect-row{display:flex;align-items:center;gap:4px}
+.back-bar{display:flex;align-items:center;justify-content:space-between}
+.mute-btn{background:none;border:0.5px solid var(--color-border-secondary);cursor:pointer;font-size:13px;padding:7px 13px;border-radius:var(--border-radius-md);color:var(--color-text-secondary);background:var(--color-background-primary);font-family:var(--font-sans);display:inline-flex;align-items:center;gap:5px;transition:background .15s}
+.mute-btn:hover{background:var(--color-background-secondary)}
+.mute-btn.muted{color:#A32D2D;border-color:#F09595}
 </style>
 <nav class="etape-tabs-wrap" aria-label="Choose étape"><div class="etape-tabs" id="etape-tabs"></div></nav>
 <div class="etape-title"><h1 id="app-title-h1">French Flashcards · Solo</h1><div class="sub" id="app-title-sub">Practice mode</div></div>
-<div class="back-bar"><a href="index.html" class="back-link" id="back-link">← Back to 1v1 lobby</a></div>
+<div class="back-bar"><a href="index.html" class="back-link" id="back-link">← Back to 1v1 lobby</a><button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle audio">🔊 Audio on</button></div>
 <style>
 *{box-sizing:border-box}
 h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
@@ -260,6 +264,25 @@ window.ETAPE_LOBBY_MAP = {
 </script>
 <script src="etapes/etape2.js"></script>
 <script>
+
+// ====== MUTE TOGGLE ======
+let audioMuted = localStorage.getItem('fq-muted') === '1';
+function applyMuteUI(){
+  const btn = document.getElementById('mute-btn');
+  if(!btn) return;
+  btn.textContent = audioMuted ? '🔇 Muted' : '🔊 Audio on';
+  btn.classList.toggle('muted', audioMuted);
+}
+function toggleMute(){
+  audioMuted = !audioMuted;
+  localStorage.setItem('fq-muted', audioMuted ? '1' : '0');
+  applyMuteUI();
+}
+// patch playAudio to respect mute
+const _origPlay = playAudio;
+window.playAudio = function(fr){ if(!audioMuted) _origPlay(fr); };
+document.addEventListener('DOMContentLoaded', applyMuteUI);
+
 // ====== VOCAB DATA (loaded from etapes/etape*.js via window.ETAPE_DATA) ======
 if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
   document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape2.js</code> is reachable.</div>';
