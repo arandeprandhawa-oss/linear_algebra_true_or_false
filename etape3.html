@@ -234,6 +234,21 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .audio-announce-inner .aa-sub{font-weight:400;opacity:0.8;margin-left:4px}
 .audio-dismiss{background:none;border:none;cursor:pointer;font-size:16px;color:#2D6B27;opacity:0.6;padding:0 2px;line-height:1;flex-shrink:0}
 .audio-dismiss:hover{opacity:1}
+.audio-announce{max-width:700px;margin:0 auto 1rem;padding:0 1rem}
+.audio-announce-inner{display:flex;align-items:center;gap:10px;background:#EAF4E8;border:0.5px solid #A8D5A2;border-radius:10px;padding:10px 14px;font-size:13px;color:#2D6B27}
+.audio-announce-inner .aa-icon{font-size:1.3em;flex-shrink:0}
+.audio-announce-inner .aa-text{flex:1;font-weight:500}
+.audio-announce-inner .aa-sub{font-weight:400;opacity:0.8;margin-left:4px}
+.audio-dismiss{background:none;border:none;cursor:pointer;font-size:16px;color:#2D6B27;opacity:0.6;padding:0 2px;line-height:1;flex-shrink:0}
+.audio-dismiss:hover{opacity:1}
+.mute-btn{position:absolute;top:10px;right:12px;background:none;border:0.5px solid var(--border);cursor:pointer;font-size:12px;padding:5px 10px;border-radius:20px;color:var(--text-3);background:var(--surface-2);font-family:inherit;display:inline-flex;align-items:center;gap:4px;transition:background .15s,color .15s;z-index:1}
+.mute-btn:hover{background:var(--border)}
+.mute-btn.muted{color:#A32D2D;border-color:#F09595;background:#FEF0F0}
+.flashcard{position:relative}
+.speaker-btn{background:none;border:0;cursor:pointer;font-size:1em;padding:2px 6px;margin-left:8px;border-radius:6px;opacity:0.7;transition:opacity .15s;vertical-align:middle}
+.speaker-btn:hover{opacity:1;background:rgba(0,0,0,0.06)}
+.answer-box{display:inline-flex;align-items:center;gap:4px}
+.mcorrect-row{display:flex;align-items:center;gap:4px}
 </style>
 </head>
 <body>
@@ -247,6 +262,13 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="sub" id="app-title-sub">Race a friend, or practice solo</div>
 </div>
 
+<div class="audio-announce" id="audio-announce">
+  <div class="audio-announce-inner">
+    <span class="aa-icon">🔊</span>
+    <span class="aa-text">Audio pronunciation added!<span class="aa-sub">Hear every card read aloud in Solo mode.</span></span>
+    <button class="audio-dismiss" onclick="dismissAnnounce()" title="Dismiss">✕</button>
+  </div>
+</div>
 <div class="audio-announce" id="audio-announce">
   <div class="audio-announce-inner">
     <span class="aa-icon">🔊</span>
@@ -825,6 +847,7 @@ function renderGame(){
       </div>
     </div>
     <div class="flashcard">
+      <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle audio">🔊</button>
       <div class="top-badges" id="top-badges"></div>
       <div class="prompt-label">Translate to French</div>
       <div class="prompt" id="prompt"></div>
@@ -870,6 +893,7 @@ function renderGame(){
   // Build accent bar
   buildAccentBar(inp);
   showCard();
+  setTimeout(applyMuteUI, 0);
 }
 
 // Accent bar — clickable buttons that insert the character at the cursor position
@@ -972,8 +996,11 @@ async function checkAnswer(){
   fb.className='feedback-text '+(ok?'good':'bad');
   const box=document.createElement('div');
   box.className='answer-box '+(ok?'good':'bad');
-  box.textContent='Answer: '+v.fr;
+  const txt=document.createElement('span');txt.textContent='Answer: '+v.fr;box.appendChild(txt);
+  const spk=document.createElement('button');spk.type='button';spk.className='speaker-btn';
+  spk.textContent='🔊';spk.onclick=function(){_playRaw(v.fr);};box.appendChild(spk);
   document.getElementById('answer-box-wrap').appendChild(box);
+  _playRaw(v.fr);
   // Add the auto-advance progress bar
   const barWrap=document.createElement('div');
   barWrap.className='auto-bar-wrap';
@@ -1004,7 +1031,7 @@ function appendMistakeRow(question, typed, correct){
   row.className='mistake-row';
   row.innerHTML = `<div class="mq">${escH(question)}</div>
     <div><div class="mlabel">You wrote</div><div class="myou">${escH(typed||'—')}</div></div>
-    <div><div class="mlabel">Correct answer</div><div class="mcorrect">${escH(correct)}</div></div>`;
+    <div><div class="mlabel">Correct answer</div><div class="mcorrect-row"><div class="mcorrect">${escH(correct)}</div><button class="speaker-btn" onclick="_playRaw(this.previousElementSibling.textContent)" title="Play">🔊</button></div></div>`;
   document.getElementById('mistakes-panel-list').appendChild(row);
 }
 
@@ -1161,6 +1188,46 @@ function dismissAnnounce(){
   localStorage.setItem('fq-audio-announce-dismissed','1');
   const el=document.getElementById('audio-announce');
   if(el){ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.style.display='none',300); }
+}
+
+
+// ====== AUDIO ANNOUNCEMENT BANNER ======
+(function(){
+  const key = 'fq-audio-announce-dismissed';
+  const el = document.getElementById('audio-announce');
+  if(!el) return;
+  if(localStorage.getItem(key)) { el.style.display='none'; return; }
+})();
+function dismissAnnounce(){
+  localStorage.setItem('fq-audio-announce-dismissed','1');
+  const el=document.getElementById('audio-announce');
+  if(el){ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.style.display='none',300); }
+}
+
+// ====== AUDIO PLAYBACK ======
+function audioSlug(text){
+  return String(text).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\u0153/g,"oe").replace(/\u00e6/g,"ae")
+    .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,80);
+}
+let audioMuted = localStorage.getItem('fq-muted') === '1';
+let _audioEl = null;
+function _playRaw(fr){
+  if(!fr || audioMuted) return;
+  if(_audioEl){ _audioEl.pause(); _audioEl = null; }
+  _audioEl = new Audio("audio/" + audioSlug(fr) + ".mp3");
+  _audioEl.play().catch(()=>{});
+}
+function applyMuteUI(){
+  const btn = document.getElementById('mute-btn');
+  if(!btn) return;
+  btn.textContent = audioMuted ? '🔇' : '🔊';
+  btn.classList.toggle('muted', audioMuted);
+}
+function toggleMute(){
+  audioMuted = !audioMuted;
+  localStorage.setItem('fq-muted', audioMuted ? '1' : '0');
+  applyMuteUI();
 }
 
 </script>

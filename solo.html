@@ -57,14 +57,14 @@ body{background:#FAF9F6;margin:0;font-family:var(--font-sans);color:var(--color-
 .speaker-btn:hover{opacity:1;background:var(--color-background-secondary)}
 .answer-box{display:inline-flex;align-items:center;gap:4px}
 .mcorrect-row{display:flex;align-items:center;gap:4px}
-.back-bar{display:flex;align-items:center;justify-content:space-between}
-.mute-btn{background:none;border:0.5px solid var(--color-border-secondary);cursor:pointer;font-size:13px;padding:7px 13px;border-radius:var(--border-radius-md);color:var(--color-text-secondary);background:var(--color-background-primary);font-family:var(--font-sans);display:inline-flex;align-items:center;gap:5px;transition:background .15s}
-.mute-btn:hover{background:var(--color-background-secondary)}
-.mute-btn.muted{color:#A32D2D;border-color:#F09595}
+.mute-btn{position:absolute;top:10px;right:12px;background:none;border:0.5px solid var(--color-border-secondary);cursor:pointer;font-size:12px;padding:5px 10px;border-radius:20px;color:var(--color-text-tertiary);background:var(--color-background-secondary);font-family:var(--font-sans);display:inline-flex;align-items:center;gap:4px;transition:background .15s,color .15s;z-index:1}
+.mute-btn:hover{background:var(--color-border-secondary)}
+.mute-btn.muted{color:#A32D2D;border-color:#F09595;background:#FEF0F0}
+.flashcard{position:relative}
 </style>
 <nav class="etape-tabs-wrap" aria-label="Choose étape"><div class="etape-tabs" id="etape-tabs"></div></nav>
 <div class="etape-title"><h1 id="app-title-h1">French Flashcards · Solo</h1><div class="sub" id="app-title-sub">Practice mode</div></div>
-<div class="back-bar"><a href="index.html" class="back-link" id="back-link">← Back to 1v1 lobby</a><button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle audio">🔊 Audio on</button></div>
+<div class="back-bar"><a href="index.html" class="back-link" id="back-link">← Back to 1v1 lobby</a></div>
 <style>
 *{box-sizing:border-box}
 h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
@@ -186,6 +186,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 </div>
 <div id="quiz-area">
   <div class="flashcard">
+    <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle audio">🔊</button>
     <div class="top-badges" id="top-badges"></div>
     <div class="prompt-label">Translate to French</div>
     <div class="prompt" id="prompt"></div>
@@ -270,7 +271,7 @@ let audioMuted = localStorage.getItem('fq-muted') === '1';
 function applyMuteUI(){
   const btn = document.getElementById('mute-btn');
   if(!btn) return;
-  btn.textContent = audioMuted ? '🔇 Muted' : '🔊 Audio on';
+  btn.textContent = audioMuted ? '🔇' : '🔊';
   btn.classList.toggle('muted', audioMuted);
 }
 function toggleMute(){
