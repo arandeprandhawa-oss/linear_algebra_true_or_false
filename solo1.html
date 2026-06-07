@@ -56,6 +56,7 @@ body{background:#FAF9F6;margin:0;font-family:var(--font-sans);color:var(--color-
 .speaker-btn{background:none;border:0;cursor:pointer;font-size:1.05em;line-height:1;padding:2px 6px;margin-left:8px;border-radius:6px;opacity:0.75;transition:opacity .15s,background .15s;vertical-align:middle}
 .speaker-btn:hover{opacity:1;background:var(--color-background-secondary)}
 .answer-box{display:inline-flex;align-items:center;gap:4px}
+.mcorrect-row{display:flex;align-items:center;gap:4px}
 </style>
 <nav class="etape-tabs-wrap" aria-label="Choose étape"><div class="etape-tabs" id="etape-tabs"></div></nav>
 <div class="etape-title"><h1 id="app-title-h1">French Flashcards · Solo</h1><div class="sub" id="app-title-sub">Practice mode</div></div>
@@ -573,7 +574,7 @@ function addMistake(question,typed,correct){
   document.getElementById('mistakes-section').style.display='block';
   document.getElementById('mistake-count').textContent=mistakes.length;
   const item=document.createElement('div');item.className='mistake-item';
-  item.innerHTML='<div class="mq">'+escH(question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(correct)+'</div></div>';
+  item.innerHTML='<div class="mq">'+escH(question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect-row"><div class="mcorrect">'+escH(correct)+'</div><button class="speaker-btn" onclick="playAudio(this.previousElementSibling.textContent)" title="Play pronunciation">🔊</button></div></div>';
   document.getElementById('mistakes-list').appendChild(item);
 }
 function checkAnswer(){
@@ -620,7 +621,7 @@ function showSummary(){
     h.textContent='Mistakes to review ('+mistakes.length+'):';sm.appendChild(h);
     mistakes.forEach(m=>{
       const item=document.createElement('div');item.className='mistake-item';
-      item.innerHTML='<div class="mq">'+escH(m.question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(m.typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(m.correct)+'</div></div>';
+      item.innerHTML='<div class="mq">'+escH(m.question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(m.typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect-row"><div class="mcorrect">'+escH(m.correct)+'</div><button class="speaker-btn" onclick="playAudio(this.previousElementSibling.textContent)" title="Play pronunciation">🔊</button></div></div>';
       sm.appendChild(item);
     });
   }
