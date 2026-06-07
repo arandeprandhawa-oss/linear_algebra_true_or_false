@@ -282,8 +282,6 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   <div class="sub" id="app-title-sub">Race a friend, or practice solo</div>
 </div>
 
-</div>
-</div>
 <div class="audio-announce" id="audio-announce">
   <div class="audio-announce-inner">
     <span class="aa-icon">🔊</span>
@@ -1180,12 +1178,8 @@ if(codeFromUrl && /^[A-Z]{4}$/.test(codeFromUrl.toUpperCase())){
 }
 
 </script>
-  <script src="pronunciation-google.js">
-}
-
-
-}
-
+  <script src="pronunciation-google.js"></script>
+  <script>
 // ====== AUDIO PLAYBACK ======
 function audioSlug(text){
   return String(text).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
@@ -1212,25 +1206,18 @@ function toggleMute(){
   applyMuteUI();
 }
 
-
 // ====== AUDIO ANNOUNCEMENT BANNER ======
 (function(){
   const KEY = 'fq-audio-banner-done';
   const el  = document.getElementById('audio-announce');
   if(!el) return;
-
-  // Never show again if already dismissed
   if(localStorage.getItem(KEY)){ el.style.display='none'; return; }
-
-  // Hide + mark done (called by X button, tab clicks, and Solo button)
   window.dismissAnnounce = function(){
     localStorage.setItem(KEY,'1');
     el.style.opacity='0';
     el.style.transition='opacity .25s';
     setTimeout(()=>{ el.style.display='none'; },260);
   };
-
-  // Dismiss when user clicks any etape tab (navigation away = done)
   document.addEventListener('click', function(e){
     const tab = e.target.closest('a.etape-tab');
     if(tab) dismissAnnounce();
@@ -1238,8 +1225,6 @@ function toggleMute(){
     if(solo) dismissAnnounce();
   });
 })();
-
-</script>
+  </script>
 </body>
 </html>
-
