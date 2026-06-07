@@ -216,7 +216,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .speaker-btn:hover{opacity:1;background:rgba(0,0,0,0.06)}
 .answer-box{display:inline-flex;align-items:center;gap:4px}
 .mcorrect-row{display:flex;align-items:center;gap:4px}
-.audio-announce{max-width:580px;margin:0 auto 1rem;padding:0}
+.audio-announce{max-width:580px;margin:0 auto 1rem;padding:0;position:sticky;top:0;z-index:20}
 .audio-announce-inner{display:flex;align-items:center;gap:10px;background:#EAF4E8;border:0.5px solid #A8D5A2;border-radius:10px;padding:10px 14px;font-size:13px;color:#2D6B27}
 .audio-announce-inner .aa-icon{font-size:1.3em;flex-shrink:0}
 .audio-announce-inner .aa-text{flex:1;font-weight:500}
@@ -231,18 +231,16 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 <nav class="etape-tabs" id="etape-tabs" aria-label="Choose étape"></nav>
 
-<div class="app-title">
-  <h1 id="app-title-h1">French Flashcards · 1v1</h1>
-  <div class="sub" id="app-title-sub">Race a friend, or practice solo</div>
-</div>
-
-
 <div class="audio-announce" id="audio-announce">
   <div class="audio-announce-inner">
     <span class="aa-icon">🔊</span>
     <span class="aa-text">Audio pronunciation added!<span class="aa-sub"> Hear every card read aloud in Solo and 1v1 modes.</span></span>
     <button class="audio-dismiss" onclick="dismissAnnounce()" title="Dismiss">✕</button>
   </div>
+</div>
+<div class="app-title">
+  <h1 id="app-title-h1">French Flashcards · 1v1</h1>
+  <div class="sub" id="app-title-sub">Race a friend, or practice solo</div>
 </div>
 <div id="screen-lobby"></div>
 <div id="screen-waiting" style="display:none"></div>
@@ -627,6 +625,7 @@ async function joinMatch(code){
     matchLength = data.length || data.cards.length;
     matchCategory = data.category || 'all';
     myCards=data.cards.map(i=>vocab[i]);
+    if(window.dismissAnnounce) dismissAnnounce();
     listenToMatch();
     startGame();
   }catch(e){
@@ -637,6 +636,7 @@ async function joinMatch(code){
 
 // ====== WAITING ROOM ======
 function renderWaiting(){
+  if(window.dismissAnnounce) dismissAnnounce();
   const el=document.getElementById('screen-waiting');
   const url=window.location.origin+window.location.pathname+'?code='+matchId;
   el.innerHTML = `
@@ -1121,6 +1121,7 @@ async function backToLobby(){
 
 // ====== SOLO MODE — redirect to full solo experience ======
 function startSolo(){
+  if(window.dismissAnnounce) dismissAnnounce();
   // Navigate to the solo file for the current étape (so browser back returns here)
   const target = (window.ETAPE_SOLO_MAP && window.ETAPE_SOLO_MAP[window.CURRENT_ETAPE_ID]) || 'solo.html';
   window.location.href = target;
@@ -1176,12 +1177,6 @@ function toggleMute(){
     el.style.transition='opacity .25s';
     setTimeout(()=>{ el.style.display='none'; },260);
   };
-  document.addEventListener('click', function(e){
-    const tab = e.target.closest('a.etape-tab');
-    if(tab) dismissAnnounce();
-    const solo = e.target.closest('#btn-solo');
-    if(solo) dismissAnnounce();
-  });
 })();
   </script>
 </body>
