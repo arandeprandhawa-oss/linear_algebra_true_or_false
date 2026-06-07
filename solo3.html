@@ -1,4 +1,5 @@
-﻿<style>
+<meta charset="UTF-8">
+<style>
 /* CSS variable fallbacks so this works on a plain website (not just Claude) */
 :root{
   --color-background-primary:#FFFFFF;
@@ -52,10 +53,13 @@ body{background:#FAF9F6;margin:0;font-family:var(--font-sans);color:var(--color-
 .cb-courses{background:#EAF3DE;color:#27500A}
 .cb-plurals{background:#E6F1FB;color:#0C447C}
 .filter-btn.active-other{border-color:#534AB7;background:#EEEDFE;color:#3C3489}
+.speaker-btn{background:none;border:0;cursor:pointer;font-size:1.05em;line-height:1;padding:2px 6px;margin-left:8px;border-radius:6px;opacity:0.75;transition:opacity .15s,background .15s;vertical-align:middle}
+.speaker-btn:hover{opacity:1;background:var(--color-background-secondary)}
+.answer-box{display:inline-flex;align-items:center;gap:4px}
 </style>
-<nav class="etape-tabs-wrap" aria-label="Choose Ã©tape"><div class="etape-tabs" id="etape-tabs"></div></nav>
-<div class="etape-title"><h1 id="app-title-h1">French Flashcards Â· Solo</h1><div class="sub" id="app-title-sub">Practice mode</div></div>
-<div class="back-bar"><a href="index.html" class="back-link" id="back-link">â† Back to 1v1 lobby</a></div>
+<nav class="etape-tabs-wrap" aria-label="Choose étape"><div class="etape-tabs" id="etape-tabs"></div></nav>
+<div class="etape-title"><h1 id="app-title-h1">French Flashcards · Solo</h1><div class="sub" id="app-title-sub">Practice mode</div></div>
+<div class="back-bar"><a href="index.html" class="back-link" id="back-link">← Back to 1v1 lobby</a></div>
 <style>
 *{box-sizing:border-box}
 h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
@@ -158,7 +162,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .restart-btn{padding:10px 24px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);font-size:15px;cursor:pointer;color:var(--color-text-primary)}
 </style>
 <div class="wrap">
-<h2 class="sr-only">French textbook spaced repetition quiz â€” strict hyphens and accents</h2>
+<h2 class="sr-only">French textbook spaced repetition quiz — strict hyphens and accents</h2>
 <div class="stats-row">
   <div class="stat"><div class="stat-label">New</div><div class="stat-val sn" id="cnt-new">0</div></div>
   <div class="stat"><div class="stat-label">Learning</div><div class="stat-val sl" id="cnt-learn">0</div></div>
@@ -183,7 +187,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     <div class="hint" id="hint"></div>
     <div class="accent-bar" id="accent-bar"></div>
     <div class="input-row">
-      <input type="text" id="answer-input" placeholder="Type the Frenchâ€¦" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="text" id="answer-input" placeholder="Type the French…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <button class="check-btn" id="check-btn" onclick="checkAnswer()">Check</button>
     </div>
   </div>
@@ -259,10 +263,32 @@ window.ETAPE_LOBBY_MAP = {
 <script>
 // ====== VOCAB DATA (loaded from etapes/etape*.js via window.ETAPE_DATA) ======
 if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
-  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load Ã©tape data. Check that <code>etapes/etape3.js</code> is reachable.</div>';
+  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape3.js</code> is reachable.</div>';
   throw new Error('ETAPE_DATA not loaded');
 }
 const vocab = window.ETAPE_DATA.vocab;
+
+// ====== AUDIO PLAYBACK (added) ======
+// Mirrors slugify() in generate-audio.js so we can derive the mp3 path
+// directly from card.vocab.fr — no manifest lookup needed.
+function audioSlug(text){
+  return String(text)
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\u0153/g,"oe").replace(/\u00e6/g,"ae")
+    .replace(/[^a-z0-9]+/g,"_")
+    .replace(/^_+|_+$/g,"")
+    .slice(0,80);
+}
+let _audioEl=null;
+function playAudio(fr){
+  if(!fr)return;
+  const src="audio/"+audioSlug(fr)+".mp3";
+  if(_audioEl){_audioEl.pause();_audioEl=null;}
+  _audioEl=new Audio(src);
+  _audioEl.play().catch(()=>{ /* file missing / autoplay blocked — ignore */ });
+}
+
 const categoryLabels = window.ETAPE_DATA.categoryLabels;
 
 (function buildCategoryFilters(){
@@ -278,12 +304,12 @@ const categoryLabels = window.ETAPE_DATA.categoryLabels;
   wrap.insertAdjacentHTML('beforeend', buttons);
 })();
 
-const accentMap=[[/[Ã Ã¢Ã¤]/g,'a'],[/[Ã©Ã¨ÃªÃ«]/g,'e'],[/[Ã®Ã¯]/g,'i'],[/[Ã´Ã¶]/g,'o'],[/[Ã¹Ã»Ã¼]/g,'u'],[/Ã§/g,'c'],[/Å“/g,'oe']];
+const accentMap=[[/[àâä]/g,'a'],[/[éèêë]/g,'e'],[/[îï]/g,'i'],[/[ôö]/g,'o'],[/[ùûü]/g,'u'],[/ç/g,'c'],[/œ/g,'oe']];
 
 function normaliseBase(s){
   return s.toLowerCase().trim()
     .replace(/[''`]/g,"'")
-    .replace(/[?!.â€¦]/g,'')
+    .replace(/[?!.…]/g,'')
     .replace(/\s+/g,' ')
     .trim();
 }
@@ -360,7 +386,7 @@ function getMissing(typed,v){
   const answer=normaliseBase(v.alts[0]);
   const msgs=[];
   if(isWrongArticle(typed,v)){
-    msgs.push(v.gender==='m'?'wrong article â€” should be MASCULINE (un/le)':'wrong article â€” should be FEMININE (une/la)');
+    msgs.push(v.gender==='m'?'wrong article — should be MASCULINE (un/le)':'wrong article — should be FEMININE (une/la)');
     return msgs;
   }
   if(isWrongGender(typed,v)){
@@ -492,7 +518,7 @@ function showCard(card){
   }
   if(card.vocab.needsHyphen) hints.push('hyphen required');
   const hintEl=document.getElementById('hint');
-  hintEl.textContent=hints.length?'Note: '+hints.join(' â€¢ '):'';
+  hintEl.textContent=hints.length?'Note: '+hints.join(' • '):'';
   hintEl.className='hint'+(!card.vocab.guessGender&&card.vocab.gender==='m'?' hint-m':!card.vocab.guessGender&&card.vocab.gender==='f'?' hint-f':'');
   const inp=document.getElementById('answer-input');
   inp.value='';inp.className='';inp.disabled=false;
@@ -528,20 +554,29 @@ function showRatingAndAutoAdvance(ok,elapsed){
 }
 function revealResult(ok,displayAnswer,extraMsg){
   const fb=document.getElementById('feedback');
-  fb.textContent=ok?'Correct!':(extraMsg?'Wrong â€” '+extraMsg:'Wrong!');
+  fb.textContent=ok?'Correct!':(extraMsg?'Wrong — '+extraMsg:'Wrong!');
   fb.className='feedback-text '+(ok?'good':'bad');
   const box=document.createElement('div');
   box.className='answer-box '+(ok?'good':'bad');
-  box.textContent='Answer: '+displayAnswer;
+  const txt=document.createElement('span');
+  txt.textContent='Answer: '+displayAnswer;
+  box.appendChild(txt);
+  const spk=document.createElement('button');
+  spk.type='button';spk.className='speaker-btn';spk.title='Play pronunciation';
+  spk.setAttribute('aria-label','Play pronunciation');
+  spk.textContent='\ud83d\udd0a';
+  spk.onclick=function(){playAudio(displayAnswer);};
+  box.appendChild(spk);
   document.getElementById('answer-box-wrap').innerHTML='';
   document.getElementById('answer-box-wrap').appendChild(box);
+  playAudio(displayAnswer);   // auto-play the correct French on reveal
 }
 function addMistake(question,typed,correct){
   mistakes.push({question,typed,correct});
   document.getElementById('mistakes-section').style.display='block';
   document.getElementById('mistake-count').textContent=mistakes.length;
   const item=document.createElement('div');item.className='mistake-item';
-  item.innerHTML='<div class="mq">'+escH(question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(typed||'â€”')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(correct)+'</div></div>';
+  item.innerHTML='<div class="mq">'+escH(question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(correct)+'</div></div>';
   document.getElementById('mistakes-list').appendChild(item);
 }
 function checkAnswer(){
@@ -588,7 +623,7 @@ function showSummary(){
     h.textContent='Mistakes to review ('+mistakes.length+'):';sm.appendChild(h);
     mistakes.forEach(m=>{
       const item=document.createElement('div');item.className='mistake-item';
-      item.innerHTML='<div class="mq">'+escH(m.question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(m.typed||'â€”')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(m.correct)+'</div></div>';
+      item.innerHTML='<div class="mq">'+escH(m.question)+'</div><div><div class="mlabel">You wrote</div><div class="myou">'+escH(m.typed||'—')+'</div></div><div><div class="mlabel">Correct answer</div><div class="mcorrect">'+escH(m.correct)+'</div></div>';
       sm.appendChild(item);
     });
   }
@@ -625,8 +660,8 @@ document.getElementById('answer-input').addEventListener('keydown',e=>{
     else{if(autoTimer){clearInterval(autoTimer);autoTimer=null;}const pre=document.querySelector('.rating-btn.preselected');if(pre)pre.click();}
   }
 });
-// Accent bar â€” clickable buttons that insert the character at the cursor position
-const ACCENT_CHARS = ['Ã ','Ã¢','Ã¤','Ã¦','Ã§','Ã©','Ã¨','Ãª','Ã«','Ã®','Ã¯','Ã´','Å“','Ã¹','Ã»','Ã¼'];
+// Accent bar — clickable buttons that insert the character at the cursor position
+const ACCENT_CHARS = ['à','â','ä','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü'];
 function insertAccentChar(inputEl, ch){
   if(!inputEl || inputEl.disabled) return;
   const start = inputEl.selectionStart ?? inputEl.value.length;

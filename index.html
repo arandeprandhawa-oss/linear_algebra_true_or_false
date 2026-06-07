@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>French Flashcards Â· 1v1 MODL-1101 2nd midterm</title>
+<title>French Flashcards · 1v1 MODL-1101 2nd midterm</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -199,7 +199,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   .prompt{font-size:20px}
 }
 
-/* ====== Ã‰TAPE TABS ====== */
+/* ====== ÉTAPE TABS ====== */
 .etape-tabs{display:flex;gap:2px;align-items:flex-end;border-bottom:0.5px solid var(--border);padding:0 2px;margin-bottom:1.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .etape-tab{padding:9px 18px 10px;font-size:13px;font-weight:500;color:var(--text-3);background:transparent;border:0.5px solid transparent;border-bottom:none;border-radius:var(--radius) var(--radius) 0 0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;line-height:1;text-decoration:none;white-space:nowrap;transition:background 0.15s,color 0.15s}
 .etape-tab:hover{color:var(--text-2);background:rgba(0,0,0,0.025)}
@@ -214,10 +214,10 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 <div class="wrap">
 <h2 class="sr-only">French Flashcards 1v1 multiplayer quiz</h2>
 
-<nav class="etape-tabs" id="etape-tabs" aria-label="Choose Ã©tape"></nav>
+<nav class="etape-tabs" id="etape-tabs" aria-label="Choose étape"></nav>
 
 <div class="app-title">
-  <h1 id="app-title-h1">French Flashcards Â· 1v1</h1>
+  <h1 id="app-title-h1">French Flashcards · 1v1</h1>
   <div class="sub" id="app-title-sub">Race a friend, or practice solo</div>
 </div>
 
@@ -228,12 +228,12 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 </div>
 
-<!-- Load registry and the active Ã©tape's vocab BEFORE the game module -->
+<!-- Load registry and the active étape's vocab BEFORE the game module -->
 <script src="etapes/registry.js"></script>
 <script>
 (function bootEtape(){
-  // This page is the Ã‰tape 2 (default) page. The other Ã©tape lives in etape1.html.
-  // Map each Ã©tape id -> the file that hosts its 1v1 multiplayer lobby.
+  // This page is the Étape 2 (default) page. The other étape lives in etape1.html.
+  // Map each étape id -> the file that hosts its 1v1 multiplayer lobby.
   window.CURRENT_ETAPE_ID = 'e2';
   window.ETAPE_PAGE_MAP = {
   e1: 'etape1.html',
@@ -248,7 +248,7 @@ window.ETAPE_SOLO_MAP = {
   e3: 'solo3.html',
   e4: 'solo4.html'
 };
-  // Render the tab bar from the registry. Adding Ã‰tape 3 later means:
+  // Render the tab bar from the registry. Adding Étape 3 later means:
   //   1. add an entry to registry.js
   //   2. add 'e3' to ETAPE_PAGE_MAP and ETAPE_SOLO_MAP in each shell
   //   3. create etape3.html and solo3.html (copies of these shells with one line changed)
@@ -294,13 +294,13 @@ const db = getFirestore(app);
 
 // ====== VOCAB DATA (loaded from etapes/etape*.js via window.ETAPE_DATA) ======
 if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
-  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load Ã©tape data. Check that <code>etapes/etape2.js</code> is reachable.</div>';
+  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape2.js</code> is reachable.</div>';
   throw new Error('ETAPE_DATA not loaded');
 }
 const vocab = window.ETAPE_DATA.vocab;
 
 // ====== ANSWER CHECKING (same logic as solo) ======
-const accentMap=[[/[Ã Ã¢Ã¤]/g,'a'],[/[Ã©Ã¨ÃªÃ«]/g,'e'],[/[Ã®Ã¯]/g,'i'],[/[Ã´Ã¶]/g,'o'],[/[Ã¹Ã»Ã¼]/g,'u'],[/Ã§/g,'c'],[/Å“/g,'oe']];
+const accentMap=[[/[àâä]/g,'a'],[/[éèêë]/g,'e'],[/[îï]/g,'i'],[/[ôö]/g,'o'],[/[ùûü]/g,'u'],[/ç/g,'c'],[/œ/g,'oe']];
 function normaliseBase(s){return s.toLowerCase().trim().replace(/[\u2018\u2019'`]/g,"'").replace(/[?!.\u2026]/g,'').replace(/\s+/g,' ').trim();}
 function stripAccents(s){let r=s;accentMap.forEach(([p,rep])=>r=r.replace(p,rep));return r;}
 function isCorrect(typed,v){
@@ -353,7 +353,7 @@ function isWrongGender(typed,v){
 function getMissing(typed,v){
   const t=normaliseBase(typed),answer=normaliseBase(v.alts[0]),msgs=[];
   if(isWrongArticle(typed,v)){
-    msgs.push(v.gender==='m'?'wrong article â€” should be MASCULINE (un/le)':'wrong article â€” should be FEMININE (une/la)');
+    msgs.push(v.gender==='m'?'wrong article — should be MASCULINE (un/le)':'wrong article — should be FEMININE (une/la)');
     return msgs;
   }
   if(isWrongGender(typed,v)){
@@ -475,7 +475,7 @@ function renderLobby(errorMsg){
     const catSize = categorySizes[selectedCategory] || 0;
     let note = '';
     if(catSize < 20){
-      note = `${categoryLabels[selectedCategory]} only has ${catSize} cards â€” match length is 20 (cards will repeat).`;
+      note = `${categoryLabels[selectedCategory]} only has ${catSize} cards — match length is 20 (cards will repeat).`;
     } else {
       note = `Category matches are 20 cards.`;
     }
@@ -493,7 +493,7 @@ function renderLobby(errorMsg){
       <div class="lobby-grid">
         <div class="lobby-card primary" id="btn-create">
           <div class="label">New match</div>
-          <div class="action">Create â†’</div>
+          <div class="action">Create →</div>
         </div>
         <div class="lobby-card">
           <div class="label">Join with code</div>
@@ -501,7 +501,7 @@ function renderLobby(errorMsg){
         </div>
         <div class="lobby-card danger" id="btn-solo">
           <div class="label">No opponent</div>
-          <div class="action">Solo â†’</div>
+          <div class="action">Solo →</div>
         </div>
       </div>
       <div class="lobby-foot">After creating, share the code with one friend</div>
@@ -520,7 +520,7 @@ function renderLobby(errorMsg){
   document.querySelectorAll('#cat-chips .chip').forEach(chip=>{
     chip.addEventListener('click',()=>{
       selectedCategory = chip.dataset.cat;
-      // Specific category â†’ fixed at 20
+      // Specific category → fixed at 20
       if(selectedCategory !== 'all') selectedLength = 20;
       renderLobby(errorMsg);
     });
@@ -586,8 +586,8 @@ async function joinMatch(code){
     if(data.status==='done'){renderLobby('That match is already over. Ask for a new code.');return;}
     if(data.status==='resigned'){renderLobby('That match was ended by the host. Ask for a new code.');return;}
     if(data.p2Joined){renderLobby('That match already has two players.');return;}
-    // Cross-Ã©tape: if this code is from a different Ã©tape, redirect to its page so the
-    // joiner gets the right vocab. Matches without an 'etape' field are legacy/Ã‰tape 1.
+    // Cross-étape: if this code is from a different étape, redirect to its page so the
+    // joiner gets the right vocab. Matches without an 'etape' field are legacy/Étape 1.
     const matchEtape = data.etape || 'e1';
     if(matchEtape !== window.CURRENT_ETAPE_ID){
       const targetPage = window.ETAPE_PAGE_MAP[matchEtape];
@@ -595,7 +595,7 @@ async function joinMatch(code){
         window.location.href = targetPage + '?code=' + code;
         return;
       }
-      renderLobby('That code is for a different Ã©tape that this page can\'t open.');
+      renderLobby('That code is for a different étape that this page can\'t open.');
       return;
     }
     await updateDoc(ref,{p2Joined:true,status:'playing',lastUpdate:serverTimestamp()});
@@ -626,7 +626,7 @@ function renderWaiting(){
       </div>
       <div class="status-row">
         <span class="status-dot"></span>
-        <span id="wait-status">Waiting for opponent to joinâ€¦</span>
+        <span id="wait-status">Waiting for opponent to join…</span>
       </div>
       <button class="cancel-btn" id="cancel-match">Cancel match</button>
     </div>`;
@@ -638,7 +638,7 @@ function renderWaiting(){
 async function copyText(text,btn){
   try{
     await navigator.clipboard.writeText(text);
-    const orig=btn.textContent;btn.textContent='Copied âœ“';btn.classList.add('copied');
+    const orig=btn.textContent;btn.textContent='Copied ✓';btn.classList.add('copied');
     setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},1500);
   }catch(e){
     prompt('Copy this:',text);
@@ -669,7 +669,7 @@ function listenToMatch(){
 }
 
 function handleStateUpdate(data){
-  // p1 sees waiting â†’ playing transition
+  // p1 sees waiting → playing transition
   if(role === 'p1' && data.status === 'playing' && document.getElementById('screen-waiting').style.display !== 'none'){
     matchLength = data.length || data.cards.length;
     matchCategory = data.category || 'all';
@@ -690,7 +690,7 @@ function handleStateUpdate(data){
   }
   // Update the live opponent score & status
   updateLiveScoreboard(data);
-  // Detect both players finished â€” but ONLY if game has actually started
+  // Detect both players finished — but ONLY if game has actually started
   // and we have local cards loaded. Use `=== true` (not truthy) to avoid undefined glitches.
   if(data.status === 'playing' && myCards.length > 0){
     const oppDone = (role==='p1' ? data.p2Done : data.p1Done) === true;
@@ -781,7 +781,7 @@ function renderGame(){
     <div class="progress-row">
       <div class="card-num">Card <strong id="g-cardnum">1</strong>/<span>${matchLength}</span></div>
       <div class="opponent-status" id="opp-status">
-        <span class="live-dot green"></span><span id="opp-name-text">Opponent Â· online</span>
+        <span class="live-dot green"></span><span id="opp-name-text">Opponent · online</span>
       </div>
     </div>
     <div class="flashcard">
@@ -791,7 +791,7 @@ function renderGame(){
       <div class="hint" id="hint"></div>
       <div class="accent-bar" id="accent-bar"></div>
       <div class="input-row">
-        <input type="text" id="answer-input" placeholder="Type the Frenchâ€¦" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <input type="text" id="answer-input" placeholder="Type the French…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
         <button class="check-btn" id="check-btn">Check</button>
       </div>
     </div>
@@ -832,8 +832,8 @@ function renderGame(){
   showCard();
 }
 
-// Accent bar â€” clickable buttons that insert the character at the cursor position
-const ACCENT_CHARS = ['Ã ','Ã¢','Ã¤','Ã¦','Ã§','Ã©','Ã¨','Ãª','Ã«','Ã®','Ã¯','Ã´','Å“','Ã¹','Ã»','Ã¼'];
+// Accent bar — clickable buttons that insert the character at the cursor position
+const ACCENT_CHARS = ['à','â','ä','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü'];
 function buildAccentBar(inputEl){
   const bar = document.getElementById('accent-bar');
   if(!bar) return;
@@ -866,7 +866,7 @@ function insertAccent(inputEl, ch){
 let answered=false;
 // Typing indicator removed to reduce Firestore writes.
 // Opponent activity is shown via score updates instead.
-function setTyping(t){ /* no-op â€” disabled to save quota */ }
+function setTyping(t){ /* no-op — disabled to save quota */ }
 
 function showCard(){
   if(myIndex>=myCards.length){finishMatch();return;}
@@ -877,7 +877,7 @@ function showCard(){
   document.getElementById('you-prog').textContent=`Card ${myIndex+1}/${matchLength}`;
   const badges=document.getElementById('top-badges');
   badges.innerHTML='';
-  const labels={classroom:'Classroom',commands:'Command',people:'Person',identify:'Identifying',describe:'Describing',colors:'Color',clothing:'Clothing',numbers:'Number',greetings:'Greeting',useful:'Useful',etre:'ÃŠtre',articles:'Article'};
+  const labels={classroom:'Classroom',commands:'Command',people:'Person',identify:'Identifying',describe:'Describing',colors:'Color',clothing:'Clothing',numbers:'Number',greetings:'Greeting',useful:'Useful',etre:'Être',articles:'Article'};
   badges.innerHTML += `<span class="cat-badge cb-${v.category}">${labels[v.category]||v.category}</span>`;
   if(!v.guessGender){
     const g=v.gender;
@@ -893,7 +893,7 @@ function showCard(){
   }
   if(v.needsHyphen)hints.push('hyphen required');
   const hintEl=document.getElementById('hint');
-  hintEl.textContent=hints.length?'Note: '+hints.join(' â€¢ '):'';
+  hintEl.textContent=hints.length?'Note: '+hints.join(' • '):'';
   hintEl.className='hint'+(!v.guessGender&&v.gender==='m'?' hint-m':!v.guessGender&&v.gender==='f'?' hint-f':'');
   const inp=document.getElementById('answer-input');
   inp.value='';inp.className='';inp.disabled=false;
@@ -927,7 +927,7 @@ async function checkAnswer(){
   }
   if(ok)myScore++;
   const fb=document.getElementById('feedback');
-  fb.textContent=ok?'Correct!':(extraMsg?'Wrong â€” '+extraMsg:'Wrong!');
+  fb.textContent=ok?'Correct!':(extraMsg?'Wrong — '+extraMsg:'Wrong!');
   fb.className='feedback-text '+(ok?'good':'bad');
   const box=document.createElement('div');
   box.className='answer-box '+(ok?'good':'bad');
@@ -942,7 +942,7 @@ async function checkAnswer(){
   // Schedule auto-advance FIRST so network slowness can never freeze the game
   if(autoTimer){clearTimeout(autoTimer);}
   autoTimer = setTimeout(()=>{autoTimer=null;nextCard();}, 2000);
-  // Push update to Firebase (multiplayer only) â€” fire-and-forget, do NOT await
+  // Push update to Firebase (multiplayer only) — fire-and-forget, do NOT await
   // If the network is slow or fails, the game still advances locally.
   // Only send essentials to minimize quota usage.
   if(matchId){
@@ -962,7 +962,7 @@ function appendMistakeRow(question, typed, correct){
   const row=document.createElement('div');
   row.className='mistake-row';
   row.innerHTML = `<div class="mq">${escH(question)}</div>
-    <div><div class="mlabel">You wrote</div><div class="myou">${escH(typed||'â€”')}</div></div>
+    <div><div class="mlabel">You wrote</div><div class="myou">${escH(typed||'—')}</div></div>
     <div><div class="mlabel">Correct answer</div><div class="mcorrect">${escH(correct)}</div></div>`;
   document.getElementById('mistakes-panel-list').appendChild(row);
 }
@@ -985,15 +985,15 @@ async function finishMatch(){
       <div class="score-tile you">
         <div class="who">You</div>
         <div class="num">${myScore}</div>
-        <div class="progress">Done Â· ${(myTotalTime/1000).toFixed(1)}s total</div>
+        <div class="progress">Done · ${(myTotalTime/1000).toFixed(1)}s total</div>
       </div>
       <div class="score-tile them">
         <div class="who">Opponent</div>
-        <div class="num" id="them-score">â€”</div>
-        <div class="progress" id="them-prog">Still playingâ€¦</div>
+        <div class="num" id="them-score">—</div>
+        <div class="progress" id="them-prog">Still playing…</div>
       </div>
     </div>
-    <div class="live-row"><span class="live-dot"></span><span>Waiting for opponent to finishâ€¦</span></div>`;
+    <div class="live-row"><span class="live-dot"></span><span>Waiting for opponent to finish…</span></div>`;
   // Mark me as done
   try{
     const update={};
@@ -1012,10 +1012,10 @@ function updateLiveScoreboard(data){
   const themScoreEl=document.getElementById('them-score');
   if(themScoreEl)themScoreEl.textContent=oppScore;
   const themProgEl=document.getElementById('them-prog');
-  if(themProgEl)themProgEl.textContent = oppDone ? 'Done' : `playingâ€¦`;
+  if(themProgEl)themProgEl.textContent = oppDone ? 'Done' : `playing…`;
   const liveText=document.getElementById('live-text');
   if(liveText){
-    if(oppDone) liveText.textContent='Opponent finished â€” keep going!';
+    if(oppDone) liveText.textContent='Opponent finished — keep going!';
     else liveText.textContent='Game on';
   }
 }
@@ -1035,9 +1035,9 @@ function showResults(data){
   else if(myFinalScore<oppFinalScore)outcome='lose';
   else if(myTime<oppTime)outcome='win';   // tiebreak by speed
   else if(myTime>oppTime)outcome='lose';
-  const heading={win:'You won! ðŸ†',lose:'You lost',tie:'It\'s a tie!'};
+  const heading={win:'You won! 🏆',lose:'You lost',tie:'It\'s a tie!'};
   const myAvg=(myTime/1000/matchLength).toFixed(1);
-  const oppAvg=oppTime?((oppTime/1000)/matchLength).toFixed(1):'â€”';
+  const oppAvg=oppTime?((oppTime/1000)/matchLength).toFixed(1):'—';
   const el=document.getElementById('screen-results');
   el.innerHTML = `
     <div class="results">
@@ -1071,7 +1071,7 @@ function renderMistakesReview(){
     <h3>Your mistakes (${myMistakes.length})</h3>
     ${myMistakes.map(m=>`<div class="review-item">
       <div class="rq">${escH(m.question)}</div>
-      <div>You wrote <span class="ryou">${escH(m.typed||'â€”')}</span></div>
+      <div>You wrote <span class="ryou">${escH(m.typed||'—')}</span></div>
       <div>Correct answer <span class="rcorrect">${escH(m.correct)}</span></div>
     </div>`).join('')}
   </div>`;
@@ -1091,9 +1091,9 @@ async function backToLobby(){
   renderLobby();
 }
 
-// ====== SOLO MODE â€” redirect to full solo experience ======
+// ====== SOLO MODE — redirect to full solo experience ======
 function startSolo(){
-  // Navigate to the solo file for the current Ã©tape (so browser back returns here)
+  // Navigate to the solo file for the current étape (so browser back returns here)
   const target = (window.ETAPE_SOLO_MAP && window.ETAPE_SOLO_MAP[window.CURRENT_ETAPE_ID]) || 'solo.html';
   window.location.href = target;
 }
