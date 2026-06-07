@@ -10,7 +10,7 @@ After every change: push → wait ~1 min → **Ctrl + F5** to see it live.
 ## Setup — run once
 
 ```powershell
-cd C:\Users\Gurda\Downloads\french-quiz-repo
+cd C:\Users\User\Downloads\french-quiz-repo
 ```
 
 > This is your repo folder. Run every command in this guide from here.
