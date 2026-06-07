@@ -8,6 +8,80 @@ After every change: push → wait ~1 min → **Ctrl + F5** to see it live.
 
 ---
 
+---
+
+## Using this as a template (forking)
+
+This repo is fully shareable. Everything here pushes to **whatever repo you cloned from** — the scripts read your git remote automatically, they are not tied to the original author's account. To make it your own:
+
+### Step 1 — Fork it (one click)
+
+On the GitHub page of this repo, click **Fork** (top-right). That creates your own copy at `github.com/YOUR-USERNAME/french-quiz`. You now own it and can push to it freely.
+
+### Step 2 — Clone YOUR fork
+
+In **Script 1**, change the `$repoUrl` line to your fork's URL (green **Code** button → HTTPS → copy), then run it. Everything else in Script 1 is automatic.
+
+### Step 3 — Enable GitHub Pages on your fork
+
+Your fork → **Settings → Pages** → Source: **Deploy from a branch** → Branch: **main** → **/ (root)** → **Save**. After ~1 min your live site is at `https://YOUR-USERNAME.github.io/french-quiz/`.
+
+### Step 4 — (Audio) get your own Google key
+
+Audio needs your own free Google Cloud Text-to-Speech key — see **Script 5**. The original author's key is not in the repo (it's private), so this is a required one-time step if you want audio.
+
+### Step 5 — (Multiplayer only) use your own Firebase
+
+The 1v1 mode points at a Firebase project. If you only use **Solo mode**, skip this. For your own multiplayer, create a free Firebase project and swap the config — see **"Swap in your own Firebase"** below.
+
+> **What's portable vs. account-specific**
+>
+> | Works for anyone immediately | Needs your own account |
+> |---|---|
+> | Clone, edit cards, add étapes, Solo mode | Pushing (fork first — Step 1) |
+> | All Scripts 1–4 (auto-detect everything) | Audio generation (your Google key — Step 4) |
+> | The site itself, hosted on your Pages | Multiplayer (your Firebase — Step 5) |
+
+### Swap in your own Firebase (multiplayer only)
+
+1. Create a project at <https://console.firebase.google.com/> → add a **Web app** → copy its `firebaseConfig` object.
+2. Run this to replace the config across all lobby pages at once:
+
+```powershell
+# auto-find repo
+$try=@("$env:USERPROFILE\Downloads\french-quiz-repo","$env:USERPROFILE\Downloads\french-quiz-main","$env:USERPROFILE\Desktop\french-quiz-repo","$env:USERPROFILE\Documents\french-quiz-repo","$env:USERPROFILE\french-quiz-repo")
+$repo=$try|Where-Object{Test-Path "$_\index.html"}|Select-Object -First 1
+if(-not $repo){Write-Host "Repo not found. Run Script 1 first." -ForegroundColor Red;return}
+Set-Location $repo
+
+# ── PASTE YOUR firebaseConfig VALUES HERE ──────────────────────────────────
+$apiKey         = "YOUR_API_KEY"
+$authDomain     = "YOUR_PROJECT.firebaseapp.com"
+$projectId      = "YOUR_PROJECT"
+$storageBucket  = "YOUR_PROJECT.firebasestorage.app"
+$messagingSenderId = "YOUR_SENDER_ID"
+$appId          = "YOUR_APP_ID"
+# ── DO NOT EDIT BELOW THIS LINE ────────────────────────────────────────────
+$utf8=[System.Text.UTF8Encoding]::new($false)
+foreach($f in (Get-ChildItem -Filter "*.html")){
+  $c=Get-Content $f.FullName -Raw -Encoding UTF8
+  if($c -notmatch 'firebaseConfig'){ continue }
+  $c=$c -replace 'apiKey:\s*"[^"]*"',            "apiKey: `"$apiKey`""
+  $c=$c -replace 'authDomain:\s*"[^"]*"',        "authDomain: `"$authDomain`""
+  $c=$c -replace 'projectId:\s*"[^"]*"',         "projectId: `"$projectId`""
+  $c=$c -replace 'storageBucket:\s*"[^"]*"',     "storageBucket: `"$storageBucket`""
+  $c=$c -replace 'messagingSenderId:\s*"[^"]*"', "messagingSenderId: `"$messagingSenderId`""
+  $c=$c -replace 'appId:\s*"[^"]*"',             "appId: `"$appId`""
+  [System.IO.File]::WriteAllText($f.FullName,$c,$utf8)
+  Write-Host "Updated Firebase config in $($f.Name)" -ForegroundColor Green
+}
+git add -A; git commit -m "use my own Firebase project"; git push
+```
+
+3. Update `firestore.rules` for your project and deploy (see **Script 6**). In `firebase deploy`, the CLI uses whichever project you `firebase use` — run `firebase use YOUR_PROJECT` first.
+
+---
+
 ## How the auto-detect works
 
 Every script below starts by locating your repo automatically. It looks for the `french-quiz` repo in the common places (Downloads, Desktop, Documents, your user folder) and `cd`s into it. You never type your username. If it can't find it, it tells you to run **Script 1** first.
@@ -59,7 +133,9 @@ generate-audio.js   <- Node script to regenerate mp3s via Google TTS
 Run this **first**, on a fresh computer or after losing your local copy. It installs Git and Node.js if missing, clones the repo into your Downloads folder, and installs dependencies. No username needed — it uses `$env:USERPROFILE`.
 
 ```powershell
-# ── CONFIG (only change if your GitHub repo URL is different) ───────────────
+# ── CONFIG ─────────────────────────────────────────────────────────────────
+# If you FORKED this repo, change this to YOUR fork's URL
+# (on your fork's GitHub page: green "Code" button -> HTTPS -> copy).
 $repoUrl = "https://github.com/arandeprandhawa-oss/french-quiz.git"
 $destDir = "$env:USERPROFILE\Downloads\french-quiz-repo"
 # ── DO NOT EDIT BELOW THIS LINE ────────────────────────────────────────────
@@ -385,14 +461,44 @@ Write-Host "`nDone. Étape $N is live in ~1 min. Hard-refresh with Ctrl+F5." -Fo
 
 Audio uses **Google Cloud Text-to-Speech**. One-time key setup, then a single command makes audio for any new cards.
 
-## One-time: get your Google API key (.json)
+## One-time: get your Google API key (.json) — full walkthrough
 
-1. <https://console.cloud.google.com/> → sign in.
-2. Project dropdown → **New Project** → name `french-quiz` → **Create**.
-3. Search **"Cloud Text-to-Speech API"** → open → **Enable** (enable billing if asked; the free tier easily covers this).
-4. **APIs & Services → Credentials → Create Credentials → Service account** → name `tts` → role **Owner** → **Done**.
-5. Open the service account → **Keys → Add key → Create new key → JSON → Create**. A `.json` downloads.
-6. Save it somewhere outside the repo, e.g. `C:\Users\You\google-tts-key.json`. **Never commit it.**
+You only do this once. It gives you a key file that lets the audio script talk to Google's voice service. Follow every step.
+
+### A. Create a Google Cloud project
+1. Go to <https://console.cloud.google.com/> and sign in with any Google account.
+2. If it's your first time, accept the terms.
+3. At the very top, click the **project dropdown** (says "Select a project") → **New Project**.
+4. Name it `french-quiz` → **Create**. Wait a few seconds, then make sure that project is selected in the dropdown.
+
+### B. Enable the Text-to-Speech API
+5. In the top search bar, type **Cloud Text-to-Speech API** and click the result.
+6. Click **Enable**.
+7. If it asks you to **enable billing**, you must add a payment method to continue. **You will almost certainly pay nothing** — Google gives 1 million free characters/month for the Neural2 voices, and this whole app is well under that. A card is required only for verification.
+
+### C. Create a service account (the identity the script uses)
+8. Left menu (☰) → **APIs & Services → Credentials**.
+9. Click **+ Create Credentials → Service account**.
+10. Service account name: `tts` → **Create and continue**.
+11. Role: click the dropdown → choose **Basic → Owner** (or search "Cloud Text-to-Speech User"). → **Continue** → **Done**.
+
+### D. Download the JSON key
+12. Back on the Credentials page, under **Service Accounts**, click the `tts@...` account you just made.
+13. Open the **Keys** tab → **Add key → Create new key**.
+14. Choose **JSON** → **Create**. A `.json` file downloads automatically — **this is your key.**
+
+### E. Store it safely
+15. Move the downloaded file somewhere outside the repo, e.g. `C:\Users\You\google-tts-key.json`.
+16. **Never commit this file to GitHub.** Anyone with it can use your Google quota. It's already covered by `.gitignore`, but to be safe, confirm it is NOT inside your repo folder:
+
+```powershell
+# auto-find repo, then check the key isn't inside it
+$try=@("$env:USERPROFILE\Downloads\french-quiz-repo","$env:USERPROFILE\Downloads\french-quiz-main","$env:USERPROFILE\Desktop\french-quiz-repo","$env:USERPROFILE\Documents\french-quiz-repo","$env:USERPROFILE\french-quiz-repo")
+$repo=$try|Where-Object{Test-Path "$_\index.html"}|Select-Object -First 1
+$keys = Get-ChildItem $repo -Recurse -Filter "*.json" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notin @('package.json','package-lock.json','audio-manifest.json') }
+if($keys){ Write-Host "WARNING: possible key file inside repo — move it out:" -ForegroundColor Red; $keys.FullName }
+else { Write-Host "Good — no stray key files in the repo." -ForegroundColor Green }
+```
 
 ## Point PowerShell at the key
 
@@ -427,6 +533,16 @@ git add audio\ audio-manifest.json; git commit -m "re-record audio"; git push
 
 > Slug rule: lowercase, accents stripped, spaces/punctuation → `_`. `Qu'est-ce que c'est ?` → `qu_est_ce_que_c_est.mp3`.
 
+### Common Google audio errors
+
+| Error you see | Cause & fix |
+|---|---|
+| `Could not load the default credentials` | The key path isn't set. Re-run the `$env:GOOGLE_APPLICATION_CREDENTIALS = "..."` line, and confirm the `.json` path is correct. |
+| `PERMISSION_DENIED` / `Cloud Text-to-Speech API has not been used` | The API isn't enabled on this project. Redo step B (Enable the API), then wait a minute. |
+| `Billing has not been enabled` | Add a payment method (step B7). You stay within the free tier; you won't be charged for this volume. |
+| `7 PERMISSION_DENIED: The caller does not have permission` | The service account role is too low. Redo step C11 and give it **Owner** or **Cloud Text-to-Speech User**. |
+| `Cannot find module '@google-cloud/text-to-speech'` | Dependencies missing. Run `npm install` in the repo folder. |
+
 ---
 
 ## Other quick tasks
@@ -458,9 +574,47 @@ git add -A; git commit -m "default $defaultEtape"; git push
 
 ## Firestore security rules (1v1 mode)
 
-Project `french-quiz-79a0d`. Update when you add etapes or change what the client writes.
-**Console:** [Firebase Console](https://console.firebase.google.com/) → `french-quiz-79a0d` → **Firestore Database → Rules** → edit → **Publish**.
-**CLI:** `npm install -g firebase-tools` → `firebase login` → `firebase deploy --only firestore:rules`.
+Update when you add etapes or change what the client writes. (If you forked, this targets **your** Firebase project — see "Swap in your own Firebase" above.)
+
+**Console:** [Firebase Console](https://console.firebase.google.com/) → select your project → **Firestore Database → Rules** → edit → **Publish**.
+
+**CLI:**
+```powershell
+npm install -g firebase-tools
+firebase login
+firebase use YOUR_PROJECT_ID      # whichever project this site uses
+firebase deploy --only firestore:rules
+```
+
+---
+
+## Troubleshooting
+
+### Push rejected: "Updates were rejected... fetch first"
+
+This means GitHub has commits your local copy doesn't. Since your local files are the ones you want to keep (you just edited them), force your version up:
+
+```powershell
+git push --force
+```
+
+> **Do not run `git pull` or `git pull --rebase` here** — that pulls the old remote files back on top of your new ones and undoes your changes. `git push --force` makes GitHub match your local copy, which is what you want after editing files locally.
+>
+> (Force-push is safe for this project because you're the only one editing it. If someone else were also pushing, you'd coordinate first.)
+
+### Files reverted after a pull
+
+If a `git pull` brought back old versions of your files, just re-copy the fixed files over them and force-push again:
+
+```powershell
+git add -A
+git commit -m "re-apply local changes"
+git push --force
+```
+
+### "nothing to commit" when you expected changes
+
+The files weren't actually copied into the repo folder. Check the source path with `ls $fixed` — you should see the html files listed. Make sure `$fixed` points to the folder that *directly* contains them.
 
 ---
 
@@ -474,5 +628,6 @@ Project `french-quiz-79a0d`. Update when you add etapes or change what the clien
 | **Make a brand-new étape** | **Script 4** |
 | Set up Google key / generate audio | **Script 5** |
 | Push manually | `git add -A && git commit -m "msg" && git push` |
+| Push rejected ("fetch first") | `git push --force` (keeps your local files) |
 | See recent commits | `git log --oneline -10` |
 | Undo unsaved edit | `git checkout -- filename.html` |
