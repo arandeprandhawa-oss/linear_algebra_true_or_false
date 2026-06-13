@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Algebra · Solo Practice</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FAF9F6;--surface:#FFFFFF;--surface-2:#F1EFE8;
+  --text:#1F1F1E;--text-2:#5F5E5A;--text-3:#888780;
+  --border:rgba(0,0,0,0.10);--border-2:rgba(0,0,0,0.18);
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* BACK BAR */
+.back-bar{max-width:580px;margin:0 auto;padding:12px 16px 0}
+.back-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--text-2);font-size:14px;padding:8px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface);font-family:inherit}
+.back-link:hover{background:var(--surface-2)}
+
+/* TABS */
+.tabs-wrap{max-width:580px;margin:14px auto 0;padding:0 16px}
+.tabs{display:flex;gap:2px;align-items:flex-end;border-bottom:0.5px solid var(--border);padding:0 2px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 18px 10px;font-size:13px;font-weight:500;color:var(--text-3);background:transparent;border:0.5px solid transparent;border-bottom:none;border-radius:var(--radius) var(--radius) 0 0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;white-space:nowrap;text-decoration:none;transition:background .15s,color .15s}
+.tab:hover{color:var(--text-2);background:rgba(0,0,0,.025)}
+.tab.active{background:var(--bg);color:var(--text);border-color:var(--border);margin-bottom:-.5px}
+.tab .e-num{font-size:10px;font-weight:500;color:var(--text-3);background:rgba(0,0,0,.06);padding:2px 7px;border-radius:999px}
+.tab.active .e-num{color:#fff;background:#185FA5}
+
+/* TITLE */
+.page-title{max-width:580px;margin:0 auto;padding:14px 16px 0;text-align:center}
+.page-title h1{font-size:17px;font-weight:500;letter-spacing:-.01em}
+.page-title .sub{font-size:12px;color:var(--text-3);margin-top:2px}
+
+/* WRAP */
+.wrap{padding:1rem 1rem 3rem;max-width:580px;margin:0 auto}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:1rem}
+.stat{background:var(--surface-2);border-radius:var(--radius);padding:10px 12px;text-align:center}
+.stat-label{font-size:11px;color:var(--text-3);margin-bottom:2px}
+.stat-val{font-size:18px;font-weight:500}
+.stat-val.sn{color:#185FA5}.stat-val.sl{color:#854F0B}.stat-val.sd{color:#3B6D11}.stat-val.sw{color:#A32D2D}
+
+/* FILTERS */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;align-items:center}
+.filters span{font-size:12px;color:var(--text-3)}
+.filter-btn{padding:6px 14px;border-radius:20px;border:0.5px solid var(--border-2);background:var(--surface-2);font-size:13px;cursor:pointer;color:var(--text-2);font-family:inherit;transition:background .1s}
+.filter-btn:hover{background:#E8E5DA}
+.filter-btn.active{border-color:#185FA5;background:#E6F1FB;color:#185FA5}
+
+/* FLASHCARD */
+.flashcard{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center;margin-bottom:1rem;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.top-badges{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
+.card-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.badge-new{background:#E6F1FB;color:#185FA5}
+.badge-learn{background:#FAEEDA;color:#854F0B}
+.badge-review{background:#EAF3DE;color:#3B6D11}
+.cat-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.cb-systems{background:#FFF8E1;color:#B56000}
+.cb-span{background:#F3E5F5;color:#6A1B9A}
+.cb-independence{background:#EAF3DE;color:#2E6B0A}
+.cb-matrices{background:#E6F1FB;color:#0C447C}
+.cb-inverses{background:#EDE7F6;color:#512DA8}
+.cb-lu{background:#E0F2F1;color:#00695C}
+.cb-determinants{background:#FCEBEB;color:#9B2828}
+.cb-transformations{background:#FBEAF0;color:#880E4F}
+.cb-subspaces{background:#FFF3E0;color:#BF360C}
+.cb-eigenvalues{background:#E8EAF6;color:#283593}
+.cb-markov{background:#F1F8E9;color:#33691E}
+.prompt-label{font-size:12px;color:var(--text-3);letter-spacing:.04em}
+.statement{font-size:21px;font-weight:400;line-height:1.5;color:var(--text);max-width:460px}
+/* INPUT */
+.input-row{display:flex;gap:8px;width:100%;margin-bottom:.5rem}
+.input-row input{flex:1;font-size:15px;padding:10px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface);color:var(--text);outline:none;font-family:inherit}
+.input-row input:focus{border-color:#185FA5;box-shadow:0 0 0 2px rgba(24,95,165,0.2)}
+.input-row input.ok{border-color:#639922;background:#EAF3DE;color:#27500A}
+.input-row input.bad{border-color:#E24B4A;background:#FCEBEB;color:#791F1F}
+.check-btn{padding:10px 18px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);font-size:15px;cursor:pointer;color:var(--text);font-family:inherit}
+.check-btn:hover:not(:disabled){background:#E8E5DA}
+.check-btn:disabled{opacity:.5;cursor:default}
+.input-hint{font-size:12px;color:var(--text-3);text-align:center;margin-bottom:8px}
+
+
+
+/* FEEDBACK */
+.feedback-area{text-align:center;min-height:52px;margin-bottom:6px}
+.feedback-text{font-size:15px;font-weight:500;margin-bottom:6px}
+.feedback-text.good{color:#3B6D11}
+.feedback-text.bad{color:#A32D2D}
+.answer-box{font-size:14px;padding:8px 16px;border-radius:var(--radius);display:inline-block;margin-bottom:4px;text-align:left;max-width:100%}
+.answer-box.good{background:#EAF3DE;color:#27500A}
+.answer-box.bad{background:#FCEBEB;color:#791F1F}
+.explanation{font-size:13px;color:var(--text-2);line-height:1.5;margin-top:4px;text-align:left}
+
+/* SRS RATING */
+.rating-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:4px}
+.rating-btn{padding:10px 4px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface);font-size:13px;cursor:pointer;color:var(--text);display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit}
+.rating-btn:hover{background:var(--surface-2)}
+.rating-btn.preselected{outline:2px solid currentColor;outline-offset:2px}
+.rating-btn .ivl{font-size:11px;color:var(--text-3)}
+.btn-again{border-color:#E24B4A;color:#A32D2D}
+.btn-hard{border-color:#BA7517;color:#854F0B}
+.btn-good{border-color:#639922;color:#3B6D11}
+.btn-easy{border-color:#185FA5;color:#0C447C}
+.auto-bar-wrap{height:4px;background:var(--surface-2);border-radius:2px;margin-top:8px;overflow:hidden}
+.auto-bar{height:100%;width:100%;transform-origin:left;animation:shrink var(--dur,2s) linear forwards}
+@keyframes shrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.auto-bar.again{background:#E24B4A}
+.auto-bar.hard{background:#BA7517}
+.auto-bar.good{background:#639922}
+.auto-bar.easy{background:#185FA5}
+
+/* MISTAKES */
+.mistakes-section{margin-top:1.5rem}
+.mistakes-header{font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.mbadge{background:#FCEBEB;color:#A32D2D;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.mistake-item{background:var(--surface);border:0.5px solid #F09595;border-radius:var(--radius);padding:10px 14px;margin-bottom:6px;font-size:13px}
+.mistake-item .mq{font-size:12px;color:var(--text-3);font-style:italic;margin-bottom:4px}
+.mistake-item .myou{color:#A32D2D}
+.mistake-item .mcorrect{color:#3B6D11;font-weight:500}
+.mistake-item .mexp{font-size:12px;color:var(--text-2);margin-top:3px}
+
+/* SUMMARY */
+.summary-wrap{background:var(--surface-2);border-radius:var(--radius-lg);padding:1.5rem;margin-top:1rem}
+.summary-wrap h3{font-size:17px;font-weight:500;margin-bottom:4px}
+.summary-wrap p{font-size:14px;color:var(--text-2);margin-bottom:1rem}
+.restart-btn{padding:10px 24px;border-radius:var(--radius);background:var(--surface);border:0.5px solid var(--border-2);font-size:15px;cursor:pointer;color:var(--text);font-family:inherit}
+.restart-btn:hover{background:#E8E5DA}
+
+@media(max-width:480px){
+  .wrap{padding:.75rem .75rem 2rem}
+  .flashcard{padding:1.5rem 1rem}
+  .statement{font-size:17px}
+
+  .stats-row{gap:6px}
+}
+</style>
+</head>
+<body>
+
+<div class="back-bar"><a href="index.html" class="back-link" id="back-link">&#8592; Back to 1v1 lobby</a></div>
+<div class="tabs-wrap"><div class="tabs" id="unit-tabs"></div></div>
+<div class="page-title"><h1 id="title-h1">Linear Algebra &middot; Solo Practice</h1><div class="sub" id="title-sub">Spaced repetition mode</div></div>
+
+<div class="wrap">
+  <div class="stats-row">
+    <div class="stat"><div class="stat-label">New</div><div class="stat-val sn" id="cnt-new">0</div></div>
+    <div class="stat"><div class="stat-label">Learning</div><div class="stat-val sl" id="cnt-learn">0</div></div>
+    <div class="stat"><div class="stat-label">Due</div><div class="stat-val sd" id="cnt-due">0</div></div>
+    <div class="stat"><div class="stat-label">Mistakes</div><div class="stat-val sw" id="cnt-miss">0</div></div>
+  </div>
+  <div class="filters" id="cat-filters"><span>Category:</span></div>
+
+  <div id="quiz-area">
+    <div class="flashcard" id="flashcard">
+      <div class="top-badges" id="top-badges"></div>
+      <div class="prompt-label">True or False?</div>
+      <div class="statement" id="stmt"></div>
+    </div>
+    <div class="feedback-area" id="feedback-area"></div>
+    <div class="input-hint">Type <strong>True</strong> or <strong>False</strong> and press Enter &nbsp;&middot;&nbsp; <kbd style="background:var(--surface-2);border:0.5px solid var(--border-2);border-radius:4px;padding:1px 5px;font-size:11px">1</kbd>&ndash;<kbd style="background:var(--surface-2);border:0.5px solid var(--border-2);border-radius:4px;padding:1px 5px;font-size:11px">4</kbd> to rate</div>
+    <div class="input-row">
+      <input type="text" id="answer-input" placeholder="True or False..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <button class="check-btn" id="check-btn" onclick="checkAnswer()">Check</button>
+    </div>
+    <div id="rating-wrap" style="display:none">
+      <div class="rating-row">
+        <button class="rating-btn btn-again" id="btn-again" onclick="rate(0)"><span>Again</span><span class="ivl" id="ivl-again"></span></button>
+        <button class="rating-btn btn-hard"  id="btn-hard"  onclick="rate(1)"><span>Hard</span><span class="ivl" id="ivl-hard"></span></button>
+        <button class="rating-btn btn-good"  id="btn-good"  onclick="rate(2)"><span>Good</span><span class="ivl" id="ivl-good"></span></button>
+        <button class="rating-btn btn-easy"  id="btn-easy"  onclick="rate(3)"><span>Easy</span><span class="ivl" id="ivl-easy"></span></button>
+      </div>
+      <div class="auto-bar-wrap"><div class="auto-bar" id="auto-bar"></div></div>
+    </div>
+    <div class="mistakes-section" id="mistakes-section" style="display:none">
+      <div class="mistakes-header">Mistakes so far <span class="mbadge" id="miss-count">0</span></div>
+      <div id="mistakes-list"></div>
+    </div>
+  </div>
+
+  <div class="summary-wrap" id="summary-wrap" style="display:none">
+    <h3 id="sum-title"></h3>
+    <p id="sum-msg"></p>
+    <div id="sum-mistakes"></div>
+    <button class="restart-btn" onclick="resetAll()">Start over</button>
+  </div>
+</div>
+
+<script src="etapes/registry.js"></script>
+<script>
+// ── BOOT TABS ─────────────────────────────────────────────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const currentUnitId = urlParams.get('unit') || window.DEFAULT_ETAPE || 'e1';
+
+(function(){
+  const nav = document.getElementById('unit-tabs');
+  nav.innerHTML = window.ETAPES.map(u => {
+    const active = u.id === currentUnitId;
+    const url = 'solo.html?unit=' + u.id;
+    if(active) return `<span class="tab active" aria-current="page">${escH(u.label)} <span class="e-num">${escH(u.sublabel)}</span></span>`;
+    return `<a class="tab" href="${url}">${escH(u.label)} <span class="e-num">${escH(u.sublabel)}</span></a>`;
+  }).join('');
+  const me = window.ETAPES.find(u => u.id === currentUnitId);
+  if(me){
+    document.getElementById('title-h1').textContent = me.titleSolo;
+    document.title = me.titleSolo;
+  }
+  document.getElementById('back-link').href = 'index.html?unit=' + currentUnitId;
+})();
+</script>
+<script src="etapes/etape1.js"></script>
+<script>
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtIvl(m){ if(m<60) return m+'m'; if(m<1440) return Math.round(m/60)+'h'; return Math.round(m/1440)+'d'; }
+
+if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
+  document.body.innerHTML='<div style="max-width:500px;margin:3rem auto;padding:1.5rem;color:#A32D2D">Could not load card data.</div>';
+  throw new Error('ETAPE_DATA not loaded');
+}
+const vocab = window.ETAPE_DATA.vocab;
+const categoryLabels = window.ETAPE_DATA.categoryLabels;
+
+// ── CATEGORY FILTERS ──────────────────────────────────────────────────────
+(function buildFilters(){
+  const wrap = document.getElementById('cat-filters');
+  Object.keys(categoryLabels).forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (k==='all'?' active':'');
+    btn.dataset.cat = k;
+    btn.textContent = categoryLabels[k]||k;
+    btn.onclick = () => setFilter(k);
+    wrap.appendChild(btn);
+  });
+})();
+
+// ── SRS CORE ──────────────────────────────────────────────────────────────
+function initCard(v,i){ return {id:i,vocab:v,state:'new',interval:0,easeFactor:2.5,step:0,steps:[1,10],due:0,reps:0}; }
+function previewIvl(card,r){
+  if(card.state==='new'||card.state==='learning'){
+    if(r===0) return fmtIvl(card.steps[0]);
+    if(r===1) return fmtIvl(card.steps[Math.max(0,card.step-1)]);
+    if(r===2){ if(card.step<card.steps.length-1) return fmtIvl(card.steps[card.step+1]); return fmtIvl(Math.max(card.interval,1)*1440); }
+    return fmtIvl(Math.max(card.interval,1)*1440);
+  }
+  if(r===0) return fmtIvl(card.steps[0]);
+  if(r===1) return fmtIvl(Math.round(card.interval*1.2)*1440);
+  if(r===2) return fmtIvl(Math.round(card.interval*card.easeFactor)*1440);
+  return fmtIvl(Math.round(card.interval*card.easeFactor*1.3)*1440);
+}
+function applyRating(card,r){
+  const now=Date.now();
+  if(card.state==='new'||card.state==='learning'){
+    card.state='learning';
+    if(r===0){card.step=0;card.due=now+card.steps[0]*60000;}
+    else if(r===1){card.step=Math.max(0,card.step-1);card.due=now+card.steps[card.step]*60000;}
+    else if(r===2){if(card.step<card.steps.length-1){card.step++;card.due=now+card.steps[card.step]*60000;}else{card.state='review';card.interval=Math.max(card.interval,1);card.due=now+card.interval*86400000;}}
+    else{card.state='review';card.interval=Math.max(card.interval*card.easeFactor,1);card.due=now+card.interval*86400000;}
+  } else {
+    if(r===0){card.state='learning';card.step=0;card.due=now+card.steps[0]*60000;card.easeFactor=Math.max(1.3,card.easeFactor-0.2);}
+    else if(r===1){card.interval=Math.round(card.interval*1.2)||1;card.easeFactor=Math.max(1.3,card.easeFactor-0.15);card.due=now+card.interval*86400000;}
+    else if(r===2){card.interval=Math.round(card.interval*card.easeFactor)||1;card.due=now+card.interval*86400000;}
+    else{card.interval=Math.round(card.interval*card.easeFactor*1.3)||1;card.easeFactor+=0.15;card.due=now+card.interval*86400000;}
+  }
+  card.reps++;
+}
+function autoRate(ok,elapsed){
+  if(!ok) return 0;
+  if(elapsed<5000) return 3;
+  if(elapsed<10000) return 2;
+  return 1;
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let allCards = vocab.map((v,i)=>initCard(v,i));
+let mistakes = [], current = null, answered = false, cardStartTime = 0, autoTimer = null;
+let filter = 'all';
+const AUTO_DELAY = 2000;
+
+function matchesFilter(card){ return filter==='all' || card.vocab.category===filter; }
+function getRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function getNext(){
+  const now=Date.now(), pool=allCards.filter(matchesFilter);
+  if(!pool.length) return null;
+  const learningDue = pool.filter(c=>c.state==='learning'&&c.due<=now);
+  if(learningDue.length) return getRandom(learningDue);
+  const newCards = pool.filter(c=>c.state==='new');
+  if(newCards.length) return getRandom(newCards);
+  const reviewDue = pool.filter(c=>c.state==='review'&&c.due<=now);
+  if(reviewDue.length) return getRandom(reviewDue);
+  return pool.slice().sort((a,b)=>a.due-b.due)[0]||null;
+}
+function updateStats(){
+  const pool=allCards.filter(matchesFilter), now=Date.now();
+  document.getElementById('cnt-new').textContent  = pool.filter(c=>c.state==='new').length;
+  document.getElementById('cnt-learn').textContent= pool.filter(c=>c.state==='learning').length;
+  document.getElementById('cnt-due').textContent  = pool.filter(c=>c.state==='review'&&c.due<=now).length;
+  document.getElementById('cnt-miss').textContent = mistakes.length;
+}
+
+// ── SHOW CARD ─────────────────────────────────────────────────────────────
+function showCard(card){
+  current=card; answered=false; cardStartTime=Date.now();
+  const badges=document.getElementById('top-badges');
+  badges.innerHTML=`<span class="card-badge ${card.state==='new'?'badge-new':card.state==='learning'?'badge-learn':'badge-review'}">${card.state==='new'?'New':card.state==='learning'?'Learning':'Review'}</span>
+    <span class="cat-badge cb-${card.vocab.category}">${escH(categoryLabels[card.vocab.category]||card.vocab.category)}</span>`;
+  document.getElementById('stmt').textContent = card.vocab.en;
+  document.getElementById('feedback-area').innerHTML = '';
+  document.getElementById('rating-wrap').style.display = 'none';
+  const inp=document.getElementById('answer-input');
+  if(inp){inp.value='';inp.className='';inp.disabled=false;setTimeout(()=>inp.focus(),50);}
+  const chk=document.getElementById('check-btn');
+  if(chk) chk.disabled=false;
+  updateStats();
+}
+
+// ── CHECK + SUBMIT ────────────────────────────────────────────────────────
+function checkAnswer(){
+  if(answered||!current) return;
+  const inp=document.getElementById('answer-input');
+  const typed=(inp?inp.value.trim():'').toLowerCase();
+  if(!typed) return;
+  let isTrue;
+  if(typed==='true'||typed==='t') isTrue=true;
+  else if(typed==='false'||typed==='f') isTrue=false;
+  else { inp.style.outline='2px solid #E24B4A'; setTimeout(()=>inp.style.outline='',600); return; }
+  submitTF(isTrue);
+}
+function submitTF(isTrue){
+  if(answered||!current) return;
+  answered=true;
+  const elapsed=Date.now()-cardStartTime;
+  const v=current.vocab;
+  const correct=(v.fr.toLowerCase()==='true')===isTrue;
+  const inp=document.getElementById('answer-input');
+  const chk=document.getElementById('check-btn');
+  if(inp){inp.disabled=true;inp.className=correct?'ok':'bad';}
+  if(chk) chk.disabled=true;
+
+  const fb=document.getElementById('feedback-area');
+  fb.innerHTML=`<div class="feedback-text ${correct?'good':'bad'}">${correct?'&#10003; Correct!':'&#10007; Incorrect'}</div>
+    <div class="answer-box ${correct?'good':'bad'}">
+      <strong>Answer: ${escH(v.fr)}</strong>
+      ${v.explanation?`<div class="explanation">${escH(v.explanation)}</div>`:''}
+    </div>`;
+
+  if(!correct) addMistake(v.en, isTrue?'True':'False', v.fr, v.explanation||'');
+  showRating(correct, elapsed);
+  updateStats();
+}
+
+function showRating(ok, elapsed){
+  const suggested=autoRate(ok,elapsed);
+  document.getElementById('ivl-again').textContent=previewIvl(current,0);
+  document.getElementById('ivl-hard').textContent=previewIvl(current,1);
+  document.getElementById('ivl-good').textContent=previewIvl(current,2);
+  document.getElementById('ivl-easy').textContent=previewIvl(current,3);
+  document.getElementById('rating-wrap').style.display='block';
+  const ids=['btn-again','btn-hard','btn-good','btn-easy'];
+  const cls=['again','hard','good','easy'];
+  ids.forEach(id=>document.getElementById(id).classList.remove('preselected'));
+  document.getElementById(ids[suggested]).classList.add('preselected');
+  const bar=document.getElementById('auto-bar');
+  bar.className='auto-bar '+cls[suggested];
+  bar.style.setProperty('--dur', AUTO_DELAY/1000+'s');
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  autoTimer=setTimeout(()=>{autoTimer=null;rate(suggested);}, AUTO_DELAY);
+}
+
+function rate(r){
+  if(!current) return;
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  applyRating(current,r);
+  const next=getNext();
+  if(!next){showSummary();return;}
+  showCard(next);
+}
+
+// ── MISTAKES ──────────────────────────────────────────────────────────────
+function addMistake(q,given,correct,exp){
+  mistakes.push({q,given,correct,exp});
+  document.getElementById('mistakes-section').style.display='block';
+  document.getElementById('miss-count').textContent=mistakes.length;
+  const item=document.createElement('div');
+  item.className='mistake-item';
+  item.innerHTML=`<div class="mq">${escH(q)}</div>
+    <div>You said: <span class="myou">${escH(given)}</span> &nbsp; Correct: <span class="mcorrect">${escH(correct)}</span></div>
+    ${exp?`<div class="mexp">${escH(exp)}</div>`:''}`;
+  document.getElementById('mistakes-list').appendChild(item);
+}
+
+// ── SUMMARY ───────────────────────────────────────────────────────────────
+function showSummary(){
+  document.removeEventListener('keydown', keyHandler);
+  document.getElementById('quiz-area').style.display='none';
+  document.getElementById('summary-wrap').style.display='block';
+  const total=allCards.reduce((a,c)=>a+c.reps,0);
+  document.getElementById('sum-title').textContent=mistakes.length===0?'Perfect session!':mistakes.length<=3?'Great work!':'Session complete!';
+  document.getElementById('sum-msg').textContent=`${total} card${total===1?'':'s'} reviewed, ${mistakes.length} mistake${mistakes.length===1?'':'s'}.`;
+  const sm=document.getElementById('sum-mistakes'); sm.innerHTML='';
+  if(!mistakes.length){
+    sm.innerHTML='<p style="color:var(--text-2);font-size:14px;margin-bottom:1rem">No mistakes this session!</p>';
+  } else {
+    const h=document.createElement('div');
+    h.style.cssText='font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px';
+    h.textContent=`Mistakes to review (${mistakes.length}):`;
+    sm.appendChild(h);
+    mistakes.forEach(m=>{
+      const item=document.createElement('div'); item.className='mistake-item';
+      item.innerHTML=`<div class="mq">${escH(m.q)}</div>
+        <div>You said <span class="myou">${escH(m.given)}</span> &nbsp; Correct: <span class="mcorrect">${escH(m.correct)}</span></div>
+        ${m.exp?`<div class="mexp">${escH(m.exp)}</div>`:''}`;
+      sm.appendChild(item);
+    });
+  }
+}
+
+function resetAll(){
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  allCards=vocab.map((v,i)=>initCard(v,i)); mistakes=[];
+  document.getElementById('mistakes-list').innerHTML='';
+  document.getElementById('mistakes-section').style.display='none';
+  document.getElementById('miss-count').textContent='0';
+  document.getElementById('summary-wrap').style.display='none';
+  document.getElementById('quiz-area').style.display='block';
+  document.addEventListener('keydown', keyHandler);
+  const n=getNext(); if(n) showCard(n);
+  updateStats();
+}
+
+function setFilter(f){
+  filter=f;
+  document.querySelectorAll('#cat-filters .filter-btn').forEach(btn=>{
+    btn.className='filter-btn'+(btn.dataset.cat===f?' active':'');
+  });
+  resetAll();
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────
+function keyHandler(e){
+  if(!answered){
+    if(e.key==='Enter') checkAnswer();
+  } else {
+    if(e.key==='1') { if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} rate(0); }
+    else if(e.key==='2') { if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} rate(1); }
+    else if(e.key==='3'||e.key==='Enter'||e.key===' ') { e.preventDefault(); if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} rate(2); }
+    else if(e.key==='4') { if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} rate(3); }
+  }
+}
+// Wire input enter key
+document.addEventListener('DOMContentLoaded', ()=>{
+  const inp=document.getElementById('answer-input');
+  if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!answered) checkAnswer(); });
+});
+document.addEventListener('keydown', keyHandler);
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+const first=getNext(); if(first) showCard(first); updateStats();
+</script>
+</body>
+</html>

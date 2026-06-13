@@ -87,18 +87,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 
 /* T/F Buttons */
 .tf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
-.tf-btn{padding:16px 24px;border-radius:var(--radius-lg);border:1.5px solid transparent;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s,opacity .15s,background .1s}
-.tf-btn:active{transform:scale(.97)}
-.tf-btn.t-btn{background:#EAF3DE;color:#2E6B0A;border-color:#7BBD4A}
-.tf-btn.f-btn{background:#FCEBEB;color:#9B2828;border-color:#DC4848}
-.tf-btn:hover.t-btn{background:#D5EDBE}
-.tf-btn:hover.f-btn{background:#F8D5D5}
-.tf-btn.sel-ok{background:#3B6D11;color:#fff;border-color:#3B6D11}
-.tf-btn.sel-bad{background:#A32D2D;color:#fff;border-color:#A32D2D}
-.tf-btn.reveal-ok-t{background:#3B6D11;color:#fff;border-color:#3B6D11}
-.tf-btn.reveal-ok-f{background:#A32D2D;color:#fff;border-color:#A32D2D}
-.tf-btn.dim{opacity:.3;cursor:default;pointer-events:none}
-.tf-btn:disabled{cursor:default}
 .kb-hint{text-align:center;font-size:11px;color:var(--text-3);margin-bottom:8px}
 .kb-hint kbd{background:var(--surface-2);border:0.5px solid var(--border-2);border-radius:4px;padding:1px 5px;font-family:inherit;font-size:11px}
 
@@ -196,8 +184,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   .lobby-card{min-height:auto;padding:12px}
   .flashcard{padding:1.5rem 1rem}
   .statement{font-size:17px}
-  .tf-btn{padding:14px 12px;font-size:15px}
-}
+  }
 </style>
 </head>
 <body>
@@ -469,8 +456,7 @@ function startGame(){
 }
 function keyHandler(e){
   if(document.getElementById('screen-game').style.display==='none') return;
-  if(!answered && (e.key==='t'||e.key==='T')) submitAnswer(true);
-  else if(!answered && (e.key==='f'||e.key==='F')) submitAnswer(false);
+  if(!answered && e.key==='Enter') checkAnswer();
   else if(answered && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); advance(); }
 }
 
@@ -485,10 +471,10 @@ function renderGameShell(){
       <div class="statement" id="g-stmt"></div>
     </div>
     <div id="g-feedback" class="feedback-area"></div>
-    <div class="kb-hint" id="g-kbhint">Press <kbd>T</kbd> True &nbsp;&middot;&nbsp; <kbd>F</kbd> False &nbsp;&middot;&nbsp; <kbd>Space</kbd> Next</div>
-    <div class="tf-row">
-      <button class="tf-btn t-btn" id="btn-t" onclick="window._tfAnswer(true)">&#10003; True</button>
-      <button class="tf-btn f-btn" id="btn-f" onclick="window._tfAnswer(false)">&#10007; False</button>
+    <div class="input-hint">Type <strong>True</strong> or <strong>False</strong> and press Enter</div>
+    <div class="input-row">
+      <input type="text" id="answer-input" placeholder="True or False..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <button class="check-btn" id="check-btn">Check</button>
     </div>
     <div id="g-next"></div>
     <div class="scoreboard" style="margin-top:1rem">
@@ -514,7 +500,8 @@ function renderGameShell(){
   showCard();
 }
 
-window._tfAnswer = submitAnswer;
+document.getElementById('check-btn').addEventListener('click', checkAnswer);
+document.getElementById('answer-input').addEventListener('keydown', e=>{ if(e.key==='Enter'&&!answered) checkAnswer(); });
 window._resign = resignMatch;
 
 function showCard(){
@@ -531,12 +518,24 @@ function showCard(){
   document.getElementById('g-feedback').innerHTML = '';
   document.getElementById('g-next').innerHTML = '';
   document.getElementById('g-kbhint').style.display = '';
-  const btnT = document.getElementById('btn-t');
-  const btnF = document.getElementById('btn-f');
-  btnT.disabled=false; btnT.className='tf-btn t-btn';
-  btnF.disabled=false; btnF.className='tf-btn f-btn';
+  const inp = document.getElementById('answer-input');
+  if(inp){ inp.value=''; inp.className=''; inp.disabled=false; setTimeout(()=>inp.focus(),50); }
+  const chk = document.getElementById('check-btn');
+  if(chk) chk.disabled=false;
 }
 
+function checkAnswer(){
+  if(answered) return;
+  const inp = document.getElementById('answer-input');
+  const typed = (inp ? inp.value.trim() : '').toLowerCase();
+  if(!typed) return;
+  // accept t/true or f/false
+  let isTrue;
+  if(typed==='true'||typed==='t') isTrue=true;
+  else if(typed==='false'||typed==='f') isTrue=false;
+  else { /* invalid — shake */ inp.style.outline='2px solid #E24B4A'; setTimeout(()=>inp.style.outline='',600); return; }
+  submitAnswer(isTrue);
+}
 function submitAnswer(isTrue){
   if(answered) return;
   answered = true;
@@ -544,22 +543,10 @@ function submitAnswer(isTrue){
   myTotalTime += elapsed;
   const v = myCards[myIndex];
   const correct = (v.fr.toLowerCase()==='true') === isTrue;
-  const btnT = document.getElementById('btn-t');
-  const btnF = document.getElementById('btn-f');
-  btnT.disabled=true; btnF.disabled=true;
-  document.getElementById('g-kbhint').style.display='none';
-
-  if(isTrue){
-    btnT.className='tf-btn t-btn '+(correct?'sel-ok':'sel-bad');
-    btnF.className='tf-btn f-btn dim';
-  } else {
-    btnF.className='tf-btn f-btn '+(correct?'sel-ok':'sel-bad');
-    btnT.className='tf-btn t-btn dim';
-  }
-  if(!correct){
-    if(v.fr.toLowerCase()==='true')  btnT.className='tf-btn t-btn reveal-ok-t';
-    if(v.fr.toLowerCase()==='false') btnF.className='tf-btn f-btn reveal-ok-f';
-  }
+  const inp = document.getElementById('answer-input');
+  const chk = document.getElementById('check-btn');
+  if(inp){ inp.disabled=true; inp.className=correct?'ok':'bad'; }
+  if(chk) chk.disabled=true;
 
   if(correct) myScore++;
   else myMistakes.push({question:v.en, given:isTrue?'True':'False', correct:v.fr, explanation:v.explanation||''});
@@ -704,17 +691,9 @@ async function backToLobby(){
   renderLobby();
 }
 
-// ====== SOLO MODE ======
+// ====== SOLO MODE — navigate to full solo page ======
 function startSolo(){
-  matchId=null; role=null;
-  matchLength = selectedLength;
-  matchCategory = selectedCategory;
-  const cards = pickMatchCards(selectedCategory, selectedLength);
-  myCards = cards.map(i=>vocab[i]);
-  myIndex=0; myScore=0; myMistakes=[]; myTotalTime=0; answered=false;
-  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
-  document.addEventListener('keydown', keyHandler);
-  renderGameShell(); showCard(); show('game');
+  window.location.href = 'solo.html?unit=' + currentUnitId;
 }
 
 // ====== INIT ======
