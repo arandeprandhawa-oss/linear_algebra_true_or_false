@@ -1,6 +1,6 @@
 # french-quiz — Maintenance Guide
 
-Live site: <https://arandeprandhawa-oss.github.io/french-quiz/>
+Live site: <https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/>
 
 Everything below is **copy-paste PowerShell**. No local server, no manual file hunting, and **nothing to fill in for your username** — every script finds your repo folder automatically and works on any computer.
 
