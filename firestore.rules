@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /matches/{matchId} {
+
+      function validCode() {
+        return matchId.matches('^[A-Z]{4}$');
+      }
+
+      function validStatus(s) {
+        return s in ['waiting', 'playing', 'done', 'resigned'];
+      }
+
+      function validEtape(e) {
+        return e in ['e1', 'e2', 'e3', 'e4'];
+      }
+
+      function validCategory(c) {
+        return c in [
+          'all',
+          'systems', 'span', 'independence',
+          'matrices', 'inverses', 'lu',
+          'determinants', 'transformations',
+          'subspaces', 'eigenvalues', 'markov'
+        ];
+      }
+
+      function validCreate() {
+        return validCode()
+          && request.resource.data.keys().hasOnly([
+            'createdAt','lastUpdate','status','etape','cards','length',
+            'category','p1Joined','p2Joined','p1Score','p2Score',
+            'p1Done','p2Done','p1Time','p2Time','p1Typing','p2Typing','currentCard'
+          ])
+          && request.resource.data.status == 'waiting'
+          && validEtape(request.resource.data.etape)
+          && request.resource.data.p1Joined == true
+          && request.resource.data.p2Joined == false
+          && request.resource.data.p1Score == 0
+          && request.resource.data.p2Score == 0
+          && request.resource.data.length in [20, 30, 40, 50, 60, 70, 80]
+          && validCategory(request.resource.data.category)
+          && request.resource.data.cards is list
+          && request.resource.data.cards.size() == request.resource.data.length;
+      }
+
+      function validJoin() {
+        return resource.data.status == 'waiting'
+          && resource.data.p2Joined == false
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['p2Joined','status','lastUpdate'])
+          && request.resource.data.p2Joined == true
+          && request.resource.data.status == 'playing';
+      }
+
+      function validGameUpdate() {
+        return resource.data.status == 'playing'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['lastUpdate','p1Score','p2Score','p1Done','p2Done',
+                      'p1Time','p2Time','p1Typing','p2Typing','currentCard','status'])
+          && request.resource.data.p1Score is int
+          && request.resource.data.p2Score is int
+          && request.resource.data.p1Score >= 0
+          && request.resource.data.p2Score >= 0
+          && validStatus(request.resource.data.status);
+      }
+
+      function validResign() {
+        return resource.data.status == 'playing'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status','resignedBy','lastUpdate'])
+          && request.resource.data.status == 'resigned'
+          && request.resource.data.resignedBy in ['p1', 'p2'];
+      }
+
+      allow read:   if validCode();
+      allow create: if validCreate();
+      allow update: if validCode() && (validJoin() || validGameUpdate() || validResign());
+      allow delete: if validCode() && resource.data.status == 'waiting';
+    }
+  }
+}
