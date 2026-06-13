@@ -224,6 +224,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .audio-dismiss{background:none;border:none;cursor:pointer;font-size:16px;color:#2D6B27;opacity:0.6;padding:0 2px;line-height:1;flex-shrink:0}
 .audio-dismiss:hover{opacity:1}
 </style>
+<style>.mute-btn{display:none!important}.speaker-btn{display:none!important}</style>
 </head>
 <body>
 <div class="wrap">
@@ -958,9 +959,10 @@ async function checkAnswer(){
   box.className='answer-box '+(ok?'good':'bad');
   const txt=document.createElement('span');txt.textContent='Answer: '+v.fr;box.appendChild(txt);
   const spk=document.createElement('button');spk.type='button';spk.className='speaker-btn';
-  spk.textContent='🔊';spk.onclick=function(){_playRaw(v.fr);};box.appendChild(spk);
-  document.getElementById('answer-box-wrap').appendChild(box);
-  _playRaw(v.fr);
+  spk.textContent='🔊';spk.onclick=function(){ };box.appendChild(spk);
+  
+  if(v.explanation){var _e=document.createElement('div');_e.style.cssText='font-size:13px;color:#5F5E5A;padding:6px 14px 2px;line-height:1.5;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:4px';_e.textContent=v.explanation;document.getElementById('answer-box-wrap').appendChild(_e);}
+   
   // Add the auto-advance progress bar
   const barWrap=document.createElement('div');
   barWrap.className='auto-bar-wrap';
@@ -1137,7 +1139,6 @@ if(codeFromUrl && /^[A-Z]{4}$/.test(codeFromUrl.toUpperCase())){
 }
 
 </script>
-  <script src="pronunciation-google.js"></script>
   <script>
 // ====== AUDIO PLAYBACK ======
 function audioSlug(text){

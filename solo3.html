@@ -590,11 +590,12 @@ function revealResult(ok,displayAnswer,extraMsg){
   spk.type='button';spk.className='speaker-btn';spk.title='Play pronunciation';
   spk.setAttribute('aria-label','Play pronunciation');
   spk.textContent='\ud83d\udd0a';
-  spk.onclick=function(){playAudio(displayAnswer);};
+  spk.onclick=function(){ };
   box.appendChild(spk);
   document.getElementById('answer-box-wrap').innerHTML='';
-  document.getElementById('answer-box-wrap').appendChild(box);
-  playAudio(displayAnswer);   // auto-play the correct French on reveal
+  
+  if(v.explanation){var _e=document.createElement('div');_e.style.cssText='font-size:13px;color:#5F5E5A;padding:6px 14px 2px;line-height:1.5;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:4px';_e.textContent=v.explanation;document.getElementById('answer-box-wrap').appendChild(_e);}
+      // auto-play the correct French on reveal
 }
 function addMistake(question,typed,correct){
   mistakes.push({question,typed,correct});
@@ -620,7 +621,8 @@ function checkAnswer(){
     const missing=getMissing(typed,current.vocab);
     if(missing.length)extraMsg=missing.join(', ');
   }
-  revealResult(ok,current.vocab.fr,extraMsg);
+  
+  if(current.vocab.explanation){var _e=document.createElement('div');_e.style.cssText='font-size:13px;color:#5F5E5A;padding:6px 14px 2px;line-height:1.5;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:4px';_e.textContent=current.vocab.explanation;document.getElementById('answer-box-wrap').appendChild(_e);}
   if(!ok)addMistake(current.vocab.en,typed,current.vocab.fr);
   showRatingAndAutoAdvance(ok,elapsed);
   updateStats();
