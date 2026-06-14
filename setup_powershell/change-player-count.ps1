@@ -308,17 +308,28 @@ function Backup-ProjectFiles {
 }
 
 function Ensure-ConfigLoaderInPage {
-    param([string]$PagePath)
+    param(
+        [string]$PagePath,
+        [string]$VersionToken
+    )
 
     $content = [System.IO.File]::ReadAllText($PagePath, [System.Text.Encoding]::UTF8)
-    if ($content -match '<script\s+src=["'']multiplayer-config\.js["'']\s*></script>') {
-        return $false
-    }
-
     $original = $content
+    $loader = "<script src=`"multiplayer-config.js?v=$VersionToken`"></script>"
 
-    if ($content -match '<!--\s*Firebase \+ game logic\s*-->') {
-        $replacement = '$1' + "`r`n<script src=`"multiplayer-config.js`"></script>"
+    # Always rewrite the loader with a new query string. This prevents the
+    # browser and GitHub Pages from reusing an older cached player-count file.
+    $existingPattern = '<script\s+src=["'']multiplayer-config\.js(?:\?[^"'']*)?["'']\s*></script>'
+    if ([regex]::IsMatch($content, $existingPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+        $content = [regex]::Replace(
+            $content,
+            $existingPattern,
+            $loader,
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+        )
+    }
+    elseif ($content -match '<!--\s*Firebase \+ game logic\s*-->') {
+        $replacement = '$1' + "`r`n" + $loader
         $content = [regex]::Replace(
             $content,
             '(<!--\s*Firebase \+ game logic\s*-->)',
@@ -327,7 +338,7 @@ function Ensure-ConfigLoaderInPage {
         )
     }
     elseif ($content -match '<script\s+type=["'']module["'']>') {
-        $replacement = "<script src=`"multiplayer-config.js`"></script>`r`n" + '$1'
+        $replacement = $loader + "`r`n" + '$1'
         $content = [regex]::Replace(
             $content,
             '(<script\s+type=["'']module["'']>)',
@@ -336,7 +347,7 @@ function Ensure-ConfigLoaderInPage {
         )
     }
     else {
-        $content = $content.Replace('</body>', "<script src=`"multiplayer-config.js`"></script>`r`n</body>")
+        $content = $content.Replace('</body>', $loader + "`r`n</body>")
     }
 
     if ($content -ne $original) {
@@ -585,9 +596,10 @@ window.MULTIPLAYER_CONFIG = Object.freeze({
 "@
     Save-Utf8NoBom -Path $configPath -Text $configText
 
+    $versionToken = (Get-Date -Format 'yyyyMMddHHmmss')
     $pageChanges = 0
     foreach ($page in $gamePages) {
-        if (Ensure-ConfigLoaderInPage -PagePath $page.FullName) { $pageChanges++ }
+        if (Ensure-ConfigLoaderInPage -PagePath $page.FullName -VersionToken $versionToken) { $pageChanges++ }
     }
 
     $rulesPath = Join-Path $ProjectFolder 'firestore.rules'
@@ -994,7 +1006,8 @@ $applyButton.Add_Click({
             $backupLine +
             "`r`n`r`nFor the live site, next double-click:`r`n" +
             "1. Deploy Firestore Rules.cmd`r`n" +
-            "2. Update Entire Project to GitHub.cmd"
+            "2. Update Entire Project to GitHub.cmd`r`n" +
+            "3. After GitHub finishes, press Ctrl+F5 on the website."
 
         Show-AppMessage -Title 'Player count updated' -Message $message -Type Success
     }
