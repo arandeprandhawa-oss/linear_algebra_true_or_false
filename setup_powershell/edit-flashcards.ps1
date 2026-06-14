@@ -1479,6 +1479,8 @@ function Start-FlashcardEditor {
     $editButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
         [System.Windows.Forms.AnchorStyles]::Right
     $editButton.Enabled = $false
+    $editButton.Cursor = [System.Windows.Forms.Cursors]::Hand
+    $editButton.TabStop = $true
     $rightPanel.Controls.Add($editButton)
 
     $statusPanel = New-Object System.Windows.Forms.Panel
@@ -1532,14 +1534,31 @@ function Start-FlashcardEditor {
     }.GetNewClosure()
 
     $updateFileDetails = {
-        if ($fileCombo.SelectedIndex -lt 0 -or
-            $fileCombo.SelectedIndex -ge $script:EditableFiles.Count) {
-            $detailsText.Text = 'Choose a flashcard JavaScript file from the drop-down menu.'
-            $editButton.Enabled = $false
-            return
+        $selected = $null
+
+        if ($fileCombo.SelectedIndex -ge 0 -and
+            $fileCombo.SelectedIndex -lt $script:EditableFiles.Count) {
+            $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
+        }
+        elseif ($null -ne $fileCombo.SelectedItem) {
+            $selectedDisplay = [string]$fileCombo.SelectedItem
+
+            foreach ($candidate in $script:EditableFiles) {
+                if ($candidate.Display -ieq $selectedDisplay) {
+                    $selected = $candidate
+                    break
+                }
+            }
         }
 
-        $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
+        if ($null -eq $selected -or
+            [string]::IsNullOrWhiteSpace($selected.FullPath) -or
+            (-not (Test-Path -LiteralPath $selected.FullPath -PathType Leaf))) {
+            $detailsText.Text = 'Choose a flashcard JavaScript file from the drop-down menu.'
+            $editButton.Enabled = $false
+            $editButton.Tag = $null
+            return
+        }
 
         $detailsText.Text = @"
 Path: $($selected.RelativePath)
@@ -1548,7 +1567,10 @@ Size: $(Format-FileSize -Bytes $selected.SizeBytes)
 Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
 "@
 
+        $editButton.Tag = $selected.FullPath
         $editButton.Enabled = $true
+        $detailsPanel.Refresh()
+        $editButton.Refresh()
     }.GetNewClosure()
 
     $loadFiles = {
@@ -1556,8 +1578,6 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
             [string]$ProjectPath,
             [string]$PreferredFile
         )
-
-        $fileCombo.BeginUpdate()
 
         try {
             $fileCombo.Items.Clear()
@@ -1646,17 +1666,24 @@ $resolvedProject
             }
 
             $fileCombo.SelectedIndex = $selectedIndex
+            $fileCombo.Refresh()
+            [System.Windows.Forms.Application]::DoEvents()
             & $updateFileDetails
+
+            if (-not $editButton.Enabled) {
+                throw 'The flashcard file was loaded, but the editor could not activate the Edit in Notepad button.'
+            }
+
             & $setStatus "Project loaded successfully. $($script:EditableFiles.Count) JavaScript flashcard file(s) are ready." 'Success'
 
             return $script:EditableFiles.Count
         }
         finally {
-            $fileCombo.EndUpdate()
             $fileCombo.Refresh()
             $projectPathBox.Refresh()
             $detailsPanel.Refresh()
             $foundPanel.Refresh()
+            $editButton.Refresh()
             [System.Windows.Forms.Application]::DoEvents()
         }
     }.GetNewClosure()
@@ -1776,14 +1803,38 @@ $resolvedProject
     }.GetNewClosure())
 
     $editButton.Add_Click({
-        if ($fileCombo.SelectedIndex -lt 0 -or
-            $fileCombo.SelectedIndex -ge $script:EditableFiles.Count) {
+        $selected = $null
+
+        if ($fileCombo.SelectedIndex -ge 0 -and
+            $fileCombo.SelectedIndex -lt $script:EditableFiles.Count) {
+            $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
+        }
+        elseif ($null -ne $fileCombo.SelectedItem) {
+            $selectedDisplay = [string]$fileCombo.SelectedItem
+
+            foreach ($candidate in $script:EditableFiles) {
+                if ($candidate.Display -ieq $selectedDisplay) {
+                    $selected = $candidate
+                    break
+                }
+            }
+        }
+
+        if ($null -eq $selected -or
+            [string]::IsNullOrWhiteSpace($selected.FullPath) -or
+            (-not (Test-Path -LiteralPath $selected.FullPath -PathType Leaf))) {
+            Show-EditorMessage `
+                -Title 'Choose a JavaScript file' `
+                -Message 'Choose a JavaScript flashcard file from the drop-down menu before clicking Edit in Notepad.' `
+                -Type 'Information'
+
+            & $updateFileDetails
             return
         }
 
-        $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
-
         try {
+            & $setStatus "Opening $($selected.RelativePath) in Notepad..." 'Normal'
+            [System.Windows.Forms.Application]::DoEvents()
             if ($script:Mode -eq 'Firebase + GitHub') {
                 & $setBusy $true
                 & $setStatus 'Preparing GitHub tools and repository...' 'Normal'
@@ -1831,9 +1882,22 @@ $resolvedProject
                     -Mode $script:Mode
             }
 
-            Start-Process `
-                -FilePath 'notepad.exe' `
-                -ArgumentList "`"$($selected.FullPath)`""
+            $notepadPath = Join-Path $env:SystemRoot 'System32\notepad.exe'
+
+            if (-not (Test-Path -LiteralPath $notepadPath -PathType Leaf)) {
+                $notepadPath = 'notepad.exe'
+            }
+
+            $notepadProcess = Start-Process `
+                -FilePath $notepadPath `
+                -ArgumentList @($selected.FullPath) `
+                -PassThru
+
+            if ($null -eq $notepadProcess) {
+                throw 'Windows did not start Notepad.'
+            }
+
+            & $setStatus "Opened $($selected.RelativePath) in Notepad." 'Success'
 
             $finished = Ask-OkCancel `
                 -Title 'Finish editing in Notepad' `
