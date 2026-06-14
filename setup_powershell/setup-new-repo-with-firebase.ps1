@@ -215,7 +215,7 @@ function Show-TextPopup {
                 [System.Windows.Forms.MessageBoxIcon]::Information
             ) | Out-Null
         }
-    })
+    }.GetNewClosure())
     $content.Controls.Add($pasteButton)
 
     $hint = New-Object System.Windows.Forms.Label
@@ -250,14 +250,14 @@ function Show-TextPopup {
 
     $input.Add_TextChanged({
         $continueButton.Enabled = -not [string]::IsNullOrWhiteSpace($input.Text)
-    })
+    }.GetNewClosure())
 
     $form.AcceptButton = $continueButton
     $form.CancelButton = $cancelButton
     $form.Add_Shown({
         $input.Focus()
         $input.SelectionStart = $input.Text.Length
-    })
+    }.GetNewClosure())
 
     $result = $form.ShowDialog()
     $value = $input.Text.Trim()
@@ -378,7 +378,7 @@ function Show-MultilinePopup {
             $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
             $continueButton.Enabled = $false
         }
-    }
+    }.GetNewClosure()
 
     $textBox.Add_TextChanged($updateValidation)
 
@@ -398,18 +398,18 @@ function Show-MultilinePopup {
                 [System.Windows.Forms.MessageBoxIcon]::Information
             ) | Out-Null
         }
-    })
+    }.GetNewClosure())
 
     $clearButton.Add_Click({
         $textBox.Clear()
         $textBox.Focus()
-    })
+    }.GetNewClosure())
 
     $form.AcceptButton = $continueButton
     $form.CancelButton = $cancelButton
     $form.Add_Shown({
         $textBox.Focus()
-    })
+    }.GetNewClosure())
 
     $result = $form.ShowDialog()
     $value = $textBox.Text
@@ -513,7 +513,7 @@ function Show-FolderPopup {
             $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
             $continueButton.Enabled = $false
         }
-    }
+    }.GetNewClosure()
 
     $pathBox.Add_TextChanged($updateFolderState)
 
@@ -533,7 +533,7 @@ function Show-FolderPopup {
         }
 
         $dialog.Dispose()
-    })
+    }.GetNewClosure())
 
     & $updateFolderState
 
@@ -542,7 +542,7 @@ function Show-FolderPopup {
     $form.Add_Shown({
         $pathBox.Focus()
         $pathBox.SelectionStart = $pathBox.Text.Length
-    })
+    }.GetNewClosure())
 
     $result = $form.ShowDialog()
     $value = [Environment]::ExpandEnvironmentVariables($pathBox.Text.Trim())
@@ -1396,7 +1396,7 @@ function Deploy-FirestoreRules {
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - ONLINE SETUP WITH FIREBASE' -ForegroundColor Magenta
-    Write-Host 'UI VERSION 3 - POWERSHELL 5.1 SIZE FIX' -ForegroundColor DarkCyan
+    Write-Host 'UI VERSION 4 - WINDOWS EVENT HANDLER FIX' -ForegroundColor DarkCyan
     Write-Host 'MODE: GitHub website + Firebase multiplayer (guided pop-ups)' -ForegroundColor Magenta
     Write-Host 'This script starts from a completely fresh template copy.'
 
