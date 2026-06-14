@@ -18,7 +18,7 @@ vocab: [
 // CHAPTER 1
 // =================================================================
 
-```
+
 // Section 1-2 — Exercise 6
 // Part (a)
 {
@@ -926,7 +926,7 @@ vocab: [
   explanation:"An invertible matrix has rank n, so its column space has dimension n. Rank-nullity then gives a nullity of zero.",
   category:"bonus23"
 }
-```
+
 
 ],
 
