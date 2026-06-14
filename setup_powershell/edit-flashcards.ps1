@@ -624,7 +624,7 @@ function Get-FlashcardFiles {
         -Recurse `
         -ErrorAction SilentlyContinue |
         Where-Object {
-            $_.Extension.ToLowerInvariant() -in @('.html', '.js', '.json') -and
+            $_.Extension.ToLowerInvariant() -eq '.js' -and
             $_.FullName -notmatch '[\\/]\.git[\\/]' -and
             $_.FullName -notmatch '[\\/]node_modules[\\/]' -and
             $_.FullName -notmatch '[\\/]backups[\\/]' -and
@@ -640,17 +640,23 @@ function Get-FlashcardFiles {
 
         $priority = 100
 
-        if ($file.Name -match '(?i)^solo\d*\.html$') {
+        if ($relative -match '(?i)^etapes\\etape1\.js$') {
             $priority = 1
         }
-        elseif ($file.Name -match '(?i)^etape\d*\.html$') {
-            $priority = 10
+        elseif ($relative -match '(?i)^etapes\\etape2\.js$') {
+            $priority = 2
+        }
+        elseif ($relative -match '(?i)^etapes\\etape3\.js$') {
+            $priority = 3
+        }
+        elseif ($relative -match '(?i)^etapes\\etape4\.js$') {
+            $priority = 4
         }
         elseif ($file.Name -match '(?i)flash|card|question|quiz') {
             $priority = 20
         }
-        elseif ($file.Name -ieq 'index.html') {
-            $priority = 80
+        elseif ($file.Name -ieq 'registry.js') {
+            $priority = 90
         }
 
         $results += [pscustomobject]@{
@@ -1264,7 +1270,7 @@ function Start-FlashcardEditor {
     $header.Controls.Add($title)
 
     $subtitle = New-Object System.Windows.Forms.Label
-    $subtitle.Text = 'The project is found automatically. Choose a flashcard page, edit it safely, and publish when using Firebase mode.'
+    $subtitle.Text = 'The project is found automatically. Choose a flashcard JavaScript file, edit it safely, and publish when using Firebase mode.'
     $subtitle.AutoSize = $true
     $subtitle.Location = New-Object System.Drawing.Point(34, 88)
     $subtitle.Font = New-Object System.Drawing.Font('Segoe UI', 9.8)
@@ -1314,7 +1320,7 @@ function Start-FlashcardEditor {
     $leftPanel.Controls.Add($instructionsTitle)
 
     $instructions = New-Object System.Windows.Forms.Label
-    $instructions.Text = "1. Choose Local or Firebase mode.`r`n`r`n2. The project is found automatically.`r`n`r`n3. Pick a flashcard file.`r`n`r`n4. Edit in Notepad and press Ctrl+S."
+    $instructions.Text = "1. Choose Local or Firebase mode.`r`n`r`n2. The project is found automatically.`r`n`r`n3. Pick a flashcard JavaScript file.`r`n`r`n4. Edit in Notepad and press Ctrl+S."
     $instructions.AutoSize = $false
     $instructions.Location = New-Object System.Drawing.Point(24, 62)
     $instructions.Size = New-Object System.Drawing.Size(286, 200)
@@ -1413,7 +1419,7 @@ function Start-FlashcardEditor {
     $rightPanel.Controls.Add($projectPathBox)
 
     $fileLabel = New-Object System.Windows.Forms.Label
-    $fileLabel.Text = 'Choose a flashcard file'
+    $fileLabel.Text = 'Choose a flashcard JavaScript file'
     $fileLabel.AutoSize = $true
     $fileLabel.Location = New-Object System.Drawing.Point(30, 184)
     $fileLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
@@ -1528,7 +1534,7 @@ function Start-FlashcardEditor {
     $updateFileDetails = {
         if ($fileCombo.SelectedIndex -lt 0 -or
             $fileCombo.SelectedIndex -ge $script:EditableFiles.Count) {
-            $detailsText.Text = 'Choose a flashcard file from the drop-down menu.'
+            $detailsText.Text = 'Choose a flashcard JavaScript file from the drop-down menu.'
             $editButton.Enabled = $false
             return
         }
@@ -1537,7 +1543,7 @@ function Start-FlashcardEditor {
 
         $detailsText.Text = @"
 Path: $($selected.RelativePath)
-Type: $($selected.Extension)
+Type: JavaScript ($($selected.Extension))
 Size: $(Format-FileSize -Bytes $selected.SizeBytes)
 Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
 "@
@@ -1607,7 +1613,7 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
                 -Mode $rememberMode `
                 -Path $resolvedProject
 
-            & $setStatus 'Loading the flashcard file list...' 'Normal'
+            & $setStatus 'Loading the flashcard JavaScript files...' 'Normal'
 
             $loadedFiles = @(Get-FlashcardFiles -ProjectFolder $resolvedProject)
             $script:EditableFiles = @($loadedFiles)
@@ -1618,13 +1624,13 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
 
             if ($script:EditableFiles.Count -eq 0) {
                 $detailsText.Text = @"
-The project was found, but no editable HTML, JavaScript, or JSON files were loaded.
+The project was found, but no JavaScript flashcard files were loaded.
 
 Project:
 $resolvedProject
 "@
                 $editButton.Enabled = $false
-                & $setStatus 'Project found, but no editable flashcard files were found.' 'Warning'
+                & $setStatus 'Project found, but no JavaScript flashcard files were found.' 'Warning'
                 return 0
             }
 
@@ -1641,7 +1647,7 @@ $resolvedProject
 
             $fileCombo.SelectedIndex = $selectedIndex
             & $updateFileDetails
-            & $setStatus "Project loaded successfully. $($script:EditableFiles.Count) editable file(s) are ready." 'Success'
+            & $setStatus "Project loaded successfully. $($script:EditableFiles.Count) JavaScript flashcard file(s) are ready." 'Success'
 
             return $script:EditableFiles.Count
         }
