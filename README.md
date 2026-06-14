@@ -1,332 +1,304 @@
-# True/False Flashcard Website - Make Your Own
+# Linear Algebra True or False — Setup Toolkit
 
-A ready-to-use template for making your own flashcard quiz website. Fork it, run one script, and you have a live website at `your-username.github.io/linear_algebra_true_or_false`.
+This folder contains beginner-friendly Windows PowerShell tools for installing, configuring, and editing the Linear Algebra True or False website.
 
-**Live demo:** https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/
+## Files in this folder
 
----
+| File | Purpose |
+|---|---|
+| `setup.ps1` | Recommended beginner launcher. It finds the installers automatically and asks which version to run when both are present. |
+| `setup-new-repo-no-firebase.ps1` | Installs a local, solo-only copy of the website on the computer. No GitHub or Firebase account is required. |
+| `setup-new-repo-with-firebase.ps1` | Creates a local copy, connects it to a new GitHub repository, guides the Firebase setup, deploys Firestore rules, and prepares GitHub Pages. |
+| `edit-quiz-javascript.ps1` | Opens a visual editor that lets you choose a JavaScript file from a drop-down menu and open it in Notepad. |
+| `README.md` | The guide you are reading. |
 
-## What you get
+## Requirements
 
-- **1v1 multiplayer** - race a friend through cards using a room code
-- **Solo mode** - spaced repetition (Again / Hard / Good / Easy rating)
-- **4 topic tabs** - each tab is a separate set of cards
-- **Category filter chips** - filter cards by topic within a tab
-- **Explanations** - shown after every answer so you learn, not just memorize
-- **Works on mobile and iPad**
+- Windows 10 or Windows 11
+- An internet connection for either installer
+- A web browser
+- A GitHub account only for the Firebase/GitHub version
+- A Google account only for the Firebase version
 
----
-
-## What you need (both are free)
-
-| Account | What it is | Sign up |
-|---|---|---|
-| **GitHub** | Hosts your website for free | github.com/signup |
-| **Firebase** | Powers the 1v1 multiplayer | firebase.google.com |
-
-You only need Firebase if you want the 1v1 mode. Solo mode works without it.
+You do **not** need to install Python, Node.js, npm, Git, GitHub CLI, or Firebase CLI manually. The setup scripts download only the tools they require.
 
 ---
 
-## One-time setup (5 minutes)
 
-### Step 1 - Fork this repo
+## Recommended: run `setup.ps1`
 
-"Forking" creates your own personal copy of this website on your GitHub account.
+Use `setup.ps1` instead of choosing an installer manually.
 
-1. Make sure you are signed in to GitHub
-2. Go to the top of this page and click **Fork** (top-right corner)
-3. Click **Create fork**
+The launcher automatically:
 
-You now have a copy at `github.com/YOUR-USERNAME/linear_algebra_true_or_false`.
+- Detects the current Windows user and real Downloads folder.
+- Looks beside `setup.ps1` and in Downloads for the installer files.
+- Starts the local installer automatically when only the local version is present.
+- Starts the Firebase installer automatically when only the Firebase version is present.
+- Shows a standard Windows choice popup when both installers are present.
+- Recognizes browser-renamed files such as `setup-new-repo-with-firebase (1).ps1`.
 
-### Step 2 - Download `setup.ps1`
+### Step 1 — Download the toolkit
 
-In your fork, click on `setup.ps1`, then click the download button (the arrow icon).
+Download and extract all toolkit files into Downloads, or keep all the `.ps1` files together in the same folder.
 
-Save it to your **Downloads** folder.
+At minimum, keep `setup.ps1` beside one or both of these files:
 
-### Step 3 - Run the script
-
-1. Open **PowerShell** (search for it in the Start menu)
-2. Paste this line and press Enter:
-   ```
-   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   ```
-3. Paste this line and press Enter:
-   ```
-   cd Downloads; .\setup.ps1
-   ```
-4. Follow the prompts - the script will guide you through everything
-
-### Step 4 - Enable GitHub Pages
-
-The script opens this page automatically, but here are the steps:
-
-1. Go to your repo on GitHub
-2. Click **Settings** (top tab bar)
-3. Click **Pages** (left sidebar)
-4. Under Source: select **Deploy from a branch**
-5. Branch: **main** | Folder: **/ (root)**
-6. Click **Save**
-
-Wait about 1 minute. Your site is live at:
-```
-https://YOUR-USERNAME.github.io/linear_algebra_true_or_false/
+```text
+setup-new-repo-no-firebase.ps1
+setup-new-repo-with-firebase.ps1
 ```
 
----
+### Step 2 — Open PowerShell
 
-## Adding your own cards
+Open the Start menu, search for **PowerShell**, and open it.
 
-Cards live in the `etapes/` folder. Each file (`etape1.js` through `etape4.js`) is one topic tab.
+You do not need to change the permanent execution policy.
 
-### Card format
+### Step 3 — Run the launcher
 
-```js
-{
-  en:          "Every square matrix is invertible.",   // the question shown
-  fr:          "False",                                // answer: "True" or "False"
-  alts:        ["False", "false"],                     // keep these as shown
-  needsHyphen: false,                                  // always false for T/F
-  needsAccent: false,                                  // always false for T/F
-  gender:      "both",                                 // always "both" for T/F
-  guessGender: true,                                   // always true for T/F
-  explanation: "A matrix is only invertible when det(A) is not zero.",
-  category:    "matrices"                              // must match a categoryLabels key
-},
-```
-
-**Rules:**
-- `en` - the statement shown to the student
-- `fr` - must be exactly `"True"` or `"False"` (capital T or F)
-- `alts` - copy exactly: `["True","true"]` or `["False","false"]`
-- `explanation` - why the answer is True or False (shown after answering)
-- `category` - must match one of the keys in `categoryLabels` at the bottom of the file
-
-### How to add cards using PowerShell
+Paste this single command and press Enter:
 
 ```powershell
-# Auto-find your repo
-$repo = "$env:USERPROFILE\Downloads\linear_algebra_true_or_false"
-Set-Location $repo
-
-# Open the card file in Notepad
-notepad etapes\etape1.js
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup.ps1"
 ```
 
-Add your cards before the `],` line that closes the `vocab` array, then save. Then push:
+The launcher finds the current Windows username through `$env:USERPROFILE`.
 
-```powershell
-git add -A
-git commit -m "add new cards"
-git push
+When both installers are present, the popup choices are:
+
+```text
+Yes    = Firebase + GitHub online version
+No     = Local-only version
+Cancel = Exit without making changes
 ```
 
-Wait ~1 minute and hard-refresh (`Ctrl + F5`) to see your changes live.
+If the toolkit was extracted into a subfolder instead of directly into Downloads, open that folder, right-click `setup.ps1`, and choose **Run with PowerShell**.
 
 ---
 
-## Adding a new category (filter chip)
+## Option 1: Install a local version without Firebase
 
-Each card belongs to a category. Categories appear as clickable filter chips above the cards. To add a new one, open the etape JS file in Notepad and add a line to `categoryLabels`:
+Use this option when the website should stay on the computer and does not need online multiplayer.
 
-```js
-categoryLabels: {
-    all:          "All Topics",
-    matrices:     "Matrices",
-    determinants: "Determinants",
-    mynewcategory: "My New Category"   // add your category here
-}
+### What this version does
+
+- Finds the current Windows user automatically.
+- Asks where the website should be stored.
+- Downloads a fresh copy of the website.
+- Removes Firebase, multiplayer, and audio features.
+- Creates a desktop shortcut.
+- Opens the website locally.
+- Does not ask for a GitHub link.
+- Does not require GitHub or Firebase login.
+
+### Run it directly
+
+The recommended method is `setup.ps1`. To run this installer directly, place `setup-new-repo-no-firebase.ps1` in Downloads and run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup-new-repo-no-firebase.ps1"
 ```
 
-Then use that key in your card's `category` field.
+Follow the popup windows. Choose the parent folder where the local website should be installed.
+
+The complete website remains on the computer. The desktop shortcut opens `index.html`.
 
 ---
 
-## Changing the tab labels
+## Option 2: Create an online GitHub and Firebase version
 
-Open `etapes/registry.js` and edit the `label`, `titleMulti`, and `sub` fields:
+Use this option when the website needs a GitHub repository, GitHub Pages, Firestore, or multiplayer features.
 
-```js
-{
-    id: 'e1',
-    label: 'Unit 1',                              // short tab label
-    sublabel: '1st',                              // small badge on the tab
-    titleMulti: 'My Subject - True or False',     // shown on the lobby page
-    titleSolo:  'My Subject - Solo Practice',     // shown on the solo page
-    sub: 'Topic description shown under title',   // subtitle
-    file: 'etapes/etape1.js'                      // which card file to load
-},
+### What this version does
+
+- Downloads portable Git when Git is missing.
+- Downloads portable GitHub CLI when it is missing.
+- Downloads the standalone Firebase CLI when it is missing.
+- Opens the GitHub browser login.
+- Opens the page for creating a new GitHub repository.
+- Shows a popup where the new repository link is pasted.
+- Downloads a fresh website copy.
+- Opens the Firebase browser login.
+- Opens Firebase Console.
+- Shows a large popup where the Firebase web configuration is pasted.
+- Updates the website configuration.
+- Deploys Firestore rules.
+- Pushes the website to GitHub.
+- Attempts to enable GitHub Pages.
+- Keeps a complete local copy in Downloads.
+
+### Run it directly
+
+The recommended method is `setup.ps1`. To run this installer directly, place `setup-new-repo-with-firebase.ps1` in Downloads and run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup-new-repo-with-firebase.ps1"
 ```
+
+### GitHub repository step
+
+When the script opens GitHub:
+
+1. Create a new **empty** public repository.
+2. Do not add a README, `.gitignore`, or license on the GitHub creation page.
+3. Copy the full repository link from the browser.
+4. Paste it into the setup popup.
+5. Click **Continue**.
+
+Example:
+
+```text
+https://github.com/your-name/linear-algebra-quiz
+```
+
+### Firebase configuration step
+
+In Firebase Console:
+
+1. Open **Project settings**.
+2. Stay on the **General** tab.
+3. Scroll to **Your apps**.
+4. Select or create the web app.
+5. Under **SDK setup and configuration**, select **Config**.
+6. Copy the entire `firebaseConfig` block.
+7. Paste it into the large setup popup.
+8. Click **Use this config**.
+
+Paste only the normal Firebase web configuration. Never paste a service-account private key into the website or upload one to GitHub.
 
 ---
 
-## Firebase setup for 1v1 mode
+## Edit JavaScript using the visual editor
 
-The 1v1 mode needs Firebase (free). The setup script walks you through this, but here are the manual steps:
+The `edit-quiz-javascript.ps1` file is designed for beginners.
 
-### Create a Firebase project
+### Start the editor
 
-1. Go to [firebase.google.com](https://firebase.google.com) and sign in
-2. Click **Add project** - name it anything
-3. Click the **Web** icon (`</>`) to add a web app
-4. Copy the `firebaseConfig` object - you will need these values
+When the editor is inside the project's `setup_powershell` folder, it usually detects the main project folder automatically.
 
-### Enable Firestore
-
-1. In your Firebase project, click **Firestore Database** (left sidebar)
-2. Click **Create database**
-3. Choose **Start in test mode** for now
-4. Pick any region and click **Done**
-
-### Update the Firestore rules
-
-In Firebase Console, go to **Firestore Database > Rules** and replace everything with:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /matches/{matchId} {
-      function validCode() { return matchId.matches('^[A-Z]{4}$'); }
-      function validStatus(s) { return s in ['waiting','playing','done','resigned']; }
-      function validEtape(e) { return e in ['e1','e2','e3','e4']; }
-      function validCategory(c) {
-        return c in [
-          'all','systems','span','independence',
-          'matrices','inverses','lu',
-          'determinants','transformations',
-          'subspaces','eigenvalues','markov'
-        ];
-      }
-      allow read: if validCode();
-      allow create: if validCode()
-        && request.resource.data.status == 'waiting'
-        && validEtape(request.resource.data.etape)
-        && request.resource.data.length in [20,30,40,50,60,70,80]
-        && validCategory(request.resource.data.category);
-      allow update: if validCode();
-      allow delete: if validCode() && resource.data.status == 'waiting';
-    }
-  }
-}
-```
-
-Click **Publish**.
-
-### Swap the Firebase config into your HTML files
-
-Run this in PowerShell (fill in your own values):
+Right-click `edit-quiz-javascript.ps1` and choose **Run with PowerShell**, or run:
 
 ```powershell
-$repo = "$env:USERPROFILE\Downloads\linear_algebra_true_or_false"
-Set-Location $repo
-
-# Paste your Firebase values here
-$apiKey            = "YOUR_API_KEY"
-$authDomain        = "YOUR_PROJECT.firebaseapp.com"
-$projectId         = "YOUR_PROJECT"
-$storageBucket     = "YOUR_PROJECT.firebasestorage.app"
-$messagingSenderId = "YOUR_SENDER_ID"
-$appId             = "YOUR_APP_ID"
-
-$utf8 = [System.Text.UTF8Encoding]::new($false)
-Get-ChildItem "*.html" | ForEach-Object {
-    $c = Get-Content $_.FullName -Raw -Encoding UTF8
-    if($c -notmatch 'firebaseConfig'){ return }
-    $c = $c -replace 'apiKey:\s*"[^"]*"',            "apiKey: `"$apiKey`""
-    $c = $c -replace 'authDomain:\s*"[^"]*"',        "authDomain: `"$authDomain`""
-    $c = $c -replace 'projectId:\s*"[^"]*"',         "projectId: `"$projectId`""
-    $c = $c -replace 'storageBucket:\s*"[^"]*"',     "storageBucket: `"$storageBucket`""
-    $c = $c -replace 'messagingSenderId:\s*"[^"]*"', "messagingSenderId: `"$messagingSenderId`""
-    $c = $c -replace 'appId:\s*"[^"]*"',             "appId: `"$appId`""
-    [System.IO.File]::WriteAllText($_.FullName, $c, $utf8)
-    Write-Host "Updated $($_.Name)"
-}
-git add -A; git commit -m "my Firebase config"; git push
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\edit-quiz-javascript.ps1"
 ```
+
+### Use the editor
+
+1. Choose the project folder, or drag and drop the project folder onto the blue drop area.
+2. Select a JavaScript file from the drop-down menu.
+3. Leave **Create a timestamped backup** checked.
+4. Click **Open in Notepad**.
+5. Make the change in Notepad.
+6. Press **Ctrl+S** to save.
+7. Refresh the website in the browser to see the change.
+
+You can also drag and drop a `.js` file directly onto the editor.
+
+### When no JavaScript files appear
+
+Some versions of the website keep JavaScript inside HTML pages instead of separate `.js` files.
+
+Turn on:
+
+```text
+Also show HTML files
+```
+
+The drop-down will then include `.html` files as well.
+
+### Backups
+
+Before opening a file, the editor creates a backup under:
+
+```text
+backups\javascript-editor\<date-and-time>\
+```
+
+The original folder structure is preserved inside the backup.
+
+The backup feature can be turned off, but keeping it enabled is recommended.
+
+### Important
+
+The editor changes the **local files on the computer**. It does not automatically upload those edits to GitHub.
+
+To update an online website after editing, commit and push the changed files using Git, GitHub Desktop, or GitHub's website.
 
 ---
 
-## Pushing changes to your live site
+## Safety features
 
-Any time you edit files locally, run these three lines to publish:
-
-```powershell
-cd "$env:USERPROFILE\Downloads\linear_algebra_true_or_false"
-git add -A
-git commit -m "describe what you changed"
-git push
-```
-
-Then wait about 1 minute and hard-refresh (`Ctrl + F5`).
-
-If you get a "push rejected" error:
-```powershell
-git push --force
-```
+- Existing local folders are moved to timestamped backup folders instead of being deleted.
+- Setup scripts do not use force push.
+- The editor backs up files before opening them.
+- Firebase web configuration is placed in browser code, but Firestore access must still be protected with Firestore Security Rules.
+- Service-account keys must never be placed in browser files or committed to GitHub.
 
 ---
 
 ## Troubleshooting
 
-**"push-la-quiz.ps1 is not digitally signed"**
-Run this first, then try again:
+### PowerShell says scripts are disabled
+
+Run the script using the provided command with:
+
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+-ExecutionPolicy Bypass
 ```
 
-**"not a git repository"**
-You are in the wrong folder. Run:
-```powershell
-cd "$env:USERPROFILE\Downloads\linear_algebra_true_or_false"
+This applies only to that PowerShell process.
+
+### GitHub login does not open
+
+Run the setup script again and press Enter when it asks to open the browser login. Complete the GitHub authorization in the browser, then return to PowerShell.
+
+### The editor cannot find the project
+
+Use **Choose project folder** and select the main folder containing `index.html`.
+
+Do not select only the `setup_powershell` folder.
+
+### The editor shows no files
+
+Turn on **Also show HTML files**. The website may use inline JavaScript inside its HTML pages.
+
+### The online website does not update immediately
+
+GitHub Pages deployment can take a short time. Refresh the page after the deployment finishes.
+
+
+
+### A popup says `You cannot call a method on a null-valued expression`
+
+This was caused by an older Windows PowerShell 5.1 popup handler losing its reference to a textbox or button when the window opened.
+
+Replace the old scripts with the newest versions. The corrected updater displays:
+
+```text
+UI VERSION 6 - WINDOWS EVENT HANDLER FIX
 ```
 
-**Cards not appearing on the live site**
-- Wait 1 full minute after pushing
-- Hold `Ctrl` and press `F5` to hard-refresh (clears the browser cache)
-- Check the card format carefully - `fr` must be exactly `"True"` or `"False"`
+This is a popup-code compatibility issue. It is not caused by the GitHub repository link or the user's GitHub account.
 
-**1v1 match not working**
-- Make sure Firestore is enabled (test mode) in your Firebase project
-- Make sure you updated the Firestore rules (see Firebase section above)
-- Make sure you ran the Firebase config script above
+### A popup reports `System.Object[]` or `op_Subtraction`
 
-**The site shows an old version**
-Push rejected somewhere earlier. Run `git push --force` to fix it.
+This means an older copy of the polished-dialog scripts is still being run.
 
----
+Replace the old files with the newest versions and confirm the updater shows:
 
-## Quick reference
-
-| Task | Command |
-|---|---|
-| Edit cards | `notepad etapes\etape1.js` |
-| Push changes | `git add -A; git commit -m "msg"; git push` |
-| Push rejected | `git push --force` |
-| See recent changes | `git log --oneline -10` |
-| Undo unsaved file edit | `git checkout -- etapes\etape1.js` |
-
----
-
-## File map
-
+```text
+UI VERSION 5 - POWERSHELL 5.1 SIZE FIX
 ```
-index.html          <- Unit 1 lobby (1v1 + solo link)
-etape1.html         <- Unit 1 - same as index but different tab active
-etape3.html         <- Unit 3 lobby
-etape4.html         <- Unit 4 lobby
-solo.html           <- Unit 1 solo (spaced repetition)
-solo1.html          <- Unit 2 solo
-solo3.html          <- Unit 3 solo
-solo4.html          <- Unit 4 solo
-etapes/
-  registry.js       <- tab labels, titles, which file each tab loads
-  etape1.js         <- Unit 1 cards and category labels
-  etape2.js         <- Unit 2 cards and category labels
-  etape3.js         <- Unit 3 cards and category labels
-  etape4.js         <- Unit 4 cards and category labels
-setup.ps1           <- beginner setup script (run this first)
-firestore.rules     <- Firestore security rules (paste into Firebase Console)
+
+The corrected scripts use a Windows PowerShell 5.1-safe method for calculating popup sizes.
+
+### An update script stops
+
+The updater saves an error log named:
+
+```text
+la-quiz-update-error.txt
 ```
+
+in Downloads. Use the popup's **Copy details** or **Open error log** button when asking for help.
