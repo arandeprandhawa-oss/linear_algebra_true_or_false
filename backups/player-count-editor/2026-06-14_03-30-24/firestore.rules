@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// Linear Algebra True or False multiplayer rules.
+// Match settings cannot be changed after creation, while player-ready and
+// game-progress fields can be updated by the browser.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /matches/{matchId} {
+
+      function validCode() {
+        return matchId.matches('^[A-Z]{4}$');
+      }
+
+      function validEtape(e) {
+        return e in ['e1', 'e2', 'e3', 'e4'];
+      }
+
+      function validCategory(c) {
+        return c in [
+          'all',
+          'bonus12',
+          'bonus23',
+          'chapter1',
+          'chapter2',
+          'chapter3',
+          'determinants',
+          'eigenvalues',
+          'inverses',
+          'lu',
+          'markov',
+          'matrices',
+          'subspaces',
+          'transformations'
+        ];
+      }
+
+      function validLength(n) {
+        return n in [20, 30, 40, 50, 60, 70, 80];
+      }
+
+      function validCreate(d) {
+        return validCode()
+          && d.status == 'waiting'
+          && validEtape(d.etape)
+          && validCategory(d.category)
+          && validLength(d.length)
+          && d.requiredPlayers is int
+          && d.requiredPlayers >= 2
+          && d.requiredPlayers <= 6
+          && d.cards is list
+          && d.cards.size() == d.length
+          && d.p1Joined == true
+          && d.p1Ready == false
+          && d.p1Id is string
+          && d.p1Id != ''
+          && d.p2Joined == false
+          && d.p3Joined == false
+          && d.p4Joined == false
+          && d.p5Joined == false
+          && d.p6Joined == false;
+      }
+
+      function matchSettingsUnchanged() {
+        return request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.etape == resource.data.etape
+          && request.resource.data.cards == resource.data.cards
+          && request.resource.data.length == resource.data.length
+          && request.resource.data.category == resource.data.category
+          && request.resource.data.requiredPlayers == resource.data.requiredPlayers;
+      }
+
+      allow read: if validCode();
+      allow create: if validCreate(request.resource.data);
+      allow update: if validCode()
+                    && matchSettingsUnchanged()
+                    && request.resource.data.status in ['waiting', 'playing', 'done', 'resigned'];
+      allow delete: if validCode() && resource.data.status == 'waiting';
+    }
+  }
+}

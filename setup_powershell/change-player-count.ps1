@@ -14,6 +14,21 @@ The tool:
 - Creates timestamped backups before changing files.
 #>
 
+param(
+    [string]$ProjectFolder
+)
+
+# Clean up a path passed by the launcher. The launcher always sends the
+# project folder that contains this setup_powershell directory, so the editor
+# cannot accidentally update an older remembered copy in Downloads.
+if (-not [string]::IsNullOrWhiteSpace($ProjectFolder)) {
+    $ProjectFolder = $ProjectFolder.Trim().Trim('"')
+    while ($ProjectFolder.Length -gt 3 -and
+           ($ProjectFolder.EndsWith('\') -or $ProjectFolder.EndsWith('/'))) {
+        $ProjectFolder = $ProjectFolder.Substring(0, $ProjectFolder.Length - 1)
+    }
+}
+
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
@@ -179,17 +194,27 @@ function Get-RememberedProject {
 }
 
 function Find-AutomaticProject {
-    $remembered = Get-RememberedProject
-    if (-not [string]::IsNullOrWhiteSpace($remembered)) { return $remembered }
+    # 1. Use the project folder explicitly supplied by Change Player Count.cmd.
+    # This is the strongest protection against editing an older project copy.
+    if (-not [string]::IsNullOrWhiteSpace($ProjectFolder)) {
+        $provided = Find-ProjectRootFromPath -Path $ProjectFolder
+        if (-not [string]::IsNullOrWhiteSpace($provided)) { return $provided }
+    }
 
+    # 2. Prefer the project that physically contains this PowerShell script.
     $scriptFolder = $PSScriptRoot
     if ([string]::IsNullOrWhiteSpace($scriptFolder)) { $scriptFolder = (Get-Location).Path }
 
     $hit = Find-ProjectRootFromPath -Path $scriptFolder
     if (-not [string]::IsNullOrWhiteSpace($hit)) { return $hit }
 
+    # 3. Then try the current working directory.
     $hit = Find-ProjectRootFromPath -Path (Get-Location).Path
     if (-not [string]::IsNullOrWhiteSpace($hit)) { return $hit }
+
+    # 4. Remembered locations are only a fallback.
+    $remembered = Get-RememberedProject
+    if (-not [string]::IsNullOrWhiteSpace($remembered)) { return $remembered }
 
     $profilePath = [Environment]::GetFolderPath('UserProfile')
     $searchRoots = @(
@@ -991,15 +1016,23 @@ $applyButton.Add_Click({
             -PlayerCount $count `
             -CreateBackup $backupCheck.Checked
 
-        $script:CurrentPlayerCount = $count
-        $statusLabel.Text = "Saved: $count players. Firestore rules were rebuilt."
+        # Read the file back immediately. Never report success unless the exact
+        # project shown in the window now contains the selected player count.
+        $verifiedCount = Read-CurrentPlayerCount -ProjectFolder $script:ProjectFolder
+        if ($verifiedCount -ne $count) {
+            throw "Verification failed. multiplayer-config.js still reports $verifiedCount players in $script:ProjectFolder"
+        }
+
+        $script:CurrentPlayerCount = $verifiedCount
+        $statusLabel.Text = "Saved and verified: $verifiedCount players in $script:ProjectFolder"
 
         $backupLine = ''
         if (-not [string]::IsNullOrWhiteSpace($result.BackupPath)) {
             $backupLine = "`r`n`r`nBackup:`r`n$($result.BackupPath)"
         }
 
-        $message = "The quiz is now configured for $count players.`r`n`r`n" +
+        $message = "The quiz is now configured and verified for $count players.`r`n`r`n" +
+            "Project updated:`r`n$script:ProjectFolder`r`n`r`n" +
             "Updated $($result.PageCount) multiplayer page(s).`r`n" +
             "Updated multiplayer-config.js.`r`n" +
             "Rebuilt firestore.rules for 2 through 6 players." +
