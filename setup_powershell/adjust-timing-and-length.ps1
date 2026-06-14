@@ -1,18 +1,21 @@
 #requires -Version 5.1
 <#
-Adjust Timing & Length — Linear Algebra True or False
+Adjust Timers — Linear Algebra True or False
 
-Opens a UI (same style as the Beginner editor) to change how the quiz behaves,
-then writes the changes into every 1v1 page (index.html, etape1/3/4.html):
+A simple typed-value editor for the quiz timing. It auto-detects the project
+and writes the changes into every page that uses each value:
 
-- Auto-advance timer: how long the answer/explanation stays on screen before
-  the next card appears. Updates BOTH the countdown bar animation and the
-  setTimeout that triggers the next card, so they stay in sync.
-- Match length options: the list of choices on the lobby length picker, plus
-  the default selected length.
+SOLO pages (solo*.html) — spaced repetition:
+  - Auto-advance delay: how long the Again/Hard/Good/Easy panel stays before the
+    card auto-advances with the suggested rating.
+  - Learning steps: the two short intervals (in minutes) used while a card is
+    still being learned. These drive the times shown on the Again / Good buttons.
 
-The project folder is detected automatically (same logic as the editors).
-A timestamped backup of each changed page is made before editing.
+1v1 pages (index.html, etape*.html) — head-to-head game:
+  - Auto-advance delay: how long the answer/explanation stays on screen before
+    the next card. The countdown bar and the actual delay are kept in sync.
+
+A timestamped backup of each changed page is made first (backups\timing-editor).
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -34,7 +37,7 @@ function New-UiButton {
     param([string]$Text, [switch]$Primary)
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $Text
-    $button.Size = New-Object System.Drawing.Size(160, 42)
+    $button.Size = New-Object System.Drawing.Size(170, 42)
     $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
     $button.Cursor = [System.Windows.Forms.Cursors]::Hand
     $button.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 9.5)
@@ -53,12 +56,12 @@ function New-UiButton {
 }
 
 function New-AppWindow {
-    param([string]$Title, [string]$Subtitle, [int]$Width = 940, [int]$Height = 720)
+    param([string]$Title, [string]$Subtitle, [int]$Width = 940, [int]$Height = 760)
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = 'Linear Algebra True or False - Adjust timing and length'
+    $form.Text = 'Linear Algebra True or False - Adjust timers'
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
     $form.Size = New-Object System.Drawing.Size($Width, $Height)
-    $form.MinimumSize = New-Object System.Drawing.Size(860, 640)
+    $form.MinimumSize = New-Object System.Drawing.Size(860, 680)
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
     $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
@@ -253,86 +256,131 @@ function Show-ProjectFolderDialog {
 }
 
 # =====================================================================
-# Reading and writing the tunable values
+# Reading / writing the timer values
 # =====================================================================
-function Get-OneVOnePages {
-    # Returns the 1v1 pages (these hold the timer + length settings).
-    param([string]$ProjectFolder)
-    Get-ChildItem -LiteralPath $ProjectFolder -Filter '*.html' -File |
-        Where-Object { $_.Name -match '(?i)^(index|etape\d+)\.html$' }
-}
+function Get-SoloPages   { param([string]$P) Get-ChildItem -LiteralPath $P -Filter 'solo*.html' -File }
+function Get-GamePages   { param([string]$P) Get-ChildItem -LiteralPath $P -Filter '*.html' -File | Where-Object { $_.Name -match '(?i)^(index|etape\d+)\.html$' } }
 
-function Read-CurrentSettings {
-    # Reads the current timer (ms) and length options from index.html.
+function Read-CurrentTimers {
     param([string]$ProjectFolder)
 
-    $indexPath = Join-Path $ProjectFolder 'index.html'
-    $text = [System.IO.File]::ReadAllText($indexPath)
+    $soloDelayMs = 1500
+    $stepAgain = 1
+    $stepGood = 10
+    $gameDelayMs = 2000
 
-    $timerMs = 2000
-    $m = [regex]::Match($text, "setTimeout\(\(\)=>\{autoTimer=null;nextCard\(\);\}\s*,\s*(\d+)\)")
-    if ($m.Success) { $timerMs = [int]$m.Groups[1].Value }
-
-    $lengthOptions = @(20, 30, 40, 50, 60, 70, 80)
-    $lm = [regex]::Match($text, "const LENGTH_OPTIONS\s*=\s*\[([^\]]+)\]")
-    if ($lm.Success) {
-        $nums = $lm.Groups[1].Value -split ',' | ForEach-Object { ($_ -replace '[^0-9]', '') } | Where-Object { $_ -ne '' }
-        if ($nums.Count -gt 0) { $lengthOptions = @($nums | ForEach-Object { [int]$_ }) }
+    $soloPages = @(Get-SoloPages -P $ProjectFolder)
+    if ($soloPages.Count -gt 0) {
+        $t = [System.IO.File]::ReadAllText($soloPages[0].FullName)
+        $m = [regex]::Match($t, "const\s+autoDelay\s*=\s*(\d+)")
+        if ($m.Success) { $soloDelayMs = [int]$m.Groups[1].Value }
+        $sm = [regex]::Match($t, "steps\s*:\s*\[\s*(\d+)\s*,\s*(\d+)\s*\]")
+        if ($sm.Success) { $stepAgain = [int]$sm.Groups[1].Value; $stepGood = [int]$sm.Groups[2].Value }
     }
 
-    $defaultLength = 20
-    $dm = [regex]::Match($text, "let selectedLength\s*=\s*(\d+)")
-    if ($dm.Success) { $defaultLength = [int]$dm.Groups[1].Value }
+    $gamePages = @(Get-GamePages -P $ProjectFolder)
+    if ($gamePages.Count -gt 0) {
+        $t = [System.IO.File]::ReadAllText($gamePages[0].FullName)
+        $gm = [regex]::Match($t, "setTimeout\(\(\)=>\{autoTimer=null;nextCard\(\);\}\s*,\s*(\d+)\)")
+        if ($gm.Success) { $gameDelayMs = [int]$gm.Groups[1].Value }
+    }
 
     return [pscustomobject]@{
-        TimerMs = $timerMs
-        LengthOptions = $lengthOptions
-        DefaultLength = $defaultLength
+        SoloDelayMs = $soloDelayMs
+        StepAgain = $stepAgain
+        StepGood = $stepGood
+        GameDelayMs = $gameDelayMs
+        SoloCount = $soloPages.Count
+        GameCount = $gamePages.Count
     }
-}
-
-function Set-SettingsInFile {
-    param(
-        [string]$FilePath,
-        [int]$TimerMs,
-        [int[]]$LengthOptions,
-        [int]$DefaultLength
-    )
-
-    $content = [System.IO.File]::ReadAllText($FilePath)
-    $original = $content
-
-    $timerSeconds = [math]::Round($TimerMs / 1000.0, 2)
-    # Trim trailing zeros for the CSS value (e.g. 2.5s, 2s).
-    $secondsText = ($timerSeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)).TrimEnd('0').TrimEnd('.')
-    if ([string]::IsNullOrWhiteSpace($secondsText)) { $secondsText = '0' }
-
-    # 1) setTimeout( ... , NNNN )
-    $content = [regex]::Replace($content, "(setTimeout\(\(\)=>\{autoTimer=null;nextCard\(\);\}\s*,\s*)\d+(\))", "`${1}$TimerMs`$2")
-
-    # 2) Countdown bar animation duration (autoBarShrink Xs ...)
-    $content = [regex]::Replace($content, "(animation:autoBarShrink\s*)[0-9.]+s", "`${1}${secondsText}s")
-
-    # 3) LENGTH_OPTIONS array
-    $lengthList = ($LengthOptions -join ', ')
-    $content = [regex]::Replace($content, "(const LENGTH_OPTIONS\s*=\s*\[)[^\]]*(\])", "`${1}$lengthList`$2")
-
-    # 4) Default selected length
-    $content = [regex]::Replace($content, "(let selectedLength\s*=\s*)\d+", "`${1}$DefaultLength")
-
-    if ($content -ne $original) {
-        Save-Utf8NoBom -Path $FilePath -Text $content
-        return $true
-    }
-    return $false
 }
 
 function Backup-File {
-    param([string]$ProjectFolder, [string]$FilePath)
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $backupRoot = Join-Path $ProjectFolder (Join-Path 'backups' (Join-Path 'timing-editor' $timestamp))
+    param([string]$ProjectFolder, [string]$FilePath, [string]$Stamp)
+    $backupRoot = Join-Path $ProjectFolder (Join-Path 'backups' (Join-Path 'timing-editor' $Stamp))
     New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
     Copy-Item -LiteralPath $FilePath -Destination (Join-Path $backupRoot (Split-Path -Leaf $FilePath)) -Force
+}
+
+function Set-SoloTimers {
+    param([string]$FilePath, [int]$DelayMs, [int]$StepAgain, [int]$StepGood)
+    $c = [System.IO.File]::ReadAllText($FilePath)
+    $o = $c
+    $c = [regex]::Replace($c, "(const\s+autoDelay\s*=\s*)\d+", "`${1}$DelayMs")
+    $c = [regex]::Replace($c, "(steps\s*:\s*\[\s*)\d+(\s*,\s*)\d+(\s*\])", "`${1}$StepAgain`${2}$StepGood`${3}")
+    if ($c -ne $o) { Save-Utf8NoBom -Path $FilePath -Text $c; return $true }
+    return $false
+}
+
+function Set-GameTimer {
+    param([string]$FilePath, [int]$DelayMs)
+    $c = [System.IO.File]::ReadAllText($FilePath)
+    $o = $c
+    $seconds = [math]::Round($DelayMs / 1000.0, 2)
+    $secondsText = ($seconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)).TrimEnd('0').TrimEnd('.')
+    if ([string]::IsNullOrWhiteSpace($secondsText)) { $secondsText = '0' }
+    $c = [regex]::Replace($c, "(setTimeout\(\(\)=>\{autoTimer=null;nextCard\(\);\}\s*,\s*)\d+(\))", "`${1}$DelayMs`$2")
+    $c = [regex]::Replace($c, "(animation:autoBarShrink\s*)[0-9.]+s", "`${1}${secondsText}s")
+    if ($c -ne $o) { Save-Utf8NoBom -Path $FilePath -Text $c; return $true }
+    return $false
+}
+
+# Add a labelled number box to a panel; returns the textbox.
+function Add-NumberField {
+    param(
+        [System.Windows.Forms.Panel]$Panel,
+        [ref]$Y,
+        [string]$Title,
+        [string]$Hint,
+        [string]$Value,
+        [string]$Suffix
+    )
+    $lbl = New-Object System.Windows.Forms.Label
+    $lbl.Text = $Title
+    $lbl.Location = New-Object System.Drawing.Point(4, $Y.Value)
+    $lbl.Size = New-Object System.Drawing.Size(820, 22)
+    $lbl.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 11)
+    $lbl.ForeColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
+    $Panel.Controls.Add($lbl)
+    $Y.Value += 26
+
+    $h = New-Object System.Windows.Forms.Label
+    $h.Text = $Hint
+    $h.Location = New-Object System.Drawing.Point(4, $Y.Value)
+    $h.Size = New-Object System.Drawing.Size(840, 36)
+    $h.Font = New-Object System.Drawing.Font('Segoe UI', 8.9)
+    $h.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
+    $Panel.Controls.Add($h)
+    $Y.Value += 40
+
+    $tb = New-Object System.Windows.Forms.TextBox
+    $tb.Text = $Value
+    $tb.Location = New-Object System.Drawing.Point(4, $Y.Value)
+    $tb.Size = New-Object System.Drawing.Size(150, 28)
+    $tb.Font = New-Object System.Drawing.Font('Segoe UI', 11)
+    $tb.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
+    $Panel.Controls.Add($tb)
+
+    if (-not [string]::IsNullOrWhiteSpace($Suffix)) {
+        $sfx = New-Object System.Windows.Forms.Label
+        $sfx.Text = $Suffix
+        $sfx.Location = New-Object System.Drawing.Point(162, ($Y.Value + 4))
+        $sfx.Size = New-Object System.Drawing.Size(300, 22)
+        $sfx.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+        $sfx.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
+        $Panel.Controls.Add($sfx)
+    }
+
+    $Y.Value += 52
+    return $tb
+}
+
+function Parse-PositiveNumber {
+    param([string]$Text, [double]$Fallback)
+    $clean = ($Text -replace '[^0-9.]', '')
+    $value = 0.0
+    if ([double]::TryParse($clean, [ref]$value) -and $value -gt 0) { return $value }
+    return $Fallback
 }
 
 # =====================================================================
@@ -340,37 +388,32 @@ function Backup-File {
 # =====================================================================
 try {
     Clear-Host
-    Write-Host 'LINEAR ALGEBRA QUIZ - ADJUST TIMING AND LENGTH' -ForegroundColor Magenta
-    Write-Host 'VERSION 1 - TIMER + MATCH LENGTH EDITOR' -ForegroundColor DarkCyan
+    Write-Host 'LINEAR ALGEBRA QUIZ - ADJUST TIMERS' -ForegroundColor Magenta
+    Write-Host 'VERSION 2 - TYPED TIMER EDITOR' -ForegroundColor DarkCyan
     Write-Host ''
 
     Initialize-Ui
 
     Write-Step 'STEP 1 OF 3 - Finding the project'
     $projectFolder = Find-AutomaticProject
-
     if ([string]::IsNullOrWhiteSpace($projectFolder)) {
         Show-AppMessage -Title 'Choose the project folder' -Message "The project was not found automatically.`r`n`r`nChoose the folder that contains index.html and the etapes folder." -Type 'Warning'
         $projectFolder = Show-ProjectFolderDialog -InitialFolder (Get-DownloadsFolder)
     }
-
     if ([string]::IsNullOrWhiteSpace($projectFolder)) { throw 'No project folder was selected.' }
     Write-Ok "Project: $projectFolder"
 
-    $pages = @(Get-OneVOnePages -ProjectFolder $projectFolder)
-    if ($pages.Count -eq 0) {
-        Show-AppMessage -Title 'Nothing to adjust' -Message "This looks like a LOCAL (solo-only) install. The timer and length settings live on the 1v1 pages, which a local install does not include.`r`n`r`nUse the online (Firebase) install to adjust these." -Type 'Warning'
-        Write-Info 'Local layout has no 1v1 pages — nothing to change.'
-        [void](Read-Host 'Press Enter to close')
-        exit 0
+    Write-Step 'STEP 2 OF 3 - Reading current timers'
+    $cur = Read-CurrentTimers -ProjectFolder $projectFolder
+    Write-Ok ("Solo delay {0:n1}s | learning steps {1}/{2} min | 1v1 delay {3:n1}s" -f ($cur.SoloDelayMs/1000.0), $cur.StepAgain, $cur.StepGood, ($cur.GameDelayMs/1000.0))
+
+    if ($cur.SoloCount -eq 0 -and $cur.GameCount -eq 0) {
+        throw 'No solo or game pages were found in the project.'
     }
 
-    Write-Step 'STEP 2 OF 3 - Reading current settings'
-    $current = Read-CurrentSettings -ProjectFolder $projectFolder
-    Write-Ok ("Timer: {0:n1}s   Default length: {1}   Options: {2}" -f ($current.TimerMs/1000.0), $current.DefaultLength, ($current.LengthOptions -join ', '))
-
-    # ---------- Build the settings window ----------
-    $ui = New-AppWindow -Title 'Adjust timing and length' -Subtitle "Changes apply to all $($pages.Count) game page(s). A backup is made first."
+    # ---------- Build the window ----------
+    $subtitle = "Type the values you want, then apply. Solo pages: $($cur.SoloCount)   1v1 pages: $($cur.GameCount)."
+    $ui = New-AppWindow -Title 'Adjust timers' -Subtitle $subtitle
     $form = $ui.Form
 
     $panel = New-Object System.Windows.Forms.Panel
@@ -380,131 +423,40 @@ try {
     $form.Controls.Add($panel)
     $ui.Header.BringToFront()
 
-    $y = 10
+    $y = 8
+    $yref = [ref]$y
 
-    # --- Auto-advance timer ---
-    $tLabel = New-Object System.Windows.Forms.Label
-    $tLabel.Text = 'Auto-advance timer'
-    $tLabel.Location = New-Object System.Drawing.Point(4, $y)
-    $tLabel.Size = New-Object System.Drawing.Size(820, 22)
-    $tLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 11)
-    $tLabel.ForeColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
-    $panel.Controls.Add($tLabel)
-    $y += 26
+    $soloDelayBox = Add-NumberField -Panel $panel -Y $yref `
+        -Title 'Auto-advance delay — Solo practice' `
+        -Hint 'After you answer, how long the Again / Hard / Good / Easy panel stays before the card auto-advances with the suggested rating.' `
+        -Value (("{0:n1}" -f ($cur.SoloDelayMs/1000.0)) -replace '\.0$','') `
+        -Suffix 'seconds'
 
-    $tHint = New-Object System.Windows.Forms.Label
-    $tHint.Text = 'How long the answer and explanation stay on screen before the next card. Higher = more time to read.'
-    $tHint.Location = New-Object System.Drawing.Point(4, $y)
-    $tHint.Size = New-Object System.Drawing.Size(840, 20)
-    $tHint.Font = New-Object System.Drawing.Font('Segoe UI', 8.9)
-    $tHint.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-    $panel.Controls.Add($tHint)
-    $y += 26
+    $againBox = Add-NumberField -Panel $panel -Y $yref `
+        -Title 'Learning step 1 — the "Again" interval' `
+        -Hint 'When a card in the learning phase is rated Again, it comes back after this many minutes. This is the time shown on the Again button.' `
+        -Value ([string]$cur.StepAgain) `
+        -Suffix 'minutes'
 
-    $tValueLabel = New-Object System.Windows.Forms.Label
-    $tValueLabel.Location = New-Object System.Drawing.Point(640, $y)
-    $tValueLabel.Size = New-Object System.Drawing.Size(180, 30)
-    $tValueLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 13)
-    $tValueLabel.ForeColor = [System.Drawing.Color]::FromArgb(37, 99, 235)
-    $tValueLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
-    $panel.Controls.Add($tValueLabel)
+    $goodBox = Add-NumberField -Panel $panel -Y $yref `
+        -Title 'Learning step 2 — the "Good" interval' `
+        -Hint 'The next learning step (in minutes) before a card graduates. This is the time shown on the Good button while a card is still being learned.' `
+        -Value ([string]$cur.StepGood) `
+        -Suffix 'minutes'
 
-    $tBar = New-Object System.Windows.Forms.TrackBar
-    $tBar.Minimum = 5     # 0.5s   (tenths of a second)
-    $tBar.Maximum = 100   # 10.0s
-    $tBar.TickFrequency = 5
-    $tBar.SmallChange = 1
-    $tBar.LargeChange = 5
-    $tBar.Location = New-Object System.Drawing.Point(0, $y)
-    $tBar.Size = New-Object System.Drawing.Size(630, 45)
-    $tBar.Value = [Math]::Min(100, [Math]::Max(5, [int][math]::Round($current.TimerMs / 100.0)))
-    $panel.Controls.Add($tBar)
+    $gameDelayBox = Add-NumberField -Panel $panel -Y $yref `
+        -Title 'Auto-advance delay — 1v1 game' `
+        -Hint 'On the head-to-head pages, how long the answer and explanation stay on screen before the next card. The countdown bar matches this automatically.' `
+        -Value (("{0:n1}" -f ($cur.GameDelayMs/1000.0)) -replace '\.0$','') `
+        -Suffix 'seconds'
 
-    $updateTimerLabel = {
-        $tenths = $tBar.Value
-        $seconds = $tenths / 10.0
-        $tValueLabel.Text = ('{0:n1} seconds' -f $seconds)
-    }
-    $tBar.Add_ValueChanged($updateTimerLabel)
-    & $updateTimerLabel
-    $y += 60
-
-    # --- Default match length ---
-    $dLabel = New-Object System.Windows.Forms.Label
-    $dLabel.Text = 'Default match length'
-    $dLabel.Location = New-Object System.Drawing.Point(4, $y)
-    $dLabel.Size = New-Object System.Drawing.Size(820, 22)
-    $dLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 11)
-    $dLabel.ForeColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
-    $panel.Controls.Add($dLabel)
-    $y += 26
-
-    $dHint = New-Object System.Windows.Forms.Label
-    $dHint.Text = 'How many cards a Random match has by default (the highlighted choice in the length picker).'
-    $dHint.Location = New-Object System.Drawing.Point(4, $y)
-    $dHint.Size = New-Object System.Drawing.Size(840, 20)
-    $dHint.Font = New-Object System.Drawing.Font('Segoe UI', 8.9)
-    $dHint.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-    $panel.Controls.Add($dHint)
-    $y += 26
-
-    $dCombo = New-Object System.Windows.Forms.ComboBox
-    $dCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    $dCombo.Location = New-Object System.Drawing.Point(4, $y)
-    $dCombo.Size = New-Object System.Drawing.Size(200, 28)
-    $dCombo.Font = New-Object System.Drawing.Font('Segoe UI', 10.5)
-    $panel.Controls.Add($dCombo)
-    $y += 50
-
-    # --- Length options ---
-    $oLabel = New-Object System.Windows.Forms.Label
-    $oLabel.Text = 'Match length choices'
-    $oLabel.Location = New-Object System.Drawing.Point(4, $y)
-    $oLabel.Size = New-Object System.Drawing.Size(820, 22)
-    $oLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 11)
-    $oLabel.ForeColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
-    $panel.Controls.Add($oLabel)
-    $y += 26
-
-    $oHint = New-Object System.Windows.Forms.Label
-    $oHint.Text = 'The buttons shown on the length picker. Enter whole numbers separated by commas (e.g. 20, 30, 40, 50).'
-    $oHint.Location = New-Object System.Drawing.Point(4, $y)
-    $oHint.Size = New-Object System.Drawing.Size(840, 20)
-    $oHint.Font = New-Object System.Drawing.Font('Segoe UI', 8.9)
-    $oHint.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-    $panel.Controls.Add($oHint)
-    $y += 26
-
-    $oBox = New-Object System.Windows.Forms.TextBox
-    $oBox.Text = ($current.LengthOptions -join ', ')
-    $oBox.Location = New-Object System.Drawing.Point(4, $y)
-    $oBox.Size = New-Object System.Drawing.Size(820, 28)
-    $oBox.Font = New-Object System.Drawing.Font('Segoe UI', 10.5)
-    $panel.Controls.Add($oBox)
-    $y += 50
-
-    # Populate default-length dropdown from current options and keep it in sync.
-    $refreshDefaults = {
-        $dCombo.Items.Clear()
-        $nums = $oBox.Text -split ',' | ForEach-Object { ($_ -replace '[^0-9]', '') } | Where-Object { $_ -ne '' } | ForEach-Object { [int]$_ }
-        foreach ($n in $nums) { [void]$dCombo.Items.Add("$n cards") }
-        if ($dCombo.Items.Count -gt 0) {
-            $idx = 0
-            for ($i = 0; $i -lt $nums.Count; $i++) { if ($nums[$i] -eq $current.DefaultLength) { $idx = $i; break } }
-            $dCombo.SelectedIndex = $idx
-        }
-    }
-    $oBox.Add_TextChanged($refreshDefaults)
-    & $refreshDefaults
-
-    # --- Buttons ---
     $applyBtn = New-UiButton -Text 'Apply to all pages' -Primary
-    $applyBtn.Location = New-Object System.Drawing.Point(654, $y)
+    $applyBtn.Location = New-Object System.Drawing.Point(644, $y)
     $applyBtn.DialogResult = [System.Windows.Forms.DialogResult]::OK
     $panel.Controls.Add($applyBtn)
 
     $cancelBtn = New-UiButton -Text 'Cancel'
-    $cancelBtn.Location = New-Object System.Drawing.Point(484, $y)
+    $cancelBtn.Location = New-Object System.Drawing.Point(464, $y)
     $cancelBtn.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
     $panel.Controls.Add($cancelBtn)
 
@@ -513,9 +465,10 @@ try {
 
     $result = $form.ShowDialog()
 
-    $newTimerMs = $tBar.Value * 100
-    $newOptionsText = $oBox.Text
-    $newDefaultText = if ($dCombo.SelectedItem) { ($dCombo.SelectedItem -replace '[^0-9]', '') } else { '' }
+    $soloDelayText = $soloDelayBox.Text
+    $againText = $againBox.Text
+    $goodText = $goodBox.Text
+    $gameDelayText = $gameDelayBox.Text
     $form.Dispose()
 
     if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
@@ -524,39 +477,48 @@ try {
         exit 0
     }
 
-    # Validate options
-    $newOptions = @($newOptionsText -split ',' | ForEach-Object { ($_ -replace '[^0-9]', '') } | Where-Object { $_ -ne '' } | ForEach-Object { [int]$_ } | Sort-Object -Unique)
-    if ($newOptions.Count -eq 0) { throw 'No valid length numbers were entered.' }
+    # Parse and clamp to sensible values.
+    $soloDelayMs = [int]([math]::Round((Parse-PositiveNumber -Text $soloDelayText -Fallback ($cur.SoloDelayMs/1000.0)) * 1000))
+    $gameDelayMs = [int]([math]::Round((Parse-PositiveNumber -Text $gameDelayText -Fallback ($cur.GameDelayMs/1000.0)) * 1000))
+    $stepAgain = [int][math]::Round((Parse-PositiveNumber -Text $againText -Fallback $cur.StepAgain))
+    $stepGood = [int][math]::Round((Parse-PositiveNumber -Text $goodText -Fallback $cur.StepGood))
 
-    $newDefault = if ([string]::IsNullOrWhiteSpace($newDefaultText)) { $newOptions[0] } else { [int]$newDefaultText }
-    if ($newOptions -notcontains $newDefault) { $newDefault = $newOptions[0] }
+    if ($soloDelayMs -lt 200) { $soloDelayMs = 200 }
+    if ($gameDelayMs -lt 200) { $gameDelayMs = 200 }
+    if ($stepAgain -lt 1) { $stepAgain = 1 }
+    if ($stepGood -lt 1) { $stepGood = 1 }
 
     Write-Step 'STEP 3 OF 3 - Applying changes'
-    Write-Info ("Timer -> {0:n1}s   Default -> {1}   Options -> {2}" -f ($newTimerMs/1000.0), $newDefault, ($newOptions -join ', '))
+    Write-Info ("Solo delay -> {0:n1}s | steps -> {1}/{2} min | 1v1 delay -> {3:n1}s" -f ($soloDelayMs/1000.0), $stepAgain, $stepGood, ($gameDelayMs/1000.0))
 
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $changed = 0
-    foreach ($page in $pages) {
-        Backup-File -ProjectFolder $projectFolder -FilePath $page.FullName
-        if (Set-SettingsInFile -FilePath $page.FullName -TimerMs $newTimerMs -LengthOptions $newOptions -DefaultLength $newDefault) {
-            $changed++
-            Write-Host "  Updated: $($page.Name)" -ForegroundColor DarkCyan
-        }
-        else {
-            Write-Host "  No change needed: $($page.Name)" -ForegroundColor DarkGray
+
+    foreach ($page in (Get-SoloPages -P $projectFolder)) {
+        Backup-File -ProjectFolder $projectFolder -FilePath $page.FullName -Stamp $stamp
+        if (Set-SoloTimers -FilePath $page.FullName -DelayMs $soloDelayMs -StepAgain $stepAgain -StepGood $stepGood) {
+            $changed++; Write-Host "  Updated solo: $($page.Name)" -ForegroundColor DarkCyan
         }
     }
 
-    Write-Ok "Applied settings to $changed page(s). Backups are in backups\timing-editor\."
+    foreach ($page in (Get-GamePages -P $projectFolder)) {
+        Backup-File -ProjectFolder $projectFolder -FilePath $page.FullName -Stamp $stamp
+        if (Set-GameTimer -FilePath $page.FullName -DelayMs $gameDelayMs) {
+            $changed++; Write-Host "  Updated 1v1: $($page.Name)" -ForegroundColor DarkCyan
+        }
+    }
+
+    Write-Ok "Applied to $changed page(s). Backups in backups\timing-editor\$stamp."
 
     Write-Host ''
     Write-Host 'DONE' -ForegroundColor Green
-    Show-AppMessage -Title 'Settings applied' -Message "Updated $changed game page(s).`r`n`r`nTimer: $('{0:n1}' -f ($newTimerMs/1000.0)) seconds`r`nDefault length: $newDefault cards`r`nChoices: $($newOptions -join ', ')`r`n`r`nA backup of each page was saved under backups\timing-editor. Refresh the website to see the changes, then push with 'Update Entire Project to GitHub'." -Type 'Success'
+    Show-AppMessage -Title 'Timers updated' -Message "Updated $changed page(s).`r`n`r`nSolo auto-advance: $('{0:n1}' -f ($soloDelayMs/1000.0)) s`r`nLearning steps: $stepAgain min / $stepGood min`r`n1v1 auto-advance: $('{0:n1}' -f ($gameDelayMs/1000.0)) s`r`n`r`nA backup of each page was saved. Refresh the website to see the changes, then push with 'Update Entire Project to GitHub'." -Type 'Success'
 }
 catch {
     Write-Host ''
-    Write-Host 'ADJUST TIMING STOPPED' -ForegroundColor Red
+    Write-Host 'ADJUST TIMERS STOPPED' -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor Red
-    try { Show-AppMessage -Title 'Adjust timing stopped' -Message $_.Exception.Message -Type 'Error' } catch { }
+    try { Show-AppMessage -Title 'Adjust timers stopped' -Message $_.Exception.Message -Type 'Error' } catch { }
     [void](Read-Host 'Press Enter to close')
     exit 1
 }

@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>French Flashcards · 1v1 MODL-1101 Étape 3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FAF9F6;--surface:#FFFFFF;--surface-2:#F1EFE8;
+  --text:#1F1F1E;--text-2:#5F5E5A;--text-3:#888780;
+  --border:rgba(0,0,0,0.10);--border-2:rgba(0,0,0,0.18);
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.wrap{padding:1.25rem 1rem 3rem;max-width:580px;margin:0 auto}
+h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.app-title{text-align:center;margin-bottom:1.25rem}
+.app-title h1{font-size:18px;font-weight:500;letter-spacing:-0.01em}
+.app-title .sub{font-size:12px;color:var(--text-3);margin-top:2px}
+
+/* ====== LOBBY ====== */
+.lobby{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center}
+.lobby h2{font-size:22px;font-weight:500;margin-bottom:4px}
+.lobby .lobby-sub{font-size:13px;color:var(--text-3);margin-bottom:1.5rem}
+.lobby-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem}
+.lobby-card{background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:background 0.15s;display:flex;flex-direction:column;justify-content:center;min-height:90px}
+.lobby-card:hover{background:#E8E5DA}
+.lobby-card.primary{background:#185FA5;color:#fff;border-color:#185FA5}
+.lobby-card.primary:hover{background:#0C447C}
+.lobby-card.danger{background:#A32D2D;color:#fff;border-color:#A32D2D}
+.lobby-card.danger:hover{background:#791F1F}
+.lobby-card .label{font-size:12px;opacity:0.85}
+.lobby-card .action{font-size:15px;font-weight:500;margin-top:2px}
+.lobby-card input{width:100%;margin-top:4px;font-size:15px;font-weight:500;padding:6px 8px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface);text-align:center;letter-spacing:0.18em;text-transform:uppercase;color:var(--text);font-family:inherit;outline:none}
+.lobby-card input:focus{border-color:#185FA5;box-shadow:0 0 0 2px rgba(24,95,165,0.2)}
+.lobby-foot{font-size:12px;color:var(--text-3)}
+
+/* Category & length pickers on lobby */
+.picker-section{margin-top:1.25rem;text-align:left}
+.picker-section h3{font-size:12px;font-weight:500;color:var(--text-3);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 12px;border-radius:20px;border:0.5px solid var(--border-2);background:var(--surface-2);font-size:13px;cursor:pointer;color:var(--text-2);font-family:inherit;transition:background 0.1s}
+.chip:hover{background:#E8E5DA}
+.chip.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.chip.disabled{opacity:0.4;cursor:not-allowed;text-decoration:line-through}
+.chip.disabled:hover{background:var(--surface-2)}
+.length-row{display:flex;gap:6px;flex-wrap:wrap}
+.length-chip{padding:8px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-2);font-family:inherit;min-width:48px;text-align:center}
+.length-chip:hover{background:#E8E5DA}
+.length-chip.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.length-chip.locked{opacity:0.5;cursor:not-allowed;background:var(--surface-2)}
+.length-note{font-size:12px;color:var(--text-3);margin-top:8px;font-style:italic}
+
+/* Mistakes-so-far panel during play */
+.mistakes-panel{margin-top:1.25rem}
+.mistakes-panel-header{font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.mistakes-panel-badge{background:#FCEBEB;color:#A32D2D;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.mistake-row{background:var(--surface);border:0.5px solid #F09595;border-radius:var(--radius);padding:8px 12px;margin-bottom:6px;font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.mistake-row .mq{font-size:12px;color:var(--text-3);grid-column:1/-1;font-style:italic}
+.mistake-row .mlabel{font-size:11px;color:var(--text-3)}
+.mistake-row .myou{color:#A32D2D}
+.mistake-row .mcorrect{color:#3B6D11;font-weight:500}
+
+/* Auto-advance progress bar */
+.auto-bar-wrap{margin-top:8px;height:3px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.auto-bar{height:100%;width:100%;background:#185FA5;transform-origin:left;animation:autoBarShrink 2s linear forwards}
+.auto-bar.bad{background:#A32D2D}
+@keyframes autoBarShrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* ====== WAITING ROOM ====== */
+.waiting{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center}
+.waiting .label{font-size:13px;color:var(--text-3);margin-bottom:8px}
+.code-display{font-size:42px;font-weight:500;letter-spacing:0.18em;color:#185FA5;margin-bottom:12px;font-family:'SF Mono',Menlo,monospace}
+.share-row{display:inline-flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;justify-content:center}
+.share-btn{padding:8px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);font-size:13px;cursor:pointer;color:var(--text);font-family:inherit}
+.share-btn:hover{background:#E8E5DA}
+.share-btn.copied{background:#EAF3DE;color:#27500A;border-color:#639922}
+.status-row{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--text-3);margin-bottom:0.75rem}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#BA7517;animation:pulse 1.4s ease-in-out infinite}
+.status-dot.online{background:#639922;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.cancel-btn{margin-top:1rem;padding:8px 18px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);font-family:inherit}
+.cancel-btn:hover{background:var(--surface-2)}
+
+/* ====== ERROR / NOTICE ====== */
+.notice{background:#FCEBEB;border:0.5px solid #F09595;color:#791F1F;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:1rem;text-align:center}
+.notice.warn{background:#FAEEDA;border-color:#FAC775;color:#633806}
+.notice.info{background:#E6F1FB;border-color:#B5D4F4;color:#0C447C}
+
+/* ====== GAME ====== */
+.progress-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 4px}
+.progress-row .card-num{font-size:13px;color:var(--text-3)}
+.progress-row .card-num strong{color:var(--text);font-weight:500}
+.opponent-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3)}
+
+.flashcard{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center;margin-bottom:1rem;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center}
+.top-badges{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
+.cat-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:var(--surface-2);color:var(--text-2)}
+.cb-classroom{background:#FAEEDA;color:#633806}
+.cb-commands{background:#FAEEDA;color:#854F0B}
+.cb-people{background:#EEEDFE;color:#3C3489}
+.cb-identify{background:#E6F1FB;color:#0C447C}
+.cb-describe{background:#FBEAF0;color:#72243E}
+.cb-colors{background:#EAF3DE;color:#27500A}
+.cb-clothing{background:#E6F1FB;color:#0C447C}
+.cb-numbers{background:#FAEEDA;color:#633806}
+.cb-greetings{background:#EEEDFE;color:#3C3489}
+.cb-useful{background:#EAF3DE;color:#27500A}
+.cb-etre{background:#FCEBEB;color:#791F1F}
+.cb-articles{background:#E6F1FB;color:#0C447C}
+/* Étape 3 / Chapitre 1 category badge colours */
+.cb-family{background:#FBEAF0;color:#72243E}
+.cb-relationships{background:#EEEDFE;color:#3C3489}
+.cb-family_phrases{background:#FBEAF0;color:#72243E}
+.cb-description{background:#E6F1FB;color:#0C447C}
+.cb-cognates{background:#E6F1FB;color:#0C447C}
+.cb-personality{background:#EEEDFE;color:#3C3489}
+.cb-possessives{background:#FAEEDA;color:#633806}
+.cb-possession{background:#FAEEDA;color:#633806}
+.cb-activities{background:#EAF3DE;color:#27500A}
+.cb-er_verbs{background:#EAF3DE;color:#27500A}
+.cb-preference{background:#EAF3DE;color:#27500A}
+.cb-venir{background:#FCEBEB;color:#791F1F}
+.cb-countries{background:#E6F1FB;color:#0C447C}
+.cb-languages{background:#E6F1FB;color:#0C447C}
+.cb-prepositions{background:#FAEEDA;color:#633806}
+.cb-dates{background:#FAEEDA;color:#633806}
+.cb-personal_info{background:#EEEDFE;color:#3C3489}
+.cb-oral_description{background:#FBEAF0;color:#72243E}
+.gender-badge{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;letter-spacing:0.02em}
+.gb-m{background:#185FA5;color:#fff}
+.gb-f{background:#D4537E;color:#fff}
+.gb-both{background:#534AB7;color:#fff}
+.prompt-label{font-size:12px;color:var(--text-3);letter-spacing:0.04em}
+.prompt{font-size:22px;font-weight:500;color:var(--text)}
+.hint{font-size:13px;color:var(--text-2);margin-top:-4px;font-weight:500}
+.hint.hint-m{color:#185FA5}
+.hint.hint-f{color:#A32D2D}
+.input-row{display:flex;gap:8px;width:100%}
+.input-row input{flex:1;font-size:15px;padding:10px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface);color:var(--text);outline:none;font-family:inherit}
+.input-row input:focus{border-color:#185FA5;box-shadow:0 0 0 2px rgba(181,212,244,0.5)}
+.input-row input.ok{border-color:#639922;background:#EAF3DE;color:#27500A}
+.input-row input.bad{border-color:#E24B4A;background:#FCEBEB;color:#791F1F}
+/* Accent bar */
+.accent-bar{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-bottom:8px;width:100%}
+.accent-btn{min-width:34px;height:34px;padding:0 8px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);color:var(--text);font-size:15px;font-family:Georgia,"Times New Roman",serif;cursor:pointer;line-height:1;transition:background 0.1s;-webkit-tap-highlight-color:transparent}
+.accent-btn:hover{background:#E8E5DA}
+.accent-btn:active{background:#D6D3C8;transform:scale(0.95)}
+.accent-btn:disabled{opacity:0.4;cursor:not-allowed}
+.check-btn{padding:10px 18px;border-radius:var(--radius);border:0.5px solid var(--border-2);background:var(--surface-2);font-size:15px;cursor:pointer;color:var(--text);font-family:inherit}
+.check-btn:hover:not(:disabled){background:#E8E5DA}
+.check-btn:disabled{opacity:0.5;cursor:default}
+
+.feedback-area{text-align:center;min-height:52px;margin-bottom:6px}
+.feedback-text{font-size:15px;font-weight:500;margin-bottom:6px}
+.feedback-text.good{color:#3B6D11}
+.feedback-text.bad{color:#A32D2D}
+.answer-box{font-size:14px;padding:7px 14px;border-radius:var(--radius);display:inline-block}
+.answer-box.good{background:#EAF3DE;color:#27500A}
+.answer-box.bad{background:#FCEBEB;color:#791F1F}
+.next-hint{display:none}
+
+/* Scoreboard below card */
+.scoreboard{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+.score-tile{background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px}
+.score-tile.you{background:#E6F1FB;border-color:#185FA5;text-align:left}
+.score-tile.them{text-align:right}
+.score-tile .who{font-size:11px;color:var(--text-3)}
+.score-tile.you .who{color:#185FA5}
+.score-tile .num{font-size:22px;font-weight:500}
+.score-tile.you .num{color:#0C447C}
+.score-tile .progress{font-size:11px;color:var(--text-3);margin-top:1px}
+.score-tile.you .progress{color:#185FA5}
+
+.live-row{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:var(--text-3)}
+.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#BA7517}
+.live-dot.green{background:#639922}
+
+/* ====== RESULTS ====== */
+.results{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center}
+.results .label{font-size:13px;color:var(--text-3);margin-bottom:4px}
+.results h2{font-size:28px;font-weight:500;margin-bottom:1.25rem}
+.results h2.win{color:#3B6D11}
+.results h2.lose{color:#A32D2D}
+.results h2.tie{color:#534AB7}
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem}
+.result-tile{background:var(--surface-2);border-radius:var(--radius);padding:14px}
+.result-tile.you{background:#E6F1FB}
+.result-tile .who{font-size:11px;color:var(--text-3)}
+.result-tile.you .who{color:#185FA5}
+.result-tile .score{font-size:28px;font-weight:500}
+.result-tile.you .score{color:#0C447C}
+.result-tile .score-total{font-size:14px;color:var(--text-3);font-weight:400}
+.result-tile.you .score-total{color:#185FA5}
+.result-tile .stat{font-size:12px;color:var(--text-3);margin-top:2px}
+.result-tile.you .stat{color:#185FA5}
+.results-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.results-actions button{padding:10px 14px;border-radius:var(--radius);border:0.5px solid var(--border-2);font-size:14px;cursor:pointer;font-family:inherit;color:var(--text)}
+.results-actions button.primary{background:#185FA5;color:#fff;border-color:#185FA5}
+.results-actions button.primary:hover{background:#0C447C}
+.results-actions button:not(.primary){background:var(--surface)}
+.results-actions button:not(.primary):hover{background:var(--surface-2)}
+
+.review-section{margin-top:1.5rem;text-align:left}
+.review-section h3{font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:8px}
+.review-item{background:var(--surface);border:0.5px solid #F09595;border-radius:var(--radius);padding:10px 14px;margin-bottom:6px;font-size:13px}
+.review-item .rq{font-size:12px;color:var(--text-3);margin-bottom:4px;font-style:italic}
+.review-item .ryou{color:#A32D2D}
+.review-item .rcorrect{color:#3B6D11;font-weight:500}
+
+@media (max-width:480px){
+  .wrap{padding:1rem 0.75rem 2rem}
+  .lobby,.waiting,.flashcard,.results{padding:1.5rem 1.25rem}
+  .lobby-grid{grid-template-columns:1fr;gap:8px}
+  .lobby-card{min-height:auto;padding:12px}
+  .code-display{font-size:36px}
+  .prompt{font-size:20px}
+}
+
+/* ====== ÉTAPE TABS ====== */
+.etape-tabs{display:flex;gap:2px;align-items:flex-end;border-bottom:0.5px solid var(--border);padding:0 2px;margin-bottom:1.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.etape-tab{padding:9px 18px 10px;font-size:13px;font-weight:500;color:var(--text-3);background:transparent;border:0.5px solid transparent;border-bottom:none;border-radius:var(--radius) var(--radius) 0 0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;line-height:1;text-decoration:none;white-space:nowrap;transition:background 0.15s,color 0.15s}
+.etape-tab:hover{color:var(--text-2);background:rgba(0,0,0,0.025)}
+.etape-tab.active{background:var(--bg);color:var(--text);border-color:var(--border);margin-bottom:-0.5px;cursor:default}
+.etape-tab.active:hover{background:var(--bg)}
+.etape-tab .e-num{font-size:10px;font-weight:500;color:var(--text-3);background:rgba(0,0,0,0.06);padding:2px 7px;border-radius:999px;letter-spacing:0.02em}
+.etape-tab.active .e-num{color:#fff;background:#185FA5}
+.flashcard{position:relative}
+.answer-box{display:inline-flex;align-items:center;gap:4px}
+.mcorrect-row{display:flex;align-items:center;gap:4px}
+.audio-announce{max-width:580px;margin:0 auto 1rem;padding:0;position:sticky;top:0;z-index:20}
+.audio-announce-inner{display:flex;align-items:center;gap:10px;background:#EAF4E8;border:0.5px solid #A8D5A2;border-radius:10px;padding:10px 14px;font-size:13px;color:#2D6B27}
+.audio-announce-inner .aa-icon{font-size:1.3em;flex-shrink:0}
+.audio-announce-inner .aa-text{flex:1;font-weight:500}
+.audio-announce-inner .aa-sub{font-weight:400;opacity:0.8;margin-left:4px}
+.audio-dismiss{background:none;border:none;cursor:pointer;font-size:16px;color:#2D6B27;opacity:0.6;padding:0 2px;line-height:1;flex-shrink:0}
+.audio-dismiss:hover{opacity:1}
+</style>
+<style>.mute-btn{display:none!important}.speaker-btn{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+<h2 class="sr-only">French Flashcards 1v1 multiplayer quiz</h2>
+
+<nav class="etape-tabs" id="etape-tabs" aria-label="Choose étape"></nav>
+
+<div class="audio-announce" id="audio-announce">
+  <div class="audio-announce-inner">
+    <span class="aa-icon">🔊</span>
+    <span class="aa-text">Audio pronunciation added!<span class="aa-sub"> Hear every card read aloud in Solo and 1v1 modes.</span></span>
+  </div>
+</div>
+<div class="app-title">
+  <h1 id="app-title-h1">French Flashcards · 1v1</h1>
+  <div class="sub" id="app-title-sub">Race a friend, or practice solo</div>
+</div>
+<div id="screen-lobby"></div>
+<div id="screen-waiting" style="display:none"></div>
+<div id="screen-game" style="display:none"></div>
+<div id="screen-results" style="display:none"></div>
+
+</div>
+
+<!-- Load registry and the active étape's vocab BEFORE the game module -->
+<script src="etapes/registry.js"></script>
+<script src="etapes/etape3.js"></script>
+<script>
+(function bootEtape(){
+  // This page is the Étape 3 page.
+  // Map each étape id -> the file that hosts its 1v1 multiplayer lobby.
+  window.CURRENT_ETAPE_ID = 'e3';
+  window.ETAPE_PAGE_MAP = {
+  e1: 'etape1.html',
+  e2: 'index.html',
+  e3: 'etape3.html',
+  e4: 'etape4.html'
+};
+
+window.ETAPE_SOLO_MAP = {
+  e1: 'solo1.html',
+  e2: 'solo.html',
+  e3: 'solo3.html',
+  e4: 'solo4.html'
+};
+
+  const tabsEl = document.getElementById('etape-tabs');
+
+  // Defensive: if registry.js failed to load, don't crash the whole page.
+  if(!window.ETAPES || !Array.isArray(window.ETAPES)){
+    console.error('registry.js did not load — window.ETAPES is missing. Check that etapes/registry.js is reachable.');
+    tabsEl.innerHTML = '';
+    // Page still works without tabs; leave the default title in place.
+    return;
+  }
+
+  // Render the tab bar from the registry.
+  tabsEl.innerHTML = window.ETAPES.map(e => {
+    const isActive = e.id === window.CURRENT_ETAPE_ID;
+    const href = window.ETAPE_PAGE_MAP[e.id] || '#';
+    if(isActive){
+      return `<span class="etape-tab active" aria-current="page">${e.label} <span class="e-num">${e.sublabel}</span></span>`;
+    }
+    return `<a class="etape-tab" href="${href}">${e.label} <span class="e-num">${e.sublabel}</span></a>`;
+  }).join('');
+
+  // Set the title from the registry.
+  const me = window.ETAPES.find(e => e.id === window.CURRENT_ETAPE_ID);
+  if(me){
+    document.getElementById('app-title-h1').textContent = me.titleMulti;
+    document.getElementById('app-title-sub').textContent = me.sub;
+    document.title = me.titleMulti;
+  }
+})();
+</script>
+
+
+<!-- Firebase + game logic -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, deleteDoc }
+  from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+// ====== FIREBASE CONFIG ======
+const firebaseConfig = {
+  apiKey: "AIzaSyB-zzC5T3DqKin1fHZovIRW-Kx4ZIPel1Y",
+  authDomain: "linearalgebra-a7935.firebaseapp.com",
+  projectId: "linearalgebra-a7935",
+  storageBucket: "linearalgebra-a7935.firebasestorage.app",
+  messagingSenderId: "115696552393",
+  appId: "1:115696552393:web:ea0843c980970073684018"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ====== VOCAB DATA (loaded from etapes/etape*.js via window.ETAPE_DATA) ======
+if(!window.ETAPE_DATA || !window.ETAPE_DATA.vocab){
+  document.body.innerHTML = '<div style="max-width:500px;margin:3rem auto;padding:1.5rem;font-family:system-ui;color:#A32D2D">Could not load étape data. Check that <code>etapes/etape3.js</code> is reachable.</div>';
+  throw new Error('ETAPE_DATA not loaded');
+}
+const vocab = window.ETAPE_DATA.vocab;
+
+// ====== ANSWER CHECKING (same logic as solo) ======
+const accentMap=[[/[àâä]/g,'a'],[/[éèêë]/g,'e'],[/[îï]/g,'i'],[/[ôö]/g,'o'],[/[ùûü]/g,'u'],[/ç/g,'c'],[/œ/g,'oe']];
+function normaliseBase(s){return s.toLowerCase().trim().replace(/[\u2018\u2019'`]/g,"'").replace(/[?!.\u2026]/g,'').replace(/\s+/g,' ').trim();}
+function stripAccents(s){let r=s;accentMap.forEach(([p,rep])=>r=r.replace(p,rep));return r;}
+function isCorrect(typed,v){
+  const t=normaliseBase(typed);
+  return v.alts.some(answer=>{
+    const a=normaliseBase(answer);
+    const tH=v.needsHyphen?t:t.replace(/-/g,' ');
+    const aH=v.needsHyphen?a:a.replace(/-/g,' ');
+    // STRICT: must match WITH accents intact, not just accent-stripped
+    return tH===aH;
+  });
+}
+function isWrongArticle(typed,v){
+  if(!v.guessGender)return false;
+  const t=normaliseBase(typed),a=normaliseBase(v.alts[0]);
+  const swaps=[[/^un /,'une '],[/^une /,'un '],[/^le /,'la '],[/^la /,'le ']];
+  for(const[from,to]of swaps){
+    if(from.test(t)){
+      const swapped=t.replace(from,to);
+      if(stripAccents(swapped)===stripAccents(a))return true;
+    }
+  }
+  return false;
+}
+function isWrongGender(typed,v){
+  if(v.gender!=='m'&&v.gender!=='f')return false;
+  const opposite=v.gender==='m'?'f':'m';
+  const coreA=v.en.replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase();
+  const idxA=vocab.indexOf(v);
+  for(const other of vocab){
+    if(other.gender!==opposite)continue;
+    if(other.category!==v.category)continue;
+    const coreB=other.en.replace(/\s*\(.*?\)\s*/g,'').trim().toLowerCase();
+    let related=(coreA===coreB);
+    if(!related){
+      const idxB=vocab.indexOf(other);
+      if(Math.abs(idxA-idxB)<=2)related=true;
+    }
+    if(!related)continue;
+    const matches=other.alts.some(answer=>{
+      const a=normaliseBase(answer);
+      const aH=other.needsHyphen?a:a.replace(/-/g,' ');
+      const tH=other.needsHyphen?normaliseBase(typed):normaliseBase(typed).replace(/-/g,' ');
+      return stripAccents(tH)===stripAccents(aH);
+    });
+    if(matches)return true;
+  }
+  return false;
+}
+function getMissing(typed,v){
+  const t=normaliseBase(typed),answer=normaliseBase(v.alts[0]),msgs=[];
+  if(isWrongArticle(typed,v)){
+    msgs.push(v.gender==='m'?'wrong article — should be MASCULINE (un/le)':'wrong article — should be FEMININE (une/la)');
+    return msgs;
+  }
+  if(isWrongGender(typed,v)){
+    msgs.push(v.gender==='m'?'that is the FEMININE form, need MASCULINE':'that is the MASCULINE form, need FEMININE');
+    return msgs;
+  }
+  if(v.needsHyphen){
+    const tH=(t.match(/-/g)||[]).length,aH=(answer.match(/-/g)||[]).length;
+    if(tH!==aH)msgs.push('missing hyphen(s)');
+  }
+  if(stripAccents(t)===stripAccents(answer)&&msgs.length===0)msgs.push('check accents');
+  return msgs;
+}
+function escH(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ====== MATCH STATE ======
+let matchLength = 20;          // set per-match (host's choice for 1v1, or local for solo)
+let matchCategory = 'all';     // set per-match
+const playerId = 'p_' + Math.random().toString(36).slice(2,10);
+let matchId = null;
+let role = null;       // 'p1' or 'p2'
+let myCards = [];      // the card sequence for this match
+let myIndex = 0;
+let myScore = 0;
+let myMistakes = [];
+let myStartTime = 0;
+let myTotalTime = 0;
+let unsubscribe = null;
+let opponentDoneShown = false;
+let autoTimer = null;          // setTimeout for auto-advance
+
+// ====== UTILS ======
+function rand4(){
+  const ch='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let s='';for(let i=0;i<4;i++)s+=ch[Math.floor(Math.random()*ch.length)];
+  return s;
+}
+function pickMatchCards(category, length){
+  // Build the eligible pool
+  let pool = vocab.slice();
+  if(category && category !== 'all'){
+    pool = pool.filter(v => v.category === category);
+  }
+  if(pool.length === 0) pool = vocab.slice(); // safety fallback
+  // For small categories, force length to at least 20 (the user setting)
+  // and allow repeats by cycling
+  const result = [];
+  // First, shuffle the pool
+  const shuffled = pool.slice();
+  for(let i=shuffled.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+  }
+  // Fill `length` slots, cycling through and reshuffling each pass to avoid back-to-back repeats
+  let cursor = 0;
+  let pass = shuffled.slice();
+  while(result.length < length){
+    if(cursor >= pass.length){
+      // Reshuffle for next pass; ensure first card of new pass != last of previous
+      const last = result[result.length-1];
+      pass = pool.slice();
+      for(let i=pass.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [pass[i],pass[j]]=[pass[j],pass[i]];
+      }
+      // Swap if first equals last
+      if(pass.length > 1 && pass[0] === last){
+        [pass[0],pass[1]] = [pass[1],pass[0]];
+      }
+      cursor = 0;
+    }
+    result.push(pass[cursor++]);
+  }
+  return result.map(v => vocab.indexOf(v));
+}
+function show(screen){
+  ['lobby','waiting','game','results'].forEach(s=>{
+    document.getElementById('screen-'+s).style.display=(s===screen?'block':'none');
+  });
+}
+
+// ====== LOBBY STATE ======
+let selectedCategory = 'all';
+let selectedLength = 20;
+const LENGTH_OPTIONS = [20, 30, 40, 50, 60, 70, 80];
+const MIN_LENGTH = 20; // small categories always do at least 20 (with repeats)
+
+// Number of cards available per category (computed once)
+const categorySizes = (()=>{
+  const c = {all: vocab.length};
+  for(const v of vocab){c[v.category] = (c[v.category]||0) + 1;}
+  return c;
+})();
+
+const categoryLabels = window.ETAPE_DATA.categoryLabels;
+
+// ====== LOBBY SCREEN ======
+function renderLobby(errorMsg){
+  const el=document.getElementById('screen-lobby');
+  const catChips = Object.keys(categoryLabels).map(c=>{
+    const size = categorySizes[c]||0;
+    const active = c===selectedCategory ? ' active' : '';
+    return `<button class="chip${active}" data-cat="${c}">${categoryLabels[c]} <span style="opacity:0.6;font-size:11px;">${size}</span></button>`;
+  }).join('');
+  // Length picker only appears when category is 'all' (Random)
+  let lengthSection = '';
+  if(selectedCategory === 'all'){
+    const lenChips = LENGTH_OPTIONS.map(n=>{
+      const active = n===selectedLength ? ' active' : '';
+      return `<button class="length-chip${active}" data-len="${n}">${n}</button>`;
+    }).join('');
+    lengthSection = `
+      <div class="picker-section">
+        <h3>Match length</h3>
+        <div class="length-row" id="len-chips">${lenChips}</div>
+      </div>`;
+  } else {
+    // Show fixed-length notice
+    const catSize = categorySizes[selectedCategory] || 0;
+    let note = '';
+    if(catSize < 20){
+      note = `${categoryLabels[selectedCategory]} only has ${catSize} cards — match length is 20 (cards will repeat).`;
+    } else {
+      note = `Category matches are 20 cards.`;
+    }
+    lengthSection = `
+      <div class="picker-section">
+        <h3>Match length</h3>
+        <div class="length-note">${note}</div>
+      </div>`;
+  }
+  el.innerHTML = `
+    ${errorMsg?`<div class="notice">${escH(errorMsg)}</div>`:''}
+    <div class="lobby">
+      <h2>Ready to play?</h2>
+      <div class="lobby-sub">Race a friend through the cards</div>
+      <div class="lobby-grid">
+        <div class="lobby-card primary" id="btn-create">
+          <div class="label">New match</div>
+          <div class="action">Create →</div>
+        </div>
+        <div class="lobby-card">
+          <div class="label">Join with code</div>
+          <input type="text" id="join-input" placeholder="ABCD" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
+        </div>
+        <div class="lobby-card danger" id="btn-solo">
+          <div class="label">No opponent</div>
+          <div class="action">Solo →</div>
+        </div>
+      </div>
+      <div class="lobby-foot">After creating, share the code with one friend</div>
+      <div class="picker-section">
+        <h3>Category</h3>
+        <div class="chip-row" id="cat-chips">${catChips}</div>
+      </div>
+      ${lengthSection}
+    </div>`;
+  document.getElementById('btn-create').addEventListener('click',createMatch);
+  document.getElementById('btn-solo').addEventListener('click',startSolo);
+  const inp=document.getElementById('join-input');
+  inp.addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,'');});
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&inp.value.length===4)joinMatch(inp.value);});
+  // Category chips
+  document.querySelectorAll('#cat-chips .chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      selectedCategory = chip.dataset.cat;
+      // Specific category → fixed at 20
+      if(selectedCategory !== 'all') selectedLength = 20;
+      renderLobby(errorMsg);
+    });
+  });
+  // Length chips (only present when Random)
+  document.querySelectorAll('#len-chips .length-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      selectedLength = parseInt(chip.dataset.len);
+      renderLobby(errorMsg);
+    });
+  });
+  show('lobby');
+}
+
+// ====== CREATE MATCH ======
+async function createMatch(){
+  const code = rand4();
+  // Apply small-category override
+  let length = selectedLength;
+  const catSize = categorySizes[selectedCategory] || 0;
+  if(selectedCategory !== 'all' && catSize < 20) length = 20;
+  if(selectedCategory !== 'all') length = 20; // category matches are always 20
+  matchLength = length;
+  matchCategory = selectedCategory;
+  const cards = pickMatchCards(selectedCategory, length);
+  // p1's local copy is the same set
+  myCards = cards.map(i => vocab[i]);
+  try{
+    await setDoc(doc(db,'matches',code),{
+      createdAt: serverTimestamp(),
+      lastUpdate: serverTimestamp(),
+      status: 'waiting',
+      etape: window.CURRENT_ETAPE_ID,
+      cards: cards,
+      length: length,
+      category: selectedCategory,
+      p1Joined: true,
+      p2Joined: false,
+      p1Score: 0, p2Score: 0,
+      p1Done: false, p2Done: false,
+      p1Time: 0, p2Time: 0,
+      p1Typing: false, p2Typing: false,
+      currentCard: 0
+    });
+    matchId = code;
+    role = 'p1';
+    listenToMatch();
+    renderWaiting();
+  }catch(e){
+    console.error(e);
+    renderLobby('Could not create match. Check your internet connection.');
+  }
+}
+
+// ====== JOIN MATCH ======
+async function joinMatch(code){
+  code=code.toUpperCase();
+  try{
+    const ref=doc(db,'matches',code);
+    const snap=await getDoc(ref);
+    if(!snap.exists()){renderLobby('Match code not found. Check with your friend.');return;}
+    const data=snap.data();
+    if(data.status==='done'){renderLobby('That match is already over. Ask for a new code.');return;}
+    if(data.status==='resigned'){renderLobby('That match was ended by the host. Ask for a new code.');return;}
+    if(data.p2Joined){renderLobby('That match already has two players.');return;}
+    // Cross-étape: if this code is from a different étape, redirect to its page so the
+    // joiner gets the right vocab. Matches without an 'etape' field are legacy/Étape 1.
+    const matchEtape = data.etape || 'e1';
+    if(matchEtape !== window.CURRENT_ETAPE_ID){
+      const targetPage = window.ETAPE_PAGE_MAP[matchEtape];
+      if(targetPage){
+        window.location.href = targetPage + '?code=' + code;
+        return;
+      }
+      renderLobby('That code is for a different étape that this page can\'t open.');
+      return;
+    }
+    await updateDoc(ref,{p2Joined:true,status:'playing',lastUpdate:serverTimestamp()});
+    matchId=code;
+    role='p2';
+    matchLength = data.length || data.cards.length;
+    matchCategory = data.category || 'all';
+    myCards=data.cards.map(i=>vocab[i]);
+    if(window.dismissAnnounce) dismissAnnounce();
+    listenToMatch();
+    startGame();
+  }catch(e){
+    console.error(e);
+    renderLobby('Could not join match. Check your internet connection or the code.');
+  }
+}
+
+// ====== WAITING ROOM ======
+function renderWaiting(){
+  if(window.dismissAnnounce) dismissAnnounce();
+  const el=document.getElementById('screen-waiting');
+  const url=window.location.origin+window.location.pathname+'?code='+matchId;
+  el.innerHTML = `
+    <div class="waiting">
+      <div class="label">Share this code with your friend</div>
+      <div class="code-display">${matchId}</div>
+      <div class="share-row">
+        <button class="share-btn" id="copy-code">Copy code</button>
+        <button class="share-btn" id="copy-link">Copy invite link</button>
+      </div>
+      <div class="status-row">
+        <span class="status-dot"></span>
+        <span id="wait-status">Waiting for opponent to join…</span>
+      </div>
+      <button class="cancel-btn" id="cancel-match">Cancel match</button>
+    </div>`;
+  document.getElementById('copy-code').addEventListener('click',e=>copyText(matchId,e.target));
+  document.getElementById('copy-link').addEventListener('click',e=>copyText(url,e.target));
+  document.getElementById('cancel-match').addEventListener('click',cancelMatch);
+  show('waiting');
+}
+async function copyText(text,btn){
+  try{
+    await navigator.clipboard.writeText(text);
+    const orig=btn.textContent;btn.textContent='Copied ✓';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},1500);
+  }catch(e){
+    prompt('Copy this:',text);
+  }
+}
+async function cancelMatch(){
+  if(unsubscribe){unsubscribe();unsubscribe=null;}
+  if(matchId){try{await deleteDoc(doc(db,'matches',matchId));}catch(e){}}
+  matchId=null;role=null;myCards=[];myIndex=0;myScore=0;myMistakes=[];
+  renderLobby();
+}
+
+// ====== FIREBASE LISTENER ======
+function listenToMatch(){
+  if(unsubscribe)unsubscribe();
+  unsubscribe = onSnapshot(doc(db,'matches',matchId),(snap)=>{
+    if(!snap.exists()){
+      // match was deleted
+      if(unsubscribe){unsubscribe();unsubscribe=null;}
+      renderLobby('The other player left the match.');
+      return;
+    }
+    const data=snap.data();
+    handleStateUpdate(data);
+  },(err)=>{
+    console.error('snapshot error',err);
+  });
+}
+
+function handleStateUpdate(data){
+  // p1 sees waiting → playing transition
+  if(role === 'p1' && data.status === 'playing' && document.getElementById('screen-waiting').style.display !== 'none'){
+    matchLength = data.length || data.cards.length;
+    matchCategory = data.category || 'all';
+
+    if(myCards.length === 0){
+      myCards = data.cards.map(i => vocab[i]);
+    }
+
+    startGame();
+  }
+  // Detect resignation
+  if(data.status==='resigned' && !opponentDoneShown){
+    opponentDoneShown=true;
+    if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+    if(unsubscribe){unsubscribe();unsubscribe=null;}
+    showResignedScreen(data);
+    return;
+  }
+  // Update the live opponent score & status
+  updateLiveScoreboard(data);
+  // Detect both players finished — but ONLY if game has actually started
+  // and we have local cards loaded. Use `=== true` (not truthy) to avoid undefined glitches.
+  if(data.status === 'playing' && myCards.length > 0){
+    const oppDone = (role==='p1' ? data.p2Done : data.p1Done) === true;
+    const meDone  = (role==='p1' ? data.p1Done : data.p2Done) === true;
+    if(oppDone && meDone){
+      showResults(data);
+    }
+  }
+}
+
+async function resignMatch(){
+  if(!matchId) return;
+  if(!confirm('Resign this match? Your opponent will be told you left.')) return;
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  try{
+    await updateDoc(doc(db,'matches',matchId),{
+      status:'resigned',
+      resignedBy: role,
+      lastUpdate: serverTimestamp()
+    });
+  }catch(e){console.error(e);}
+  // The snapshot listener will trigger showResignedScreen
+}
+
+function showResignedScreen(data){
+  const youResigned = data.resignedBy === role;
+
+  const myKey = role;
+  const oppKey = role === 'p1' ? 'p2' : 'p1';
+
+  const myFinalScore = data[myKey + 'Score'] || myScore || 0;
+  const oppFinalScore = data[oppKey + 'Score'] || 0;
+
+  const title = youResigned ? 'You resigned' : 'You won!';
+  const message = youResigned
+    ? 'You left the match.'
+    : 'Your opponent resigned, so you win.';
+
+  const el = document.getElementById('screen-results');
+
+  el.innerHTML = `
+    <div class="results">
+      <div class="label">Match ended</div>
+
+      <h2 class="${youResigned ? 'lose' : 'win'}">${title}</h2>
+
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:1.25rem">
+        ${message}
+      </p>
+
+      <div class="results-grid">
+        <div class="result-tile you">
+          <div class="who">You</div>
+          <div class="score">${myFinalScore}<span class="score-total">/${matchLength}</span></div>
+          <div class="stat">${youResigned ? 'Resigned' : 'Winner'}</div>
+        </div>
+
+        <div class="result-tile">
+          <div class="who">Opponent</div>
+          <div class="score">${oppFinalScore}<span class="score-total">/${matchLength}</span></div>
+          <div class="stat">${youResigned ? 'Winner' : 'Resigned'}</div>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button class="primary" id="back-lobby">Back to lobby</button>
+      </div>
+
+      ${myMistakes.length ? renderMistakesReview() : ''}
+    </div>`;
+
+  document.getElementById('back-lobby').addEventListener('click', backToLobby);
+  show('results');
+}
+
+// ====== START GAME ======
+function startGame(){
+  myIndex=0;myScore=0;myMistakes=[];myTotalTime=0;
+  opponentDoneShown=false;
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  renderGame();
+  show('game');
+}
+
+function renderGame(){
+  const el=document.getElementById('screen-game');
+  el.innerHTML = `
+    <div class="progress-row">
+      <div class="card-num">Card <strong id="g-cardnum">1</strong>/<span>${matchLength}</span></div>
+      <div class="opponent-status" id="opp-status">
+        <span class="live-dot green"></span><span id="opp-name-text">Opponent · online</span>
+      </div>
+    </div>
+    <div class="flashcard">
+      <div class="top-badges" id="top-badges"></div>
+      <div class="prompt-label">Translate to French</div>
+      <div class="prompt" id="prompt"></div>
+      <div class="hint" id="hint"></div>
+      <div class="accent-bar" id="accent-bar"></div>
+      <div class="input-row">
+        <input type="text" id="answer-input" placeholder="Type the French…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <button class="check-btn" id="check-btn">Check</button>
+      </div>
+    </div>
+    <div class="feedback-area">
+      <div class="feedback-text" id="feedback"></div>
+      <div id="answer-box-wrap"></div>
+    </div>
+    <div class="scoreboard">
+      <div class="score-tile you">
+        <div class="who">You</div>
+        <div class="num" id="you-score">0</div>
+        <div class="progress" id="you-prog">Card 1/${matchLength}</div>
+      </div>
+      <div class="score-tile them">
+        <div class="who">Opponent</div>
+        <div class="num" id="them-score">0</div>
+        <div class="progress" id="them-prog">Card 1/${matchLength}</div>
+      </div>
+    </div>
+    <div class="live-row" id="live-row"><span class="live-dot green"></span><span id="live-text">Game on</span></div>
+    <div class="mistakes-panel" id="mistakes-panel" style="display:none">
+      <div class="mistakes-panel-header">Mistakes so far <span class="mistakes-panel-badge" id="mistakes-panel-count">0</span></div>
+      <div id="mistakes-panel-list"></div>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem">
+      <button class="cancel-btn" id="btn-resign">Resign match</button>
+    </div>`;
+  document.getElementById('check-btn').addEventListener('click',checkAnswer);
+  const inp=document.getElementById('answer-input');
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter' && !answered) checkAnswer();
+  });
+  inp.addEventListener('input',()=>setTyping(true));
+  // Resign button
+  document.getElementById('btn-resign').addEventListener('click',resignMatch);
+  // Build accent bar
+  buildAccentBar(inp);
+  showCard();
+  setTimeout(applyMuteUI, 0);
+}
+
+// Accent bar — clickable buttons that insert the character at the cursor position
+const ACCENT_CHARS = ['à','â','ä','æ','ç','é','è','ê','ë','î','ï','ô','œ','ù','û','ü'];
+function buildAccentBar(inputEl){
+  const bar = document.getElementById('accent-bar');
+  if(!bar) return;
+  bar.innerHTML = '';
+  ACCENT_CHARS.forEach(ch=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'accent-btn';
+    btn.textContent = ch;
+    btn.tabIndex = -1; // don't steal Tab focus during typing
+    btn.addEventListener('mousedown', e => e.preventDefault()); // keep input focus
+    btn.addEventListener('click', () => insertAccent(inputEl, ch));
+    bar.appendChild(btn);
+  });
+}
+function insertAccent(inputEl, ch){
+  if(!inputEl || inputEl.disabled) return;
+  const start = inputEl.selectionStart ?? inputEl.value.length;
+  const end = inputEl.selectionEnd ?? inputEl.value.length;
+  const before = inputEl.value.slice(0, start);
+  const after = inputEl.value.slice(end);
+  inputEl.value = before + ch + after;
+  const newPos = start + ch.length;
+  inputEl.setSelectionRange(newPos, newPos);
+  inputEl.focus();
+  // Manually fire 'input' event so the typing indicator still updates
+  inputEl.dispatchEvent(new Event('input', {bubbles:true}));
+}
+
+let answered=false;
+// Typing indicator removed to reduce Firestore writes.
+// Opponent activity is shown via score updates instead.
+function setTyping(t){ /* no-op — disabled to save quota */ }
+
+function showCard(){
+  if(myIndex>=myCards.length){finishMatch();return;}
+  answered=false;
+  const v=myCards[myIndex];
+  myStartTime=Date.now();
+  document.getElementById('g-cardnum').textContent=myIndex+1;
+  document.getElementById('you-prog').textContent=`Card ${myIndex+1}/${matchLength}`;
+  const badges=document.getElementById('top-badges');
+  badges.innerHTML='';
+  // Use the étape's own category labels so badges read correctly for any étape.
+  const labels = categoryLabels;
+  badges.innerHTML += `<span class="cat-badge cb-${v.category}">${labels[v.category]||v.category}</span>`;
+  if(!v.guessGender){
+    const g=v.gender;
+    const gLabel=g==='m'?'Masculine':g==='f'?'Feminine':'Same form';
+    const gClass=g==='m'?'gb-m':g==='f'?'gb-f':'gb-both';
+    badges.innerHTML += `<span class="gender-badge ${gClass}">${gLabel}</span>`;
+  }
+  document.getElementById('prompt').textContent=v.en;
+  const hints=[];
+  if(!v.guessGender){
+    if(v.gender==='m')hints.push('use the MASCULINE form');
+    else if(v.gender==='f')hints.push('use the FEMININE form');
+  }
+  if(v.needsHyphen)hints.push('hyphen required');
+  const hintEl=document.getElementById('hint');
+  hintEl.textContent=hints.length?'Note: '+hints.join(' • '):'';
+  hintEl.className='hint'+(!v.guessGender&&v.gender==='m'?' hint-m':!v.guessGender&&v.gender==='f'?' hint-f':'');
+  const inp=document.getElementById('answer-input');
+  inp.value='';inp.className='';inp.disabled=false;
+  document.querySelectorAll('.accent-btn').forEach(b=>b.disabled=false);
+  document.getElementById('check-btn').disabled=false;
+  document.getElementById('feedback').textContent='';
+  document.getElementById('feedback').className='feedback-text';
+  document.getElementById('answer-box-wrap').innerHTML='';
+  setTimeout(()=>inp.focus(),50);
+}
+
+async function checkAnswer(){
+  if(answered)return;
+  const typed=document.getElementById('answer-input').value.trim();
+  if(!typed)return;
+  answered=true;
+  const elapsed=Date.now()-myStartTime;
+  myTotalTime+=elapsed;
+  const v=myCards[myIndex];
+  const ok=isCorrect(typed,v);
+  const inp=document.getElementById('answer-input');
+  inp.disabled=true;inp.classList.add(ok?'ok':'bad');
+  document.querySelectorAll('.accent-btn').forEach(b=>b.disabled=true);
+  document.getElementById('check-btn').disabled=true;
+  let extraMsg='';
+  if(!ok){
+    const missing=getMissing(typed,v);
+    if(missing.length)extraMsg=missing.join(', ');
+    myMistakes.push({question:v.en,typed,correct:v.fr});
+    appendMistakeRow(v.en,typed,v.fr);
+  }
+  if(ok)myScore++;
+  const fb=document.getElementById('feedback');
+  fb.textContent=ok?'Correct!':(extraMsg?'Wrong — '+extraMsg:'Wrong!');
+  fb.className='feedback-text '+(ok?'good':'bad');
+  const box=document.createElement('div');
+  box.className='answer-box '+(ok?'good':'bad');
+  const txt=document.createElement('span');txt.textContent='Answer: '+v.fr;box.appendChild(txt);
+  const spk=document.createElement('button');spk.type='button';spk.className='speaker-btn';
+  spk.textContent='🔊';spk.onclick=function(){ };box.appendChild(spk);
+  
+  if(v.explanation){var _e=document.createElement('div');_e.style.cssText='font-size:13px;color:#5F5E5A;padding:6px 14px 2px;line-height:1.5;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:4px';_e.textContent=v.explanation;document.getElementById('answer-box-wrap').appendChild(_e);}
+   
+  // Add the auto-advance progress bar
+  const barWrap=document.createElement('div');
+  barWrap.className='auto-bar-wrap';
+  barWrap.innerHTML=`<div class="auto-bar${ok?'':' bad'}"></div>`;
+  document.getElementById('answer-box-wrap').appendChild(barWrap);
+  document.getElementById('you-score').textContent=myScore;
+  // Schedule auto-advance FIRST so network slowness can never freeze the game
+  if(autoTimer){clearTimeout(autoTimer);}
+  autoTimer = setTimeout(()=>{autoTimer=null;nextCard();}, 2000);
+  // Push update to Firebase (multiplayer only) — fire-and-forget, do NOT await
+  // If the network is slow or fails, the game still advances locally.
+  // Only send essentials to minimize quota usage.
+  if(matchId){
+    const update={};
+    update[role+'Score']=myScore;
+    update.currentCard=myIndex+1;
+    updateDoc(doc(db,'matches',matchId),update).catch(e=>console.error('score update failed',e));
+  }
+}
+
+// Show a mistake row in the running panel below the scoreboard
+function appendMistakeRow(question, typed, correct){
+  const panel = document.getElementById('mistakes-panel');
+  if(!panel) return;
+  panel.style.display='block';
+  document.getElementById('mistakes-panel-count').textContent = myMistakes.length;
+  const row=document.createElement('div');
+  row.className='mistake-row';
+  row.innerHTML = `<div class="mq">${escH(question)}</div>
+    <div><div class="mlabel">You wrote</div><div class="myou">${escH(typed||'—')}</div></div>
+    <div><div class="mlabel">Correct answer</div><div class="mcorrect-row"><div class="mcorrect">${escH(correct)}</div></div></div>`;
+  document.getElementById('mistakes-panel-list').appendChild(row);
+}
+
+function nextCard(){
+  myIndex++;
+  if(myIndex>=myCards.length){finishMatch();return;}
+  showCard();
+}
+
+async function finishMatch(){
+  // Hide the input area, show "waiting for opponent" if they're not done
+  const el=document.getElementById('screen-game');
+  el.innerHTML = `
+    <div class="flashcard">
+      <div class="prompt">You're done!</div>
+      <div class="hint">Score: ${myScore}/${matchLength}</div>
+    </div>
+    <div class="scoreboard">
+      <div class="score-tile you">
+        <div class="who">You</div>
+        <div class="num">${myScore}</div>
+        <div class="progress">Done · ${(myTotalTime/1000).toFixed(1)}s total</div>
+      </div>
+      <div class="score-tile them">
+        <div class="who">Opponent</div>
+        <div class="num" id="them-score">—</div>
+        <div class="progress" id="them-prog">Still playing…</div>
+      </div>
+    </div>
+    <div class="live-row"><span class="live-dot"></span><span>Waiting for opponent to finish…</span></div>`;
+  // Mark me as done
+  try{
+    const update={};
+    update[role+'Done']=true;
+    update[role+'Score']=myScore;
+    update[role+'Time']=myTotalTime;
+    update.lastUpdate=serverTimestamp();
+    await updateDoc(doc(db,'matches',matchId),update);
+  }catch(e){console.error(e);}
+}
+
+function updateLiveScoreboard(data){
+  const oppKey = role==='p1' ? 'p2' : 'p1';
+  const oppScore = data[oppKey+'Score'] || 0;
+  const oppDone = data[oppKey+'Done'] || false;
+  const themScoreEl=document.getElementById('them-score');
+  if(themScoreEl)themScoreEl.textContent=oppScore;
+  const themProgEl=document.getElementById('them-prog');
+  if(themProgEl)themProgEl.textContent = oppDone ? 'Done' : `playing…`;
+  const liveText=document.getElementById('live-text');
+  if(liveText){
+    if(oppDone) liveText.textContent='Opponent finished — keep going!';
+    else liveText.textContent='Game on';
+  }
+}
+
+// ====== RESULTS ======
+function showResults(data){
+  if(opponentDoneShown)return;
+  opponentDoneShown=true;
+  if(unsubscribe){unsubscribe();unsubscribe=null;}
+  const myKey=role,oppKey=role==='p1'?'p2':'p1';
+  const myFinalScore=data[myKey+'Score']||0;
+  const oppFinalScore=data[oppKey+'Score']||0;
+  const myTime=data[myKey+'Time']||myTotalTime;
+  const oppTime=data[oppKey+'Time']||0;
+  let outcome='tie';
+  if(myFinalScore>oppFinalScore)outcome='win';
+  else if(myFinalScore<oppFinalScore)outcome='lose';
+  else if(myTime<oppTime)outcome='win';   // tiebreak by speed
+  else if(myTime>oppTime)outcome='lose';
+  const heading={win:'You won! 🏆',lose:'You lost',tie:'It\'s a tie!'};
+  const myAvg=(myTime/1000/matchLength).toFixed(1);
+  const oppAvg=oppTime?((oppTime/1000)/matchLength).toFixed(1):'—';
+  const el=document.getElementById('screen-results');
+  el.innerHTML = `
+    <div class="results">
+      <div class="label">Match complete</div>
+      <h2 class="${outcome}">${heading[outcome]}</h2>
+      <div class="results-grid">
+        <div class="result-tile you">
+          <div class="who">You</div>
+          <div class="score">${myFinalScore}<span class="score-total">/${matchLength}</span></div>
+          <div class="stat">avg ${myAvg}s per card</div>
+        </div>
+        <div class="result-tile">
+          <div class="who">Opponent</div>
+          <div class="score">${oppFinalScore}<span class="score-total">/${matchLength}</span></div>
+          <div class="stat">avg ${oppAvg}s per card</div>
+        </div>
+      </div>
+      <div class="results-actions">
+        <button class="primary" id="rematch">Rematch</button>
+        <button id="new-match">New match</button>
+      </div>
+      ${myMistakes.length?renderMistakesReview():''}
+    </div>`;
+  document.getElementById('rematch').addEventListener('click',rematch);
+  document.getElementById('new-match').addEventListener('click',backToLobby);
+  show('results');
+}
+
+function renderMistakesReview(){
+  return `<div class="review-section">
+    <h3>Your mistakes (${myMistakes.length})</h3>
+    ${myMistakes.map(m=>`<div class="review-item">
+      <div class="rq">${escH(m.question)}</div>
+      <div>You wrote <span class="ryou">${escH(m.typed||'—')}</span></div>
+      <div>Correct answer <span class="rcorrect">${escH(m.correct)}</span></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+async function rematch(){
+  // p1 creates a new match, p2 has to rejoin via code (simpler)
+  // For symmetry, just go back to lobby
+  await backToLobby();
+}
+async function backToLobby(){
+  if(unsubscribe){unsubscribe();unsubscribe=null;}
+  if(matchId && role==='p1'){
+    try{await updateDoc(doc(db,'matches',matchId),{status:'done',lastUpdate:serverTimestamp()});}catch(e){}
+  }
+  matchId=null;role=null;myCards=[];myIndex=0;myScore=0;myMistakes=[];opponentDoneShown=false;
+  renderLobby();
+}
+
+// ====== SOLO MODE — redirect to full solo experience ======
+function startSolo(){
+  if(window.dismissAnnounce) dismissAnnounce();
+  // Navigate to the solo file for the current étape (so browser back returns here)
+  const target = (window.ETAPE_SOLO_MAP && window.ETAPE_SOLO_MAP[window.CURRENT_ETAPE_ID]) || 'solo.html';
+  window.location.href = target;
+}
+
+// ====== INIT ======
+const params = new URLSearchParams(window.location.search);
+const codeFromUrl = params.get('code');
+if(codeFromUrl && /^[A-Z]{4}$/.test(codeFromUrl.toUpperCase())){
+  joinMatch(codeFromUrl);
+} else {
+  renderLobby();
+}
+
+</script>
+  <script>
+// ====== AUDIO PLAYBACK ======
+function audioSlug(text){
+  return String(text).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\u0153/g,"oe").replace(/\u00e6/g,"ae")
+    .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,80);
+}
+let audioMuted = localStorage.getItem('fq-muted') === '1';
+let _audioEl = null;
+function _playRaw(fr){
+  if(!fr || audioMuted) return;
+  if(_audioEl){ _audioEl.pause(); _audioEl = null; }
+  _audioEl = new Audio("audio/" + audioSlug(fr) + ".mp3");
+  _audioEl.play().catch(()=>{});
+}
+function applyMuteUI(){
+  const btn = document.getElementById('mute-btn');
+  if(!btn) return;
+  btn.textContent = audioMuted ? '🔇' : '🔊';
+  btn.classList.toggle('muted', audioMuted);
+}
+function toggleMute(){
+  audioMuted = !audioMuted;
+  localStorage.setItem('fq-muted', audioMuted ? '1' : '0');
+  applyMuteUI();
+}
+
+// ====== AUDIO ANNOUNCEMENT BANNER ======
+(function(){
+  const el = document.getElementById('audio-announce');
+  if(!el) return;
+  window.dismissAnnounce = function(){
+    el.style.opacity='0';
+    el.style.transition='opacity .25s';
+    setTimeout(()=>{ el.style.display='none'; },260);
+  };
+})();
+  </script>
+</body>
+</html>

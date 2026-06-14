@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title Linear Algebra Quiz - Adjust Timing and Length
+title Linear Algebra Quiz - Adjust Timers
 
 set "SCRIPT_DIR=%~dp0"
 set "POWERSHELL_SCRIPT=%SCRIPT_DIR%adjust-timing-and-length.ps1"

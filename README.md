@@ -16,7 +16,7 @@ A web-based flashcard quiz for **MATH 2210 Applied Linear Algebra**. Practise th
 - [Tutorial 3 — Edit the quiz questions](#tutorial-3-edit-questions)
 - [Tutorial 4 — Edit the flashcard data](#tutorial-4-edit-flashcards)
 - [Tutorial 5 — Add a new unit](#tutorial-5-add-unit)
-- [Tutorial 6 — Adjust the timer and match length](#tutorial-6-timing)
+- [Tutorial 6 — Adjust the timers](#tutorial-6-timing)
 - [Tutorial 7 — Push your changes to GitHub](#tutorial-7-push)
 - [Tutorial 8 — Update the toolkit itself](#tutorial-8-update-toolkit)
 - [Project file layout](#project-file-layout)
@@ -73,7 +73,7 @@ Everything lives in the **`setup_powershell`** folder. Each tool is a `.cmd` fil
 | **Edit Quiz JavaScript** | Visual editor to open and edit the quiz logic / question files. |
 | **Edit Flashcards** | Visual editor for the flashcard vocabulary data. |
 | **Add New Unit** | Creates a brand-new unit and wires it into the registry, pages, and tabs automatically. |
-| **Adjust Timing and Length** | UI to change the auto-advance timer and match-length options across all game pages. |
+| **Adjust Timing and Length** | Type in the auto-advance delays and learning-step times; applies to all pages. |
 | **Update Entire Project to GitHub** | Commits **every** change in the project and pushes it to GitHub. |
 | **Update GitHub Setup Toolkit** | Pushes only the `setup_powershell` toolkit files to GitHub. |
 
@@ -167,18 +167,21 @@ It creates the unit's data file (`etapes/etapeN.js`), adds it to `registry.js`, 
 ---
 
 <a id="tutorial-6-timing"></a>
-## Tutorial 6 — Adjust the timer and match length
+## Tutorial 6 — Adjust the timers
+
+This tool lets you **type** the timing values for the quiz. The project is detected automatically.
 
 1. Double-click **Adjust Timing and Length**.
-2. With the project detected automatically, set:
-   - **Auto-advance timer** — how long the answer/explanation stays on screen before the next card (the countdown bar and the actual delay are kept in sync).
-   - **Default match length** — the highlighted choice on the length picker.
-   - **Match length choices** — the list of buttons (comma-separated numbers).
+2. Type the values you want:
+   - **Auto-advance delay — Solo practice**: after you answer, how long the Again / Hard / Good / Easy panel stays before the card auto-advances with the suggested rating (seconds).
+   - **Learning step 1 — the "Again" interval**: when a learning card is rated Again, how soon it returns (minutes). This is the time shown on the Again button.
+   - **Learning step 2 — the "Good" interval**: the next learning step before a card graduates (minutes). This is the time shown on the Good button.
+   - **Auto-advance delay — 1v1 game**: on the head-to-head pages, how long the answer/explanation stays before the next card (seconds). The countdown bar stays in sync automatically.
 3. Click **Apply to all pages**.
 
-It writes the changes to every game page and saves a backup under `backups\timing-editor` first. Refresh the site to see the effect.
+It writes the solo values to every `solo*.html` page and the 1v1 value to every game page, saving a backup of each under `backups\timing-editor` first. Refresh the site to see the effect.
 
-> These settings live on the 1v1 pages, so this tool applies to the **online** layout. A local (solo-only) install uses spaced repetition and has no fixed timer/length, so the tool will tell you there's nothing to change.
+> A local (solo-only) install has the solo timing controls; an online install has both the solo and the 1v1 controls. The tool fills the boxes with the current values so you can see what they are before changing them.
 
 ---
 
