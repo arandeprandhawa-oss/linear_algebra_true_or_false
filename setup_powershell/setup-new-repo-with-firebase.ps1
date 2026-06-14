@@ -1192,7 +1192,7 @@ function Deploy-FirestoreRules {
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - ONLINE SETUP WITH FIREBASE' -ForegroundColor Magenta
-    Write-Host 'UI VERSION 5 - STABLE POPUPS WITHOUT EVENT HANDLERS
+    Write-Host 'UI VERSION 6 - PARSER FIX' -ForegroundColor DarkCyan
     Write-Host 'MODE: GitHub website + Firebase multiplayer (guided pop-ups)' -ForegroundColor Magenta
     Write-Host 'This script starts from a completely fresh template copy.'
 

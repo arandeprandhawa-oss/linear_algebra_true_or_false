@@ -702,7 +702,7 @@ start "" "%~dp0index.html"
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - LOCAL INSTALLER' -ForegroundColor Magenta
-    Write-Host 'UI VERSION 5 - STABLE POPUPS WITHOUT EVENT HANDLERS
+    Write-Host 'UI VERSION 6 - PARSER FIX' -ForegroundColor DarkCyan
     Write-Host 'MODE: Local computer only - no GitHub and no Firebase' -ForegroundColor Magenta
     Write-Host 'Nothing needs to be installed except the website files themselves.'
 
