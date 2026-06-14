@@ -1133,6 +1133,264 @@ function Apply-FirebaseConfig {
     Write-Ok "Firebase configuration was applied to $updated HTML files."
 }
 
+# =====================================================================
+# Complete 2-to-6 player Firestore rules builder
+# =====================================================================
+function Read-ConfiguredPlayerCount {
+    param([string]$ProjectFolder)
+
+    $configPath = Join-Path $ProjectFolder 'multiplayer-config.js'
+    if (Test-Path -LiteralPath $configPath -PathType Leaf) {
+        try {
+            $configText = [System.IO.File]::ReadAllText($configPath, [System.Text.Encoding]::UTF8)
+            $match = [regex]::Match($configText, 'playerCount\s*:\s*([2-6])')
+            if ($match.Success) { return [int]$match.Groups[1].Value }
+        }
+        catch { }
+    }
+
+    return 2
+}
+
+function Get-FirestoreRuleMetadata {
+    param([string]$ProjectFolder)
+
+    $etapeIds = @()
+    $registryPath = Join-Path $ProjectFolder (Join-Path 'etapes' 'registry.js')
+    if (Test-Path -LiteralPath $registryPath -PathType Leaf) {
+        $registryText = [System.IO.File]::ReadAllText($registryPath, [System.Text.Encoding]::UTF8)
+        $etapeIds = @(
+            [regex]::Matches($registryText, 'id\s*:\s*["\x27](e\d+)["\x27]') |
+                ForEach-Object { $_.Groups[1].Value } |
+                Sort-Object -Unique
+        )
+    }
+    if ($etapeIds.Count -eq 0) { $etapeIds = @('e1', 'e2', 'e3', 'e4') }
+
+    $categories = [System.Collections.Generic.SortedSet[string]]::new()
+    [void]$categories.Add('all')
+    $etapesFolder = Join-Path $ProjectFolder 'etapes'
+    if (Test-Path -LiteralPath $etapesFolder -PathType Container) {
+        $jsFiles = Get-ChildItem -LiteralPath $etapesFolder -Filter 'etape*.js' -File -ErrorAction SilentlyContinue
+        foreach ($jsFile in $jsFiles) {
+            $jsText = [System.IO.File]::ReadAllText($jsFile.FullName, [System.Text.Encoding]::UTF8)
+            foreach ($categoryMatch in [regex]::Matches($jsText, 'category\s*:\s*["\x27]([^"\x27\s]+)["\x27]')) {
+                $category = $categoryMatch.Groups[1].Value.Trim()
+                if (-not [string]::IsNullOrWhiteSpace($category)) {
+                    [void]$categories.Add($category)
+                }
+            }
+        }
+    }
+
+    $lengths = @(20, 30, 40, 50, 60, 70, 80)
+    $indexPath = Join-Path $ProjectFolder 'index.html'
+    if (Test-Path -LiteralPath $indexPath -PathType Leaf) {
+        $indexText = [System.IO.File]::ReadAllText($indexPath, [System.Text.Encoding]::UTF8)
+        $lengthMatch = [regex]::Match($indexText, 'const\s+LENGTH_OPTIONS\s*=\s*\[([^\]]+)\]')
+        if ($lengthMatch.Success) {
+            $foundLengths = @(
+                $lengthMatch.Groups[1].Value -split ',' |
+                    ForEach-Object { $_.Trim() } |
+                    Where-Object { $_ -match '^\d+$' } |
+                    ForEach-Object { [int]$_ } |
+                    Sort-Object -Unique
+            )
+            if ($foundLengths.Count -gt 0) { $lengths = $foundLengths }
+        }
+    }
+
+    return [pscustomobject]@{
+        EtapeList = ($etapeIds | ForEach-Object { "'$_'" }) -join ', '
+        CategoryLines = ($categories | ForEach-Object { "          '$_'" }) -join ",`r`n"
+        LengthList = ($lengths -join ', ')
+    }
+}
+
+function New-CompleteFirestoreRulesText {
+    param(
+        [string]$ProjectFolder,
+        [int]$PlayerCount
+    )
+
+    if ($PlayerCount -lt 2 -or $PlayerCount -gt 6) { $PlayerCount = 2 }
+    $meta = Get-FirestoreRuleMetadata -ProjectFolder $ProjectFolder
+
+    return @"
+rules_version = '2';
+
+// Configured default for newly created matches: $PlayerCount players.
+// The rules intentionally support every value from 2 through 6 so the
+// Change Player Count tool can switch the website without another rules redesign.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /matches/{matchId} {
+
+      function validCode() {
+        return matchId.matches('^[A-Z]{4}$');
+      }
+
+      function validEtape(e) {
+        return e in [$($meta.EtapeList)];
+      }
+
+      function validCategory(c) {
+        return c in [
+$($meta.CategoryLines)
+        ];
+      }
+
+      function validPresence(joined, ready, id, active) {
+        return joined is bool
+          && ready is bool
+          && id is string
+          && (!ready || joined)
+          && ((joined && id != '') || (!joined && id == ''))
+          && (active || (!joined && !ready && id == ''));
+      }
+
+      function validProgress(score, done, time, currentCard, length, active) {
+        return score is int
+          && score >= 0
+          && score <= length
+          && done is bool
+          && time is int
+          && time >= 0
+          && currentCard is int
+          && currentCard >= 0
+          && currentCard <= length
+          && (active || (score == 0 && done == false && time == 0 && currentCard == 0));
+      }
+
+      function validPlayers(d) {
+        return d.requiredPlayers is int
+          && d.requiredPlayers >= 2
+          && d.requiredPlayers <= 6
+          && validPresence(d.p1Joined, d.p1Ready, d.p1Id, true)
+          && validProgress(d.p1Score, d.p1Done, d.p1Time, d.p1CurrentCard, d.length, true)
+          && validPresence(d.p2Joined, d.p2Ready, d.p2Id, true)
+          && validProgress(d.p2Score, d.p2Done, d.p2Time, d.p2CurrentCard, d.length, true)
+          && validPresence(d.p3Joined, d.p3Ready, d.p3Id, d.requiredPlayers >= 3)
+          && validProgress(d.p3Score, d.p3Done, d.p3Time, d.p3CurrentCard, d.length, d.requiredPlayers >= 3)
+          && validPresence(d.p4Joined, d.p4Ready, d.p4Id, d.requiredPlayers >= 4)
+          && validProgress(d.p4Score, d.p4Done, d.p4Time, d.p4CurrentCard, d.length, d.requiredPlayers >= 4)
+          && validPresence(d.p5Joined, d.p5Ready, d.p5Id, d.requiredPlayers >= 5)
+          && validProgress(d.p5Score, d.p5Done, d.p5Time, d.p5CurrentCard, d.length, d.requiredPlayers >= 5)
+          && validPresence(d.p6Joined, d.p6Ready, d.p6Id, d.requiredPlayers >= 6)
+          && validProgress(d.p6Score, d.p6Done, d.p6Time, d.p6CurrentCard, d.length, d.requiredPlayers >= 6);
+      }
+
+      function allRequiredPlayersReady(d) {
+        return d.p1Joined && d.p1Ready
+          && d.p2Joined && d.p2Ready
+          && (d.requiredPlayers < 3 || (d.p3Joined && d.p3Ready))
+          && (d.requiredPlayers < 4 || (d.p4Joined && d.p4Ready))
+          && (d.requiredPlayers < 5 || (d.p5Joined && d.p5Ready))
+          && (d.requiredPlayers < 6 || (d.p6Joined && d.p6Ready));
+      }
+
+      function validCreate() {
+        return validCode()
+          && request.resource.data.keys().hasOnly([
+            'createdAt', 'lastUpdate', 'status', 'etape', 'cards', 'length',
+            'category', 'requiredPlayers',
+            'p1Joined', 'p1Ready', 'p1Score', 'p1Done', 'p1Time', 'p1CurrentCard', 'p1Id',
+            'p2Joined', 'p2Ready', 'p2Score', 'p2Done', 'p2Time', 'p2CurrentCard', 'p2Id',
+            'p3Joined', 'p3Ready', 'p3Score', 'p3Done', 'p3Time', 'p3CurrentCard', 'p3Id',
+            'p4Joined', 'p4Ready', 'p4Score', 'p4Done', 'p4Time', 'p4CurrentCard', 'p4Id',
+            'p5Joined', 'p5Ready', 'p5Score', 'p5Done', 'p5Time', 'p5CurrentCard', 'p5Id',
+            'p6Joined', 'p6Ready', 'p6Score', 'p6Done', 'p6Time', 'p6CurrentCard', 'p6Id'
+          ])
+          && request.resource.data.status == 'waiting'
+          && validEtape(request.resource.data.etape)
+          && request.resource.data.length in [$($meta.LengthList)]
+          && validCategory(request.resource.data.category)
+          && request.resource.data.cards is list
+          && request.resource.data.cards.size() == request.resource.data.length
+          && request.resource.data.p1Joined == true
+          && request.resource.data.p1Ready == false
+          && request.resource.data.p1Id != ''
+          && request.resource.data.p2Joined == false
+          && request.resource.data.p3Joined == false
+          && request.resource.data.p4Joined == false
+          && request.resource.data.p5Joined == false
+          && request.resource.data.p6Joined == false
+          && validPlayers(request.resource.data);
+      }
+
+      function validLobbyUpdate() {
+        return resource.data.status == 'waiting'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastUpdate', 'status', 'p1Ready',
+            'p2Joined', 'p2Ready', 'p2Id',
+            'p3Joined', 'p3Ready', 'p3Id',
+            'p4Joined', 'p4Ready', 'p4Id',
+            'p5Joined', 'p5Ready', 'p5Id',
+            'p6Joined', 'p6Ready', 'p6Id'
+          ])
+          && request.resource.data.status in ['waiting', 'playing']
+          && request.resource.data.p1Joined == true
+          && validPlayers(request.resource.data)
+          && (request.resource.data.status == 'waiting'
+              || allRequiredPlayersReady(request.resource.data));
+      }
+
+      function validGameUpdate() {
+        return resource.data.status == 'playing'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastUpdate', 'status',
+            'p1Score', 'p1Done', 'p1Time', 'p1CurrentCard',
+            'p2Score', 'p2Done', 'p2Time', 'p2CurrentCard',
+            'p3Score', 'p3Done', 'p3Time', 'p3CurrentCard',
+            'p4Score', 'p4Done', 'p4Time', 'p4CurrentCard',
+            'p5Score', 'p5Done', 'p5Time', 'p5CurrentCard',
+            'p6Score', 'p6Done', 'p6Time', 'p6CurrentCard'
+          ])
+          && request.resource.data.status in ['playing', 'done']
+          && validPlayers(request.resource.data);
+      }
+
+      function validResign() {
+        return resource.data.status == 'playing'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'resignedBy', 'lastUpdate'])
+          && request.resource.data.status == 'resigned'
+          && request.resource.data.resignedBy is int
+          && request.resource.data.resignedBy >= 1
+          && request.resource.data.resignedBy <= resource.data.requiredPlayers;
+      }
+
+      allow read: if validCode();
+      allow create: if validCreate();
+      allow update: if validCode()
+                    && (validLobbyUpdate() || validGameUpdate() || validResign());
+      allow delete: if validCode() && resource.data.status == 'waiting';
+    }
+  }
+}
+"@
+}
+
+function Write-CurrentFirestoreRules {
+    param([string]$ProjectFolder)
+
+    $rulesPath = Join-Path $ProjectFolder 'firestore.rules'
+    $playerCount = Read-ConfiguredPlayerCount -ProjectFolder $ProjectFolder
+    $rulesText = New-CompleteFirestoreRulesText -ProjectFolder $ProjectFolder -PlayerCount $playerCount
+    $oldText = $null
+    if (Test-Path -LiteralPath $rulesPath -PathType Leaf) {
+        try { $oldText = [System.IO.File]::ReadAllText($rulesPath, [System.Text.Encoding]::UTF8) } catch { }
+    }
+
+    if ($oldText -ne $rulesText) {
+        Save-Utf8NoBom -Path $rulesPath -Text $rulesText
+        return [pscustomobject]@{ Path = $rulesPath; Changed = $true; PlayerCount = $playerCount }
+    }
+
+    return [pscustomobject]@{ Path = $rulesPath; Changed = $false; PlayerCount = $playerCount }
+}
+
 function Configure-FirebaseProjectFiles {
     param(
         [string]$RepositoryFolder,
@@ -1169,10 +1427,9 @@ function Deploy-FirestoreRules {
         [string]$ProjectId
     )
 
-    $rulesPath = Join-Path $RepositoryFolder 'firestore.rules'
-    if (-not (Test-Path -LiteralPath $rulesPath)) {
-        throw 'The template does not contain firestore.rules.'
-    }
+    $rulesResult = Write-CurrentFirestoreRules -ProjectFolder $RepositoryFolder
+    $rulesPath = $rulesResult.Path
+    Write-Ok "Created the complete 2-to-6-player firestore.rules file. Current website default: $($rulesResult.PlayerCount) players."
 
     Write-Host ''
     Write-Host 'Firestore must exist before its rules can be deployed.' -ForegroundColor White
@@ -1192,7 +1449,7 @@ function Deploy-FirestoreRules {
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - ONLINE SETUP WITH FIREBASE' -ForegroundColor Magenta
-    Write-Host 'UI VERSION 6 - PARSER FIX' -ForegroundColor DarkCyan
+    Write-Host 'UI VERSION 7 - FULL FIRESTORE RULES AUTO-BUILDER' -ForegroundColor DarkCyan
     Write-Host 'MODE: GitHub website + Firebase multiplayer (guided pop-ups)' -ForegroundColor Magenta
     Write-Host 'This script starts from a completely fresh template copy.'
 

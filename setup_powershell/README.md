@@ -1,4 +1,4 @@
-# Linear Algebra True or False — Setup Toolkit
+﻿# Linear Algebra True or False — Setup Toolkit
 
 This folder contains beginner-friendly Windows PowerShell tools for installing, configuring, and editing the Linear Algebra True or False website.
 
@@ -79,6 +79,7 @@ Windows may show a security prompt the first time a downloaded file is opened. C
 | `Edit Quiz JavaScript.cmd` | Double-click launcher for the visual JavaScript editor. |
 | `Change Player Count.cmd` | Double-click launcher for the 2–6 player configuration editor. |
 | `change-player-count.ps1` | Visual tool that updates `multiplayer-config.js`, checks every multiplayer page, and rebuilds `firestore.rules`. |
+| `deploy-firestore-rules.ps1` | Rebuilds the complete 2-to-6-player rules from the current project, connects Firebase when needed, and deploys them. |
 | `edit-quiz-javascript.ps1` | Opens a visual editor that lets you choose a JavaScript file from a drop-down menu and open it in Notepad. |
 | `Edit Flashcards and Publish.cmd` | Double-click launcher for editing a flashcard file and publishing the saved change to GitHub. |
 | `edit-flashcards-and-publish.ps1` | Companion PowerShell program used by the double-click launcher. It prepares Git, opens Notepad, creates a backup, and asks before pushing. |
