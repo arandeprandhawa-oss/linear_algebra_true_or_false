@@ -1,10 +1,10 @@
 @echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title Linear Algebra Quiz - Local Installer
+title Linear Algebra Quiz - Update Entire Project
 
 set "SCRIPT_DIR=%~dp0"
-set "POWERSHELL_SCRIPT=%SCRIPT_DIR%setup-new-repo-no-firebase.ps1"
+set "POWERSHELL_SCRIPT=%SCRIPT_DIR%update-entire-project-to-github.ps1"
 set "POWERSHELL_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
 if not exist "%POWERSHELL_EXE%" set "POWERSHELL_EXE=powershell.exe"
@@ -15,8 +15,8 @@ if not exist "%POWERSHELL_SCRIPT%" (
     echo %POWERSHELL_SCRIPT%
     echo.
     echo Extract the complete ZIP and keep these files together:
-    echo   Install Local Quiz.cmd
-    echo   setup-new-repo-no-firebase.ps1
+    echo   Update Entire Project to GitHub.cmd
+    echo   update-entire-project-to-github.ps1
     echo.
     pause
     exit /b 1
@@ -32,7 +32,7 @@ popd >nul
 
 if not "%EXIT_CODE%"=="0" (
     echo.
-    echo The local installer ended with an error.
+    echo The full-project updater ended with an error.
     echo Review the red PowerShell message above.
     echo.
     pause

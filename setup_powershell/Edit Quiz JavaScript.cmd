@@ -1,16 +1,20 @@
 @echo off
-setlocal
+setlocal EnableExtensions
+chcp 65001 >nul
 title Linear Algebra Quiz - JavaScript Editor
 
 set "SCRIPT_DIR=%~dp0"
 set "POWERSHELL_SCRIPT=%SCRIPT_DIR%edit-quiz-javascript.ps1"
+set "POWERSHELL_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+
+if not exist "%POWERSHELL_EXE%" set "POWERSHELL_EXE=powershell.exe"
 
 if not exist "%POWERSHELL_SCRIPT%" (
     echo.
     echo The companion PowerShell file was not found:
     echo %POWERSHELL_SCRIPT%
     echo.
-    echo Keep these two files together:
+    echo Extract the complete ZIP and keep these files together:
     echo   Edit Quiz JavaScript.cmd
     echo   edit-quiz-javascript.ps1
     echo.
@@ -18,12 +22,19 @@ if not exist "%POWERSHELL_SCRIPT%" (
     exit /b 1
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%POWERSHELL_SCRIPT%"
+pushd "%SCRIPT_DIR%" >nul
+
+"%POWERSHELL_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Unblock-File -LiteralPath $env:POWERSHELL_SCRIPT -ErrorAction SilentlyContinue" >nul 2>&1
+"%POWERSHELL_EXE%" -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File "%POWERSHELL_SCRIPT%"
 set "EXIT_CODE=%ERRORLEVEL%"
+
+popd >nul
 
 if not "%EXIT_CODE%"=="0" (
     echo.
     echo The JavaScript editor ended with an error.
+    echo Review the red PowerShell message above.
+    echo.
     pause
 )
 
