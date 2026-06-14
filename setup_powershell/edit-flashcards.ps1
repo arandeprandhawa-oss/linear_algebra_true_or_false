@@ -612,7 +612,9 @@ function Find-AutomaticQuizProject {
 function Get-FlashcardFiles {
     param([string]$ProjectFolder)
 
-    if (-not (Test-QuizProject -Path $ProjectFolder)) {
+    if ([string]::IsNullOrWhiteSpace($ProjectFolder) -or
+        (-not (Test-Path -LiteralPath $ProjectFolder -PathType Container)) -or
+        (-not (Test-Path -LiteralPath (Join-Path $ProjectFolder 'index.html') -PathType Leaf))) {
         return @()
     }
 
@@ -1198,7 +1200,7 @@ Choose No to keep the saved change only on this computer.
 
 function Start-FlashcardEditor {
     $script:Mode = 'Local only'
-    $script:ProjectFolder = Find-AutomaticQuizProject -Mode 'local'
+    $script:ProjectFolder = $null
     $script:EditableFiles = @()
     $script:GitTools = $null
     $script:GitHubUser = $null
@@ -1206,19 +1208,38 @@ function Start-FlashcardEditor {
     $form = New-Object System.Windows.Forms.Form
     $form.Text = 'Linear Algebra Quiz Flashcard Editor'
     $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-    $form.Size = New-Object System.Drawing.Size(1120, 760)
-    $form.MinimumSize = New-Object System.Drawing.Size(1000, 700)
+    $form.Size = New-Object System.Drawing.Size(1180, 800)
+    $form.MinimumSize = New-Object System.Drawing.Size(1080, 740)
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
     $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
-    $form.AllowDrop = $true
     $form.ShowIcon = $false
 
+    # A table layout keeps the header and content from covering each other.
+    $rootLayout = New-Object System.Windows.Forms.TableLayoutPanel
+    $rootLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $rootLayout.RowCount = 2
+    $rootLayout.ColumnCount = 1
+    $rootLayout.Margin = New-Object System.Windows.Forms.Padding(0)
+    $rootLayout.Padding = New-Object System.Windows.Forms.Padding(0)
+
+    $headerRow = New-Object System.Windows.Forms.RowStyle
+    $headerRow.SizeType = [System.Windows.Forms.SizeType]::Absolute
+    $headerRow.Height = 128
+    [void]$rootLayout.RowStyles.Add($headerRow)
+
+    $contentRow = New-Object System.Windows.Forms.RowStyle
+    $contentRow.SizeType = [System.Windows.Forms.SizeType]::Percent
+    $contentRow.Height = 100
+    [void]$rootLayout.RowStyles.Add($contentRow)
+
+    $form.Controls.Add($rootLayout)
+
     $header = New-Object System.Windows.Forms.Panel
-    $header.Dock = [System.Windows.Forms.DockStyle]::Top
-    $header.Height = 124
+    $header.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $header.Margin = New-Object System.Windows.Forms.Padding(0)
     $header.BackColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
-    $form.Controls.Add($header)
+    $rootLayout.Controls.Add($header, 0, 0)
 
     $accent = New-Object System.Windows.Forms.Panel
     $accent.Dock = [System.Windows.Forms.DockStyle]::Left
@@ -1229,7 +1250,7 @@ function Start-FlashcardEditor {
     $brand = New-Object System.Windows.Forms.Label
     $brand.Text = 'LINEAR ALGEBRA TRUE OR FALSE'
     $brand.AutoSize = $true
-    $brand.Location = New-Object System.Drawing.Point(31, 18)
+    $brand.Location = New-Object System.Drawing.Point(34, 19)
     $brand.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 8.5)
     $brand.ForeColor = [System.Drawing.Color]::FromArgb(125, 211, 252)
     $header.Controls.Add($brand)
@@ -1237,39 +1258,57 @@ function Start-FlashcardEditor {
     $title = New-Object System.Windows.Forms.Label
     $title.Text = 'Beginner flashcard editor'
     $title.AutoSize = $true
-    $title.Location = New-Object System.Drawing.Point(28, 43)
-    $title.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 18)
+    $title.Location = New-Object System.Drawing.Point(31, 45)
+    $title.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 19)
     $title.ForeColor = [System.Drawing.Color]::White
     $header.Controls.Add($title)
 
     $subtitle = New-Object System.Windows.Forms.Label
     $subtitle.Text = 'The project is found automatically. Choose a flashcard page, edit it safely, and publish when using Firebase mode.'
     $subtitle.AutoSize = $true
-    $subtitle.Location = New-Object System.Drawing.Point(31, 84)
+    $subtitle.Location = New-Object System.Drawing.Point(34, 88)
     $subtitle.Font = New-Object System.Drawing.Font('Segoe UI', 9.8)
     $subtitle.ForeColor = [System.Drawing.Color]::FromArgb(203, 213, 225)
     $header.Controls.Add($subtitle)
 
+    $bodyLayout = New-Object System.Windows.Forms.TableLayoutPanel
+    $bodyLayout.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $bodyLayout.RowCount = 1
+    $bodyLayout.ColumnCount = 2
+    $bodyLayout.Margin = New-Object System.Windows.Forms.Padding(0)
+    $bodyLayout.Padding = New-Object System.Windows.Forms.Padding(0)
+
+    $leftColumn = New-Object System.Windows.Forms.ColumnStyle
+    $leftColumn.SizeType = [System.Windows.Forms.SizeType]::Absolute
+    $leftColumn.Width = 338
+    [void]$bodyLayout.ColumnStyles.Add($leftColumn)
+
+    $rightColumn = New-Object System.Windows.Forms.ColumnStyle
+    $rightColumn.SizeType = [System.Windows.Forms.SizeType]::Percent
+    $rightColumn.Width = 100
+    [void]$bodyLayout.ColumnStyles.Add($rightColumn)
+
+    $rootLayout.Controls.Add($bodyLayout, 0, 1)
+
     $leftPanel = New-Object System.Windows.Forms.Panel
-    $leftPanel.Dock = [System.Windows.Forms.DockStyle]::Left
-    $leftPanel.Width = 330
-    $leftPanel.Padding = New-Object System.Windows.Forms.Padding(22)
+    $leftPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $leftPanel.Margin = New-Object System.Windows.Forms.Padding(0)
     $leftPanel.BackColor = [System.Drawing.Color]::White
-    $form.Controls.Add($leftPanel)
+    $leftPanel.AutoScroll = $true
+    $bodyLayout.Controls.Add($leftPanel, 0, 0)
 
     $rightPanel = New-Object System.Windows.Forms.Panel
     $rightPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $rightPanel.Padding = New-Object System.Windows.Forms.Padding(28, 22, 28, 22)
+    $rightPanel.Margin = New-Object System.Windows.Forms.Padding(0)
+    $rightPanel.Padding = New-Object System.Windows.Forms.Padding(30, 20, 30, 20)
     $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $rightPanel.AutoScroll = $true
-    $form.Controls.Add($rightPanel)
-
-    $header.BringToFront()
+    $bodyLayout.Controls.Add($rightPanel, 1, 0)
 
     $instructionsTitle = New-Object System.Windows.Forms.Label
     $instructionsTitle.Text = 'How to use it'
     $instructionsTitle.AutoSize = $true
-    $instructionsTitle.Location = New-Object System.Drawing.Point(22, 24)
+    $instructionsTitle.Location = New-Object System.Drawing.Point(24, 24)
     $instructionsTitle.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 12)
     $instructionsTitle.ForeColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
     $leftPanel.Controls.Add($instructionsTitle)
@@ -1277,15 +1316,15 @@ function Start-FlashcardEditor {
     $instructions = New-Object System.Windows.Forms.Label
     $instructions.Text = "1. Choose Local or Firebase mode.`r`n`r`n2. The project is found automatically.`r`n`r`n3. Pick a flashcard file.`r`n`r`n4. Edit in Notepad and press Ctrl+S."
     $instructions.AutoSize = $false
-    $instructions.Location = New-Object System.Drawing.Point(22, 59)
-    $instructions.Size = New-Object System.Drawing.Size(282, 195)
+    $instructions.Location = New-Object System.Drawing.Point(24, 62)
+    $instructions.Size = New-Object System.Drawing.Size(286, 200)
     $instructions.Font = New-Object System.Drawing.Font('Segoe UI', 10)
     $instructions.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
     $leftPanel.Controls.Add($instructions)
 
     $foundPanel = New-Object System.Windows.Forms.Panel
-    $foundPanel.Location = New-Object System.Drawing.Point(22, 265)
-    $foundPanel.Size = New-Object System.Drawing.Size(282, 145)
+    $foundPanel.Location = New-Object System.Drawing.Point(24, 270)
+    $foundPanel.Size = New-Object System.Drawing.Size(286, 145)
     $foundPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
     $foundPanel.BackColor = [System.Drawing.Color]::FromArgb(239, 246, 255)
     $leftPanel.Controls.Add($foundPanel)
@@ -1294,8 +1333,8 @@ function Start-FlashcardEditor {
     $foundTitle.Text = 'Automatic project detection'
     $foundTitle.AutoSize = $false
     $foundTitle.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-    $foundTitle.Location = New-Object System.Drawing.Point(10, 24)
-    $foundTitle.Size = New-Object System.Drawing.Size(260, 28)
+    $foundTitle.Location = New-Object System.Drawing.Point(10, 19)
+    $foundTitle.Size = New-Object System.Drawing.Size(264, 30)
     $foundTitle.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10.5)
     $foundTitle.ForeColor = [System.Drawing.Color]::FromArgb(30, 64, 175)
     $foundPanel.Controls.Add($foundTitle)
@@ -1304,26 +1343,28 @@ function Start-FlashcardEditor {
     $foundText.Text = 'Searching for the installed quiz...'
     $foundText.AutoSize = $false
     $foundText.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-    $foundText.Location = New-Object System.Drawing.Point(14, 58)
-    $foundText.Size = New-Object System.Drawing.Size(252, 66)
+    $foundText.Location = New-Object System.Drawing.Point(14, 53)
+    $foundText.Size = New-Object System.Drawing.Size(256, 75)
+    $foundText.Font = New-Object System.Drawing.Font('Segoe UI', 9)
     $foundText.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
     $foundPanel.Controls.Add($foundText)
 
-    $autoButton = New-EditorButton -Text 'Find automatically' -Width 282
-    $autoButton.Location = New-Object System.Drawing.Point(22, 430)
+    $autoButton = New-EditorButton -Text 'Find automatically' -Width 286
+    $autoButton.Location = New-Object System.Drawing.Point(24, 434)
     $leftPanel.Controls.Add($autoButton)
 
-    $browseButton = New-EditorButton -Text 'Choose a different folder' -Width 282
-    $browseButton.Location = New-Object System.Drawing.Point(22, 480)
+    $browseButton = New-EditorButton -Text 'Choose a different folder' -Width 286
+    $browseButton.Location = New-Object System.Drawing.Point(24, 484)
     $leftPanel.Controls.Add($browseButton)
 
-    $openFolderButton = New-EditorButton -Text 'Open project folder' -Width 282
-    $openFolderButton.Location = New-Object System.Drawing.Point(22, 530)
+    $openFolderButton = New-EditorButton -Text 'Open project folder' -Width 286
+    $openFolderButton.Location = New-Object System.Drawing.Point(24, 534)
+    $openFolderButton.Enabled = $false
     $leftPanel.Controls.Add($openFolderButton)
 
     $backupBox = New-Object System.Windows.Forms.Panel
-    $backupBox.Location = New-Object System.Drawing.Point(22, 588)
-    $backupBox.Size = New-Object System.Drawing.Size(282, 74)
+    $backupBox.Location = New-Object System.Drawing.Point(24, 592)
+    $backupBox.Size = New-Object System.Drawing.Size(286, 76)
     $backupBox.BackColor = [System.Drawing.Color]::FromArgb(240, 253, 244)
     $leftPanel.Controls.Add($backupBox)
 
@@ -1331,22 +1372,24 @@ function Start-FlashcardEditor {
     $backupHelp.Text = "Backups are created inside:`r`nbackups\local-flashcard-editor"
     $backupHelp.AutoSize = $false
     $backupHelp.Location = New-Object System.Drawing.Point(13, 12)
-    $backupHelp.Size = New-Object System.Drawing.Size(256, 52)
+    $backupHelp.Size = New-Object System.Drawing.Size(260, 54)
     $backupHelp.ForeColor = [System.Drawing.Color]::FromArgb(22, 101, 52)
     $backupBox.Controls.Add($backupHelp)
 
     $modeLabel = New-Object System.Windows.Forms.Label
     $modeLabel.Text = 'Editing mode'
     $modeLabel.AutoSize = $true
-    $modeLabel.Location = New-Object System.Drawing.Point(28, 24)
+    $modeLabel.Location = New-Object System.Drawing.Point(30, 24)
     $modeLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
     $rightPanel.Controls.Add($modeLabel)
 
     $modeCombo = New-Object System.Windows.Forms.ComboBox
     $modeCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    $modeCombo.Location = New-Object System.Drawing.Point(28, 52)
-    $modeCombo.Size = New-Object System.Drawing.Size(680, 32)
-    $modeCombo.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $modeCombo.Location = New-Object System.Drawing.Point(30, 52)
+    $modeCombo.Size = New-Object System.Drawing.Size(730, 32)
+    $modeCombo.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Left -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     [void]$modeCombo.Items.Add('Local only')
     [void]$modeCombo.Items.Add('Firebase + GitHub')
     $modeCombo.SelectedIndex = 0
@@ -1355,36 +1398,42 @@ function Start-FlashcardEditor {
     $projectLabel = New-Object System.Windows.Forms.Label
     $projectLabel.Text = 'Automatically detected project folder'
     $projectLabel.AutoSize = $true
-    $projectLabel.Location = New-Object System.Drawing.Point(28, 105)
+    $projectLabel.Location = New-Object System.Drawing.Point(30, 105)
     $projectLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
     $rightPanel.Controls.Add($projectLabel)
 
     $projectPathBox = New-Object System.Windows.Forms.TextBox
     $projectPathBox.ReadOnly = $true
-    $projectPathBox.Location = New-Object System.Drawing.Point(28, 133)
-    $projectPathBox.Size = New-Object System.Drawing.Size(680, 31)
-    $projectPathBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $projectPathBox.Location = New-Object System.Drawing.Point(30, 133)
+    $projectPathBox.Size = New-Object System.Drawing.Size(730, 31)
+    $projectPathBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Left -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     $projectPathBox.BackColor = [System.Drawing.Color]::White
     $rightPanel.Controls.Add($projectPathBox)
 
     $fileLabel = New-Object System.Windows.Forms.Label
     $fileLabel.Text = 'Choose a flashcard file'
     $fileLabel.AutoSize = $true
-    $fileLabel.Location = New-Object System.Drawing.Point(28, 184)
+    $fileLabel.Location = New-Object System.Drawing.Point(30, 184)
     $fileLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
     $rightPanel.Controls.Add($fileLabel)
 
     $fileCombo = New-Object System.Windows.Forms.ComboBox
     $fileCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-    $fileCombo.Location = New-Object System.Drawing.Point(28, 212)
-    $fileCombo.Size = New-Object System.Drawing.Size(680, 32)
-    $fileCombo.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $fileCombo.Location = New-Object System.Drawing.Point(30, 212)
+    $fileCombo.Size = New-Object System.Drawing.Size(730, 32)
+    $fileCombo.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Left -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     $rightPanel.Controls.Add($fileCombo)
 
     $detailsPanel = New-Object System.Windows.Forms.Panel
-    $detailsPanel.Location = New-Object System.Drawing.Point(28, 267)
-    $detailsPanel.Size = New-Object System.Drawing.Size(680, 172)
-    $detailsPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $detailsPanel.Location = New-Object System.Drawing.Point(30, 268)
+    $detailsPanel.Size = New-Object System.Drawing.Size(730, 180)
+    $detailsPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Left -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     $detailsPanel.BackColor = [System.Drawing.Color]::White
     $detailsPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
     $rightPanel.Controls.Add($detailsPanel)
@@ -1400,8 +1449,10 @@ function Start-FlashcardEditor {
     $detailsText.Text = 'The editor is finding your quiz project.'
     $detailsText.AutoSize = $false
     $detailsText.Location = New-Object System.Drawing.Point(18, 51)
-    $detailsText.Size = New-Object System.Drawing.Size(640, 100)
-    $detailsText.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $detailsText.Size = New-Object System.Drawing.Size(690, 110)
+    $detailsText.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Left -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     $detailsText.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
     $detailsPanel.Controls.Add($detailsText)
 
@@ -1409,34 +1460,51 @@ function Start-FlashcardEditor {
     $backupCheck.Text = 'Create a timestamped backup before editing'
     $backupCheck.Checked = $true
     $backupCheck.AutoSize = $true
-    $backupCheck.Location = New-Object System.Drawing.Point(30, 462)
+    $backupCheck.Location = New-Object System.Drawing.Point(32, 470)
     $rightPanel.Controls.Add($backupCheck)
 
     $refreshButton = New-EditorButton -Text 'Refresh files'
-    $refreshButton.Location = New-Object System.Drawing.Point(28, 505)
+    $refreshButton.Location = New-Object System.Drawing.Point(30, 512)
+    $refreshButton.Enabled = $false
     $rightPanel.Controls.Add($refreshButton)
 
-    $editButton = New-EditorButton -Text 'Edit in Notepad' -Primary -Width 180
-    $editButton.Location = New-Object System.Drawing.Point(528, 505)
-    $editButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
+    $editButton = New-EditorButton -Text 'Edit in Notepad' -Primary -Width 190
+    $editButton.Location = New-Object System.Drawing.Point(570, 512)
+    $editButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     $editButton.Enabled = $false
     $rightPanel.Controls.Add($editButton)
 
     $statusPanel = New-Object System.Windows.Forms.Panel
-    $statusPanel.Location = New-Object System.Drawing.Point(28, 565)
-    $statusPanel.Size = New-Object System.Drawing.Size(680, 70)
-    $statusPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $statusPanel.Location = New-Object System.Drawing.Point(30, 570)
+    $statusPanel.Size = New-Object System.Drawing.Size(730, 78)
+    $statusPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Left -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     $statusPanel.BackColor = [System.Drawing.Color]::FromArgb(241, 245, 249)
     $rightPanel.Controls.Add($statusPanel)
 
     $statusLabel = New-Object System.Windows.Forms.Label
     $statusLabel.Text = 'Searching automatically...'
     $statusLabel.AutoSize = $false
-    $statusLabel.Location = New-Object System.Drawing.Point(15, 13)
-    $statusLabel.Size = New-Object System.Drawing.Size(646, 44)
-    $statusLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $statusLabel.Location = New-Object System.Drawing.Point(15, 12)
+    $statusLabel.Size = New-Object System.Drawing.Size(696, 54)
+    $statusLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor
+        [System.Windows.Forms.AnchorStyles]::Left -bor
+        [System.Windows.Forms.AnchorStyles]::Right
     $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
     $statusPanel.Controls.Add($statusLabel)
+
+    $setBusy = {
+        param([bool]$Busy)
+
+        $autoButton.Enabled = -not $Busy
+        $browseButton.Enabled = -not $Busy
+        $modeCombo.Enabled = -not $Busy
+        $refreshButton.Enabled = (-not $Busy) -and
+            (-not [string]::IsNullOrWhiteSpace($script:ProjectFolder))
+        $form.UseWaitCursor = $Busy
+    }.GetNewClosure()
 
     $setStatus = {
         param(
@@ -1453,85 +1521,147 @@ function Start-FlashcardEditor {
             'Error'   { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(185, 28, 28) }
             default   { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105) }
         }
+
+        [System.Windows.Forms.Application]::DoEvents()
     }.GetNewClosure()
 
     $updateFileDetails = {
         if ($fileCombo.SelectedIndex -lt 0 -or
             $fileCombo.SelectedIndex -ge $script:EditableFiles.Count) {
-            $detailsText.Text = 'Choose a flashcard file.'
+            $detailsText.Text = 'Choose a flashcard file from the drop-down menu.'
             $editButton.Enabled = $false
             return
         }
 
         $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
-        $detailsText.Text = "Path: $($selected.RelativePath)`r`nType: $($selected.Extension)`r`nSize: $(Format-FileSize -Bytes $selected.SizeBytes)`r`nLast changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))"
+
+        $detailsText.Text = @"
+Path: $($selected.RelativePath)
+Type: $($selected.Extension)
+Size: $(Format-FileSize -Bytes $selected.SizeBytes)
+Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
+"@
+
         $editButton.Enabled = $true
     }.GetNewClosure()
 
     $loadFiles = {
-        param([string]$PreferredFile)
+        param(
+            [string]$ProjectPath,
+            [string]$PreferredFile
+        )
 
-        $fileCombo.Items.Clear()
-        $script:EditableFiles = @()
+        $fileCombo.BeginUpdate()
 
-        if (-not (Test-QuizProject -Path $script:ProjectFolder)) {
-            $projectPathBox.Text = ''
-            $foundText.Text = 'No project found yet.'
-            $detailsText.Text = 'Use Find automatically or Choose a different folder.'
-            $editButton.Enabled = $false
-            & $setStatus 'No Linear Algebra quiz project is selected.' 'Warning'
-            return
-        }
+        try {
+            $fileCombo.Items.Clear()
+            $script:EditableFiles = @()
 
-        $projectPathBox.Text = $script:ProjectFolder
-        $foundText.Text = "Found:`r`n$script:ProjectFolder"
+            if ([string]::IsNullOrWhiteSpace($ProjectPath) -or
+                (-not (Test-Path -LiteralPath $ProjectPath -PathType Container))) {
+                $script:ProjectFolder = $null
+                $projectPathBox.Text = ''
+                $foundText.Text = 'No project found yet.'
+                $detailsText.Text = 'Use Find automatically or Choose a different folder.'
+                $openFolderButton.Enabled = $false
+                $refreshButton.Enabled = $false
+                $editButton.Enabled = $false
+                & $setStatus 'No Linear Algebra quiz project is selected.' 'Warning'
+                return 0
+            }
 
-        $rememberMode = if ($script:Mode -eq 'Firebase + GitHub') {
-            'firebase'
-        }
-        else {
-            'local'
-        }
+            $resolvedProject = Find-ProjectRootFromPath -Path $ProjectPath
 
-        Save-RememberedProject `
-            -Mode $rememberMode `
-            -Path $script:ProjectFolder
+            if ([string]::IsNullOrWhiteSpace($resolvedProject)) {
+                $resolvedProject = [System.IO.Path]::GetFullPath($ProjectPath)
+            }
 
-        $script:EditableFiles = @(Get-FlashcardFiles -ProjectFolder $script:ProjectFolder)
+            if (-not (Test-Path -LiteralPath (Join-Path $resolvedProject 'index.html') -PathType Leaf)) {
+                $script:ProjectFolder = $null
+                $projectPathBox.Text = ''
+                $foundText.Text = 'The selected folder is not the quiz root.'
+                $detailsText.Text = 'The main project folder must contain index.html.'
+                $openFolderButton.Enabled = $false
+                $refreshButton.Enabled = $false
+                $editButton.Enabled = $false
+                & $setStatus 'The detected folder does not contain index.html.' 'Error'
+                return 0
+            }
 
-        foreach ($file in $script:EditableFiles) {
-            [void]$fileCombo.Items.Add($file.Display)
-        }
+            $script:ProjectFolder = $resolvedProject
+            $projectPathBox.Text = $resolvedProject
+            $projectPathBox.SelectionStart = 0
+            $projectPathBox.SelectionLength = 0
+            $foundText.Text = "Found the quiz project.`r`n$resolvedProject"
+            $openFolderButton.Enabled = $true
+            $refreshButton.Enabled = $true
 
-        if ($script:EditableFiles.Count -eq 0) {
-            $detailsText.Text = 'No HTML, JavaScript, or JSON flashcard files were found.'
-            $editButton.Enabled = $false
-            & $setStatus 'The project was found, but it contains no editable flashcard files.' 'Warning'
-            return
-        }
+            $rememberMode = if ($script:Mode -eq 'Firebase + GitHub') {
+                'firebase'
+            }
+            else {
+                'local'
+            }
 
-        $selectedIndex = 0
+            Save-RememberedProject `
+                -Mode $rememberMode `
+                -Path $resolvedProject
 
-        if (-not [string]::IsNullOrWhiteSpace($PreferredFile)) {
-            for ($index = 0; $index -lt $script:EditableFiles.Count; $index++) {
-                if ($script:EditableFiles[$index].FullPath -ieq $PreferredFile) {
-                    $selectedIndex = $index
-                    break
+            & $setStatus 'Loading the flashcard file list...' 'Normal'
+
+            $loadedFiles = @(Get-FlashcardFiles -ProjectFolder $resolvedProject)
+            $script:EditableFiles = @($loadedFiles)
+
+            foreach ($editableFile in $script:EditableFiles) {
+                [void]$fileCombo.Items.Add([string]$editableFile.Display)
+            }
+
+            if ($script:EditableFiles.Count -eq 0) {
+                $detailsText.Text = @"
+The project was found, but no editable HTML, JavaScript, or JSON files were loaded.
+
+Project:
+$resolvedProject
+"@
+                $editButton.Enabled = $false
+                & $setStatus 'Project found, but no editable flashcard files were found.' 'Warning'
+                return 0
+            }
+
+            $selectedIndex = 0
+
+            if (-not [string]::IsNullOrWhiteSpace($PreferredFile)) {
+                for ($index = 0; $index -lt $script:EditableFiles.Count; $index++) {
+                    if ($script:EditableFiles[$index].FullPath -ieq $PreferredFile) {
+                        $selectedIndex = $index
+                        break
+                    }
                 }
             }
-        }
 
-        $fileCombo.SelectedIndex = $selectedIndex
-        & $setStatus "Automatically loaded $($script:EditableFiles.Count) editable file(s)." 'Success'
+            $fileCombo.SelectedIndex = $selectedIndex
+            & $updateFileDetails
+            & $setStatus "Project loaded successfully. $($script:EditableFiles.Count) editable file(s) are ready." 'Success'
+
+            return $script:EditableFiles.Count
+        }
+        finally {
+            $fileCombo.EndUpdate()
+            $fileCombo.Refresh()
+            $projectPathBox.Refresh()
+            $detailsPanel.Refresh()
+            $foundPanel.Refresh()
+            [System.Windows.Forms.Application]::DoEvents()
+        }
     }.GetNewClosure()
 
     $findProject = {
-        $form.UseWaitCursor = $true
-        [System.Windows.Forms.Application]::DoEvents()
+        param([bool]$ShowNotFoundMessage = $true)
+
+        & $setBusy $true
+        & $setStatus 'Searching Documents, Desktop, Downloads, OneDrive, the editor folder, and remembered locations...' 'Normal'
 
         try {
-            & $setStatus 'Searching Documents, Desktop, Downloads, OneDrive, and remembered locations...' 'Normal'
-
             $modeKey = if ($script:Mode -eq 'Firebase + GitHub') {
                 'firebase'
             }
@@ -1539,23 +1669,43 @@ function Start-FlashcardEditor {
                 'local'
             }
 
-            $detected = Find-AutomaticQuizProject -Mode $modeKey
+            $rawCandidates = @(Find-AutomaticQuizProject -Mode $modeKey)
+            $detected = $null
+
+            foreach ($candidate in $rawCandidates) {
+                if ($null -eq $candidate) {
+                    continue
+                }
+
+                $candidateText = ([string]$candidate).Trim()
+
+                if ([string]::IsNullOrWhiteSpace($candidateText) -or
+                    (-not (Test-Path -LiteralPath $candidateText -PathType Container))) {
+                    continue
+                }
+
+                $candidateRoot = Find-ProjectRootFromPath -Path $candidateText
+
+                if (-not [string]::IsNullOrWhiteSpace($candidateRoot)) {
+                    $detected = $candidateRoot
+                    break
+                }
+            }
 
             if ([string]::IsNullOrWhiteSpace($detected)) {
-                $script:ProjectFolder = $null
-                & $loadFiles $null
+                [void](& $loadFiles $null $null)
 
-                Show-EditorMessage `
-                    -Title 'Project not found automatically' `
-                    -Message 'The editor checked Documents, Desktop, Downloads, OneDrive, its own folder, parent folders, and remembered installation locations. Use Choose a different folder as a fallback.' `
-                    -Type 'Information'
+                if ($ShowNotFoundMessage) {
+                    Show-EditorMessage `
+                        -Title 'Project not found automatically' `
+                        -Message 'The search could not find the main quiz folder. Use Choose a different folder and select the folder containing index.html.' `
+                        -Type 'Information'
+                }
 
                 return
             }
 
-            $script:ProjectFolder = $detected
-            & $loadFiles $null
-            & $setStatus "Automatically found: $detected" 'Success'
+            [void](& $loadFiles $detected $null)
         }
         catch {
             & $setStatus $_.Exception.Message 'Error'
@@ -1566,12 +1716,13 @@ function Start-FlashcardEditor {
                 -Type 'Error'
         }
         finally {
-            $form.UseWaitCursor = $false
+            & $setBusy $false
         }
     }.GetNewClosure()
 
     $modeCombo.Add_SelectedIndexChanged({
         $script:Mode = [string]$modeCombo.SelectedItem
+
         $backupHelp.Text = if ($script:Mode -eq 'Firebase + GitHub') {
             "Backups are created inside:`r`nbackups\firebase-flashcard-editor"
         }
@@ -1579,36 +1730,24 @@ function Start-FlashcardEditor {
             "Backups are created inside:`r`nbackups\local-flashcard-editor"
         }
 
-        & $findProject
+        & $findProject $false
     }.GetNewClosure())
 
     $autoButton.Add_Click({
-        & $setStatus 'Searching Documents, Desktop, and Downloads...' 'Normal'
-        & $findProject
+        & $findProject $true
     }.GetNewClosure())
 
     $browseButton.Add_Click({
-        $selected = Show-ProjectFolderDialog -InitialFolder $script:ProjectFolder
+        $selectedFolder = Show-ProjectFolderDialog -InitialFolder $script:ProjectFolder
 
-        if (-not [string]::IsNullOrWhiteSpace($selected)) {
-            $root = Find-ProjectRootFromPath -Path $selected
-
-            if ([string]::IsNullOrWhiteSpace($root)) {
-                Show-EditorMessage `
-                    -Title 'Quiz project not found' `
-                    -Message 'Choose the main folder containing index.html and the solo quiz pages.' `
-                    -Type 'Warning'
-
-                return
-            }
-
-            $script:ProjectFolder = $root
-            & $loadFiles $null
+        if (-not [string]::IsNullOrWhiteSpace($selectedFolder)) {
+            [void](& $loadFiles $selectedFolder $null)
         }
     }.GetNewClosure())
 
     $openFolderButton.Add_Click({
-        if (Test-QuizProject -Path $script:ProjectFolder) {
+        if (-not [string]::IsNullOrWhiteSpace($script:ProjectFolder) -and
+            (Test-Path -LiteralPath $script:ProjectFolder -PathType Container)) {
             Start-Process `
                 -FilePath 'explorer.exe' `
                 -ArgumentList "`"$script:ProjectFolder`""
@@ -1623,7 +1762,7 @@ function Start-FlashcardEditor {
             $preferred = $script:EditableFiles[$fileCombo.SelectedIndex].FullPath
         }
 
-        & $loadFiles $preferred
+        [void](& $loadFiles $script:ProjectFolder $preferred)
     }.GetNewClosure())
 
     $fileCombo.Add_SelectedIndexChanged({
@@ -1640,9 +1779,8 @@ function Start-FlashcardEditor {
 
         try {
             if ($script:Mode -eq 'Firebase + GitHub') {
-                $form.UseWaitCursor = $true
+                & $setBusy $true
                 & $setStatus 'Preparing GitHub tools and repository...' 'Normal'
-                [System.Windows.Forms.Application]::DoEvents()
 
                 $script:GitTools = Ensure-GitTools
                 $script:GitHubUser = Ensure-GitHubLogin -GhExe $script:GitTools.Gh
@@ -1652,23 +1790,19 @@ function Start-FlashcardEditor {
                     -Tools $script:GitTools
 
                 if ($repository -ine $script:ProjectFolder) {
-                    $script:ProjectFolder = $repository
-                    & $loadFiles $null
+                    $oldRelativePath = $selected.RelativePath
+                    [void](& $loadFiles $repository $null)
 
                     $matchIndex = -1
 
                     for ($index = 0; $index -lt $script:EditableFiles.Count; $index++) {
-                        if ($script:EditableFiles[$index].RelativePath -ieq $selected.RelativePath) {
+                        if ($script:EditableFiles[$index].RelativePath -ieq $oldRelativePath) {
                             $matchIndex = $index
                             break
                         }
                     }
 
-                    if ($matchIndex -ge 0) {
-                        $fileCombo.SelectedIndex = $matchIndex
-                        $selected = $script:EditableFiles[$matchIndex]
-                    }
-                    else {
+                    if ($matchIndex -lt 0) {
                         Show-EditorMessage `
                             -Title 'Choose the file again' `
                             -Message 'The Firebase repository was prepared. Choose the flashcard file again from the list.' `
@@ -1676,6 +1810,9 @@ function Start-FlashcardEditor {
 
                         return
                     }
+
+                    $fileCombo.SelectedIndex = $matchIndex
+                    $selected = $script:EditableFiles[$matchIndex]
                 }
             }
 
@@ -1736,18 +1873,17 @@ Choose Cancel to stop without publishing.
                 -Type 'Error'
         }
         finally {
-            $form.UseWaitCursor = $false
+            & $setBusy $false
         }
     }.GetNewClosure())
 
     $form.Add_Shown({
-        & $findProject
+        & $findProject $false
     }.GetNewClosure())
 
     [void]$form.ShowDialog()
     $form.Dispose()
 }
-
 try {
     Initialize-EditorUi
     Start-FlashcardEditor
