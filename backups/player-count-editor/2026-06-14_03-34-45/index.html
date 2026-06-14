@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>French Flashcards · Multiplayer MODL-1101 1st midterm</title>
+<title>French Flashcards · Multiplayer MODL-1101 2nd midterm</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -270,8 +270,8 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 (function bootEtape(){
   // This page is the Étape 2 (default) page. The other étape lives in etape1.html.
   // Map each étape id -> the file that hosts its multiplayer lobby.
-  window.CURRENT_ETAPE_ID = 'e1';
- window.ETAPE_PAGE_MAP = {
+  window.CURRENT_ETAPE_ID = 'e2';
+  window.ETAPE_PAGE_MAP = {
   e1: 'etape1.html',
   e2: 'index.html',
   e3: 'etape3.html',
@@ -284,7 +284,6 @@ window.ETAPE_SOLO_MAP = {
   e3: 'solo3.html',
   e4: 'solo4.html'
 };
-
   // Render the tab bar from the registry. Adding Étape 3 later means:
   //   1. add an entry to registry.js
   //   2. add 'e3' to ETAPE_PAGE_MAP and ETAPE_SOLO_MAP in each shell
@@ -308,11 +307,11 @@ window.ETAPE_SOLO_MAP = {
   }
 })();
 </script>
-<script src="etapes/etape1.js"></script>
+<script src="etapes/etape2.js"></script>
 
 
 <!-- Firebase + game logic -->
-<script src="multiplayer-config.js?v=20260614033445"></script>
+<script src="multiplayer-config.js?v=20260614033024"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
