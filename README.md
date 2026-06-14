@@ -1,4 +1,12 @@
+
+
+link for the website <https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/>
+
+
+
+
 # Linear Algebra True or False — Setup Toolkit
+
 
 This folder contains beginner-friendly Windows PowerShell tools for installing, configuring, and editing the Linear Algebra True or False website.
 
