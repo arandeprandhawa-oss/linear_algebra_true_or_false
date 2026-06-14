@@ -1,794 +1,231 @@
-# Linear Algebra True or False
+# Linear Algebra: True or False
 
-A beginner-friendly true-or-false flashcard website for studying linear algebra.
+A web-based flashcard quiz for **MATH 2210 Applied Linear Algebra**. Practise the true/false concept checks for each unit, either **solo** (with spaced repetition) or **head-to-head 1v1** against a friend using a shared match code.
 
-**Live website:**  
-https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/
-
-This repository also includes Windows setup, editing, backup, Firebase, and GitHub update tools.
+**Live website:** <https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/>
 
 ---
 
 ## Table of contents
 
-- [Quick start](#quick-start)
-- [Important rule: extract the ZIP first](#important-rule-extract-the-zip-first)
-- [Files in `setup_powershell`](#files-in-setup_powershell)
-- [Which file should I double-click?](#which-file-should-i-double-click)
-- [Install the local version](#install-the-local-version)
-- [Install the Firebase and GitHub version](#install-the-firebase-and-github-version)
-- [Edit flashcards](#edit-flashcards)
-- [Edit JavaScript files](#edit-javascript-files)
-- [Update the entire project to GitHub](#update-the-entire-project-to-github)
-- [Update only the setup toolkit](#update-only-the-setup-toolkit)
-- [How the `.cmd` and `.ps1` files work](#how-the-cmd-and-ps1-files-work)
-- [Backups](#backups)
-- [Firebase configuration](#firebase-configuration)
-- [GitHub Pages](#github-pages)
+- [What this is](#what-this-is)
+- [How the site is organised](#how-the-site-is-organised)
+- [The setup toolkit (double-click tools)](#the-setup-toolkit)
+- [Tutorial 1 — Install a local copy (no internet needed)](#tutorial-1-local)
+- [Tutorial 2 — Create your own online copy (GitHub + Firebase)](#tutorial-2-online)
+- [Tutorial 3 — Edit the quiz questions](#tutorial-3-edit-questions)
+- [Tutorial 4 — Edit the flashcard data](#tutorial-4-edit-flashcards)
+- [Tutorial 5 — Push your changes to GitHub](#tutorial-5-push)
+- [Tutorial 6 — Update the toolkit itself](#tutorial-6-update-toolkit)
+- [Project file layout](#project-file-layout)
 - [Safety features](#safety-features)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## Quick start
+<a id="what-this-is"></a>
+## What this is
 
-### Use the live website
+This repository holds two things:
 
-Open:
+1. **The website** — plain HTML/CSS/JavaScript flashcard pages. No build step, no framework. Open `index.html` in a browser and it works.
+2. **A setup toolkit** — a folder of friendly double-click tools (in `setup_powershell/`) for installing, editing, and publishing the site on Windows. You never have to type a single command.
 
-https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/
-
-### Install or edit the project on Windows
-
-1. Download the repository or toolkit ZIP.
-2. Right-click the ZIP.
-3. Choose **Extract All**.
-4. Open the extracted folder.
-5. Open the `setup_powershell` folder.
-6. Double-click the `.cmd` file for the task you want to perform.
+The online version uses **Firebase / Firestore** for the 1v1 multiplayer matches. The local version strips that out and runs entirely offline as solo-only.
 
 ---
 
-## Important rule: extract the ZIP first
+<a id="how-the-site-is-organised"></a>
+## How the site is organised
 
-Do **not** run a `.cmd` file while viewing files inside the ZIP preview.
+The quiz is split into four **units**, matching the course:
 
-Each `.cmd` launcher needs its matching `.ps1` file beside it.
-
-Example:
-
-```text
-Edit Flashcards.cmd
-edit-flashcards.ps1
-```
-
-Keep both files in the same folder.
-
-If the `.ps1` file is missing, the launcher will show:
-
-```text
-The companion PowerShell file was not found
-```
-
----
-
-## Files in `setup_powershell`
-
-| File | Purpose |
+| Unit | Topic |
 |---|---|
-| `Setup Launcher.cmd` | Opens the main setup launcher. |
-| `setup.ps1` | Lets the user choose between the local and Firebase installers. |
-| `Install Local Quiz.cmd` | Double-click launcher for the local-only installer. |
-| `setup-new-repo-no-firebase.ps1` | Installs a local copy that does not require GitHub or Firebase. |
-| `Install Firebase Quiz.cmd` | Double-click launcher for the Firebase and GitHub installer. |
-| `setup-new-repo-with-firebase.ps1` | Creates an online version connected to GitHub, Firebase, Firestore, and GitHub Pages. |
-| `Edit Flashcards.cmd` | Double-click launcher for the beginner flashcard editor. |
-| `edit-flashcards.ps1` | Finds the project automatically and edits only flashcard `.js` files. |
-| `Edit Quiz JavaScript.cmd` | Double-click launcher for the general JavaScript editor. |
-| `edit-quiz-javascript.ps1` | Opens JavaScript files through a visual file-selection interface. |
-| `Update Entire Project to GitHub.cmd` | Double-click launcher that uploads every reviewed, non-ignored project change. |
-| `update-entire-project-to-github.ps1` | Finds the Git repository, reviews all changes, commits, and pushes them to `main`. |
-| `Update GitHub Setup Toolkit.cmd` | Double-click launcher that updates only the files inside `setup_powershell`. |
-| `update-github-setup-scripts.ps1` | Validates and uploads the setup toolkit to GitHub. |
-| `README.md` | This guide. |
+| Unit 1 | Systems, Span & Independence |
+| Unit 2 | Matrix Algebra, Inverses & LU |
+| Unit 3 | Determinants & Linear Transformations |
+| Unit 4 | Subspaces, Eigenvalues & Markov |
+
+Each unit has two pages:
+
+- A **1v1 lobby** page (`index.html`, `etape1.html`, `etape3.html`, `etape4.html`) — create or join a match, or jump to solo.
+- A **solo** page (`solo.html`, `solo1.html`, `solo3.html`, `solo4.html`) — practise on your own with spaced repetition.
+
+A tab bar at the top of every page lets you switch units. The question/answer content for each unit lives in `etapes/etape1.js` … `etape4.js`, and the unit list itself is defined in `etapes/registry.js`.
+
+> **Page-to-unit mapping (worth knowing):** `index.html` = Unit 2's 1v1 page, `solo.html` = Unit 2's solo page. `solo1.html` = Unit 1, `solo3.html` = Unit 3, `solo4.html` = Unit 4. The `1` / `3` / `4` in the filename is the unit number; the unnumbered files are Unit 2.
 
 ---
 
-## Which file should I double-click?
+<a id="the-setup-toolkit"></a>
+## The setup toolkit
 
-### Install a local version
+Everything lives in the **`setup_powershell`** folder. Each tool is a `.cmd` file you **double-click** — it runs the matching PowerShell script for you and handles the security prompts automatically.
 
-```text
-Install Local Quiz.cmd
+| Double-click this | What it does |
+|---|---|
+| **Install Local Quiz** | Installs an offline, solo-only copy on this computer. No accounts needed. |
+| **Install Firebase Quiz** | Creates a full online copy with GitHub Pages + Firebase multiplayer. |
+| **Setup Launcher** | If both installers are present, lets you pick local vs. online. |
+| **Edit Quiz JavaScript** | Visual editor to open and edit the quiz logic / question files. |
+| **Edit Flashcards** | Visual editor for the flashcard vocabulary data. |
+| **Update Entire Project to GitHub** | Commits **every** change in the project and pushes it to GitHub. |
+| **Update GitHub Setup Toolkit** | Pushes only the `setup_powershell` toolkit files to GitHub. |
+
+**Requirements:** Windows 10/11, a web browser, and an internet connection for the online installer. A GitHub account is needed only for the online/GitHub tools, and a Google account only for Firebase. You do **not** need to install Git, Node.js, Python, or any CLI yourself — the scripts fetch what they need.
+
+---
+
+<a id="tutorial-1-local"></a>
+## Tutorial 1 — Install a local copy (no internet needed)
+
+Use this when you just want the quiz on your own machine, offline, solo-only.
+
+1. Open the `setup_powershell` folder.
+2. Double-click **Install Local Quiz**.
+3. When the folder picker appears, choose where to put the site (Documents is fine).
+4. Give the folder a name, or accept the default.
+5. Wait for it to finish. It will open the quiz in your browser and drop a **desktop shortcut**.
+
+**What you get:** a fully offline copy. The homepage opens straight into Unit 1 solo practice, the unit tabs switch between all four units, and the **← Home** link returns you to the start. Firebase, multiplayer, and audio are removed since they need the internet.
+
+> If you ran an older version of this installer before, re-run it — the local homepage and the "back" link were fixed so they no longer land on a blank or broken page.
+
+---
+
+<a id="tutorial-2-online"></a>
+## Tutorial 2 — Create your own online copy (GitHub + Firebase)
+
+Use this to publish the full site, with working 1v1 multiplayer, on the web.
+
+1. Double-click **Install Firebase Quiz** in `setup_powershell`.
+2. **GitHub step** — when the browser opens:
+   - Create a new **empty, public** repository.
+   - Do **not** add a README, `.gitignore`, or license.
+   - Copy the repository URL (e.g. `https://github.com/your-name/your-repo`).
+   - Paste it into the setup popup and click **Continue**.
+3. **Firebase step** — in the Firebase Console:
+   - Open **Project settings → General → Your apps**.
+   - Select or create a **web** app.
+   - Under **SDK setup and configuration**, choose **Config**.
+   - Copy the entire `firebaseConfig` block.
+   - Paste it into the large setup popup and click **Use this config**.
+4. The script applies your config, deploys the Firestore rules, pushes to GitHub, and tries to enable GitHub Pages.
+
+Your site goes live at `https://your-name.github.io/your-repo/` (Pages can take a couple of minutes the first time).
+
+> **Security:** only ever paste the normal Firebase **web** config. Never paste a service-account private key into the site or commit one to GitHub. The `.gitignore` already excludes key files, `.env`, and logs.
+
+---
+
+<a id="tutorial-3-edit-questions"></a>
+## Tutorial 3 — Edit the quiz questions
+
+1. Double-click **Edit Quiz JavaScript**.
+2. Choose your project folder (the one containing `index.html`), or drag-and-drop it onto the blue area.
+3. Pick a file from the drop-down — the unit data lives in `etapes/etape1.js` … `etape4.js`.
+4. Leave **Create a timestamped backup** checked.
+5. Click **Open in Notepad**, make your edit, then **Ctrl+S** to save.
+6. Refresh the website to see the change.
+
+If the drop-down looks empty, turn on **Also show HTML files** — some logic lives inline in the HTML pages.
+
+---
+
+<a id="tutorial-4-edit-flashcards"></a>
+## Tutorial 4 — Edit the flashcard data
+
+1. Double-click **Edit Flashcards**.
+2. Point it at your project folder.
+3. Edit the vocabulary/question entries through the editor.
+4. Save. A timestamped backup is created automatically before any change.
+
+---
+
+<a id="tutorial-5-push"></a>
+## Tutorial 5 — Push your changes to GitHub
+
+After editing anything locally, the changes are only on your computer until you push them.
+
+1. Double-click **Update Entire Project to GitHub**.
+2. Review the list of changed files it shows you.
+3. Confirm. It runs `git add -A`, makes one commit, and pushes to `main`.
+
+That single action publishes everything — edited questions, flashcards, pages, and any toolkit fixes. GitHub Pages redeploys automatically a moment later.
+
+> This tool does a normal push (no force-push), so it's safe to run any time you've made changes.
+
+---
+
+<a id="tutorial-6-update-toolkit"></a>
+## Tutorial 6 — Update the toolkit itself
+
+If you only changed files inside `setup_powershell` and want to publish just those:
+
+1. Double-click **Update GitHub Setup Toolkit**.
+2. It stages, commits, and pushes only the toolkit folder to `main`.
+
+For most cases, **Update Entire Project to GitHub** (Tutorial 5) already covers this too.
+
+---
+
+<a id="project-file-layout"></a>
+## Project file layout
+
 ```
-
-### Install an online Firebase version
-
-```text
-Install Firebase Quiz.cmd
-```
-
-### Choose between local and Firebase setup
-
-```text
-Setup Launcher.cmd
-```
-
-### Edit flashcard questions and answers
-
-```text
-Edit Flashcards.cmd
-```
-
-### Edit general JavaScript files
-
-```text
-Edit Quiz JavaScript.cmd
-```
-
-### Upload every project change to GitHub
-
-```text
-Update Entire Project to GitHub.cmd
-```
-
-### Update only the setup and editor tools
-
-```text
-Update GitHub Setup Toolkit.cmd
+linear_algebra_true_or_false/
+├── index.html              1v1 lobby — Unit 2 (and the site entry point)
+├── etape1.html             1v1 lobby — Unit 1
+├── etape3.html             1v1 lobby — Unit 3
+├── etape4.html             1v1 lobby — Unit 4
+├── solo.html               Solo practice — Unit 2
+├── solo1.html              Solo practice — Unit 1
+├── solo3.html              Solo practice — Unit 3
+├── solo4.html              Solo practice — Unit 4
+├── script-simulations.html Interactive terminal simulator
+├── firestore.rules         Firestore security rules (online version)
+├── etapes/
+│   ├── registry.js         The list of units
+│   ├── etape1.js           Unit 1 questions
+│   ├── etape2.js           Unit 2 questions
+│   ├── etape3.js           Unit 3 questions
+│   └── etape4.js           Unit 4 questions
+└── setup_powershell/       The double-click setup toolkit
 ```
 
 ---
 
-## Install the local version
-
-Use the local installer when the quiz should stay on the computer and does not need online multiplayer.
-
-Double-click:
-
-```text
-Install Local Quiz.cmd
-```
-
-The installer:
-
-- Finds the current Windows user automatically.
-- Downloads the website.
-- Asks where the local quiz should be stored.
-- Removes Firebase and online multiplayer requirements.
-- Creates a local website folder.
-- Creates shortcuts when supported.
-- Opens the website on the computer.
-- Does not require a GitHub account.
-- Does not require a Firebase account.
-
-The local version opens from the computer using `index.html`.
-
----
-
-## Install the Firebase and GitHub version
-
-Use the Firebase installer when the quiz needs:
-
-- GitHub hosting
-- GitHub Pages
-- Firebase
-- Firestore
-- Online multiplayer
-- Shared online data
-
-Double-click:
-
-```text
-Install Firebase Quiz.cmd
-```
-
-The installer can download the tools it needs, including:
-
-- Portable Git
-- GitHub CLI
-- Firebase CLI
-
-It then guides the user through:
-
-1. GitHub login
-2. GitHub repository creation
-3. Repository link entry
-4. Firebase login
-5. Firebase project setup
-6. Firebase web configuration entry
-7. Firestore rule deployment
-8. GitHub push
-9. GitHub Pages setup
-
-### GitHub repository step
-
-Create a new empty public repository.
-
-Do not add these items on the repository creation page:
-
-- README
-- `.gitignore`
-- License
-
-Copy the repository URL and paste it into the setup window.
-
-Example:
-
-```text
-https://github.com/your-name/linear-algebra-quiz
-```
-
----
-
-## Edit flashcards
-
-Double-click:
-
-```text
-Edit Flashcards.cmd
-```
-
-The flashcard editor has two modes:
-
-### Local only
-
-Use this mode when editing a local copy that is not connected to GitHub.
-
-The editor:
-
-- Finds the quiz project automatically.
-- Shows only flashcard `.js` files.
-- Creates a timestamped backup.
-- Opens the selected file in Notepad.
-- Saves the change on the computer.
-- Can open the local website for testing.
-
-### Firebase + GitHub
-
-Use this mode when the project is connected to GitHub.
-
-The editor:
-
-- Finds the Git repository automatically.
-- Shows only flashcard `.js` files.
-- Creates a timestamped backup.
-- Opens the selected file in Notepad.
-- Checks whether the file changed.
-- Asks before committing.
-- Pushes only the selected flashcard file to GitHub.
-- Never force-pushes.
-
-### Flashcard files shown in the editor
-
-The editor is intentionally limited to `.js` files.
-
-Typical files include:
-
-```text
-etapes\etape1.js
-etapes\etape2.js
-etapes\etape3.js
-etapes\etape4.js
-etapes\registry.js
-```
-
-HTML files such as these are not shown:
-
-```text
-index.html
-solo.html
-solo1.html
-solo3.html
-solo4.html
-```
-
-### How to edit a flashcard
-
-1. Open `Edit Flashcards.cmd`.
-2. Choose **Local only** or **Firebase + GitHub**.
-3. Wait for automatic project detection.
-4. Select a `.js` file.
-5. Confirm the selected-file details appear.
-6. Click **Edit in Notepad**.
-7. Press **Ctrl+F** in Notepad to find a question.
-8. Make the change.
-9. Press **Ctrl+S**.
-10. Return to the editor.
-11. Confirm the next step.
-
----
-
-## Edit JavaScript files
-
-Double-click:
-
-```text
-Edit Quiz JavaScript.cmd
-```
-
-This is the general JavaScript editor.
-
-It includes:
-
-- Automatic project detection
-- Manual folder selection
-- A JavaScript file drop-down
-- File information
-- Timestamped backups
-- Notepad editing
-- Project-folder access
-
-Use this editor for broader JavaScript changes that are not limited to flashcard content.
-
----
-
-## Update the entire project to GitHub
-
-Double-click:
-
-```text
-Update Entire Project to GitHub.cmd
-```
-
-This tool is for uploading **all project changes**, not only the setup tools.
-
-It:
-
-- Finds the local Git repository automatically.
-- Lets the user choose the repository folder when needed.
-- Signs in to GitHub.
-- Checks the current branch.
-- Lists every changed file.
-- Includes added files.
-- Includes modified files.
-- Includes deleted files.
-- Includes renamed files.
-- Warns about possible secret or private-key files.
-- Requires the user to review the complete list.
-- Uses `git add -A`.
-- Creates one commit.
-- Pulls safely before pushing.
-- Pushes to the `main` branch.
-- Never force-pushes.
-
-Files excluded by `.gitignore` are not uploaded.
-
-### Use this tool when
-
-- Flashcards were changed.
-- HTML was changed.
-- JavaScript was changed.
-- Images were added or removed.
-- A file was renamed.
-- Multiple project folders were changed.
-- The whole repository should be synchronized with GitHub.
-
-### Review before confirming
-
-Before uploading, check that the list does not include:
-
-- `.env`
-- Private keys
-- Service-account JSON files
-- Password files
-- Secret credentials
-- Personal files
-
----
-
-## Update only the setup toolkit
-
-Double-click:
-
-```text
-Update GitHub Setup Toolkit.cmd
-```
-
-This updater changes only the tools inside:
-
-```text
-setup_powershell
-```
-
-It does not upload every project file.
-
-It validates the PowerShell files, downloads a fresh repository copy, replaces the toolkit files, commits the changes, and pushes them to GitHub.
-
-The repaired toolkit updater displays:
-
-```text
-VERSION 11 - SHARED FLASHCARD EDITOR STATE FIX
-```
-
-Use this updater when changing:
-
-- Installers
-- Editors
-- `.cmd` launchers
-- PowerShell scripts
-- Setup tools
-
-Use **Update Entire Project to GitHub.cmd** instead when the rest of the repository must also be uploaded.
-
----
-
-## How the `.cmd` and `.ps1` files work
-
-The `.cmd` file is the beginner-friendly launcher.
-
-The `.ps1` file contains the actual PowerShell program.
-
-Example:
-
-```text
-Edit Flashcards.cmd
-edit-flashcards.ps1
-```
-
-The repaired `.cmd` launchers:
-
-- Find their own folder.
-- Find the matching `.ps1` file.
-- Use Windows PowerShell.
-- Use `-ExecutionPolicy Bypass`.
-- Use `-STA` for Windows Forms interfaces.
-- Keep the window open when an error occurs.
-- Display a useful message when the companion file is missing.
-
-Do not rename only one file in a pair.
-
----
-
-## Backups
-
-The editing tools create backups before opening files.
-
-Typical backup folders include:
-
-```text
-backups\local-flashcard-editor\<date-and-time>\
-```
-
-```text
-backups\firebase-flashcard-editor\<date-and-time>\
-```
-
-```text
-backups\javascript-editor\<date-and-time>\
-```
-
-The original folder structure is preserved inside each backup.
-
-Keep backup creation enabled unless there is a specific reason to turn it off.
-
----
-
-## Firebase configuration
-
-In Firebase Console:
-
-1. Open **Project settings**.
-2. Stay on the **General** tab.
-3. Scroll to **Your apps**.
-4. Select or create the web app.
-5. Find **SDK setup and configuration**.
-6. Select **Config**.
-7. Copy the complete `firebaseConfig` object.
-8. Paste it into the installer window.
-
-Example format:
-
-```javascript
-const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "...",
-  storageBucket: "...",
-  messagingSenderId: "...",
-  appId: "..."
-};
-```
-
-The normal Firebase web configuration is designed for browser applications.
-
-Never paste or upload:
-
-- Firebase Admin SDK private keys
-- Service-account credentials
-- Private certificate files
-- Passwords
-
-Firestore access must still be protected with proper Firestore Security Rules.
-
----
-
-## GitHub Pages
-
-The public website is:
-
-https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/
-
-After pushing changes, GitHub Pages may take a short time to redeploy.
-
-When a change is not visible immediately:
-
-1. Open the repository on GitHub.
-2. Open the **Actions** tab.
-3. Wait for the Pages deployment to finish.
-4. Refresh the website.
-5. Use **Ctrl+F5** for a full browser refresh.
-
----
-
+<a id="safety-features"></a>
 ## Safety features
 
-The toolkit includes these safeguards:
-
-- No force push
-- Review screen before uploading the entire project
-- Automatic backups before editing
-- PowerShell syntax checks before toolkit updates
-- Secret-file warnings in the full-project updater
-- Fresh repository copies during toolkit updates
-- Timestamped backup folders instead of automatic deletion
-- Git pull and rebase before full-project pushes
-- Clear confirmation windows before publishing
+- Existing local folders are moved to timestamped **backup** folders, never deleted.
+- The editors back up files before opening them.
+- "Update Entire Project to GitHub" never force-pushes.
+- Service-account keys, `.env` files, and logs are excluded by `.gitignore`.
 
 ---
 
+<a id="troubleshooting"></a>
 ## Troubleshooting
 
-### A `.cmd` file does not open
+**PowerShell says scripts are disabled.**
+Use the `.cmd` launchers (double-click) rather than running the `.ps1` files directly — they already pass `-ExecutionPolicy Bypass` for that one process.
 
-Confirm that:
+**The GitHub login doesn't open.**
+Run the installer again and complete the GitHub authorization in the browser when prompted, then return to the window.
 
-1. The ZIP was fully extracted.
-2. The `.cmd` and matching `.ps1` are together.
-3. The files were not renamed separately.
-4. The file is being run from the extracted folder, not the ZIP preview.
+**The local homepage opens to a blank/odd page, or "back" goes nowhere.**
+You're on an old install. Re-run **Install Local Quiz** — the newest version shows `UI VERSION 7 - LOCAL INDEX + BACK-LINK FIX` and fixes the homepage redirect and the **← Home** link.
 
-Example required pair:
+**The editor can't find the project.**
+Choose the **main** folder (the one containing `index.html`), not the `setup_powershell` subfolder.
 
-```text
-Edit Flashcards.cmd
-edit-flashcards.ps1
-```
+**The editor shows no files.**
+Turn on **Also show HTML files** — some units keep their logic inline in the HTML.
 
----
+**The online site didn't update right away.**
+GitHub Pages takes a short while to redeploy. Refresh after a minute or two.
 
-### The launcher says the companion PowerShell file was not found
-
-The matching `.ps1` is missing or in another folder.
-
-Move the two matching files into the same folder.
-
----
-
-### PowerShell says scripts are disabled
-
-Use the provided `.cmd` launcher.
-
-The launchers already use:
-
-```powershell
--ExecutionPolicy Bypass
-```
-
-This does not permanently change the computer's execution policy.
-
----
-
-### The editor cannot find the project
-
-Click:
-
-```text
-Choose a different folder
-```
-
-Select the main quiz folder containing:
-
-```text
-index.html
-```
-
-Do not select only:
-
-```text
-setup_powershell
-```
-
----
-
-### The editor finds the folder but shows no JavaScript files
-
-Confirm the main folder contains JavaScript files such as:
-
-```text
-etapes\etape1.js
-```
-
-Then click:
-
-```text
-Refresh files
-```
-
----
-
-### The flashcard dropdown shows HTML files
-
-Replace the editor with the newest version.
-
-The current flashcard editor shows only `.js` files.
-
----
-
-### The selected file appears, but Edit in Notepad does not activate
-
-Use the current repaired editor.
-
-The shared-state repair is identified by the setup-toolkit updater version:
-
-```text
-VERSION 11 - SHARED FLASHCARD EDITOR STATE FIX
-```
-
-Close the old editor completely before opening the new one.
-
----
-
-### Notepad does not open
-
-Confirm that a valid `.js` file is selected and the selected-file details are visible.
-
-The editor uses Windows Notepad directly.
-
----
-
-### GitHub login does not open
-
-Run the tool again.
-
-When PowerShell asks, press Enter to begin the browser login.
-
-Complete the login in the browser, then return to PowerShell.
-
----
-
-### The full-project updater says nothing changed
-
-Git does not see any modified, added, deleted, or renamed non-ignored files.
-
-The local repository already matches its current committed state.
-
----
-
-### The full-project updater cannot find the repository
-
-Choose the repository folder manually.
-
-It must contain the hidden folder:
-
-```text
-.git
-```
-
-A normal ZIP download of a GitHub repository does not contain `.git`.
-
-Use a cloned repository when pushing changes back to GitHub.
-
----
-
-### A possible private file warning appears
-
-Review the file list carefully.
-
-Do not upload:
-
-```text
-.env
-```
-
-```text
-service-account.json
-```
-
-```text
-firebase-adminsdk-*.json
-```
-
-```text
-*.pem
-```
-
-```text
-*.p12
-```
-
-```text
-*.pfx
-```
-
-Cancel the update when unsure.
-
----
-
-### GitHub Pages does not update immediately
-
-Wait for GitHub Actions to finish the deployment, then refresh the live website.
-
----
-
-### An updater stops with a PowerShell syntax error
-
-Use the newest complete toolkit ZIP and extract every file before running the updater.
-
-The setup-toolkit updater checks all `.ps1` files before pushing them.
-
----
-
-## Repository structure
-
-A simplified view of the project:
-
-```text
-linear_algebra_true_or_false/
-├── index.html
-├── solo.html
-├── solo1.html
-├── solo3.html
-├── solo4.html
-├── etapes/
-│   ├── etape1.js
-│   ├── etape2.js
-│   ├── etape3.js
-│   ├── etape4.js
-│   └── registry.js
-├── setup_powershell/
-│   ├── Setup Launcher.cmd
-│   ├── setup.ps1
-│   ├── Install Local Quiz.cmd
-│   ├── setup-new-repo-no-firebase.ps1
-│   ├── Install Firebase Quiz.cmd
-│   ├── setup-new-repo-with-firebase.ps1
-│   ├── Edit Flashcards.cmd
-│   ├── edit-flashcards.ps1
-│   ├── Edit Quiz JavaScript.cmd
-│   ├── edit-quiz-javascript.ps1
-│   ├── Update Entire Project to GitHub.cmd
-│   ├── update-entire-project-to-github.ps1
-│   ├── Update GitHub Setup Toolkit.cmd
-│   ├── update-github-setup-scripts.ps1
-│   └── README.md
-└── firestore.rules
-```
-
----
-
-## Final reminder
-
-Use:
-
-```text
-Edit Flashcards.cmd
-```
-
-to edit flashcard `.js` files.
-
-Use:
-
-```text
-Update Entire Project to GitHub.cmd
-```
-
-to upload all reviewed project changes.
-
-Use:
-
-```text
-Update GitHub Setup Toolkit.cmd
-```
-
-to update only the Windows setup and editor tools.
+**An update tool stops with an error.**
+It saves a log named `la-quiz-update-error.txt` in Downloads. Use the popup's **Copy details** / **Open error log** button when asking for help.

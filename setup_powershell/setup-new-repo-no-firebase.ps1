@@ -537,6 +537,58 @@ function Remove-AudioFeatures {
     Write-Ok "Audio cleanup finished. Removed $removed items and cleaned $cleaned HTML files."
 }
 
+function Repair-SoloLinks {
+    param([string]$WebsiteFolder)
+
+    # In every solo page, repoint the lobby map so each étape's "lobby"
+    # target is its own solo page (the multiplayer shells are deleted in a
+    # local install), and relabel the back-link so it no longer says
+    # "Back to 1v1 lobby" or points at a missing file.
+    # index.html is now a redirect to the Unit 1 solo page, so every
+    # étape's "lobby"/home target is simply index.html.
+    $lobbyMapReplacement = @"
+window.ETAPE_LOBBY_MAP = {
+  e1: 'index.html',
+  e2: 'index.html',
+  e3: 'index.html',
+  e4: 'index.html'
+"@
+
+    $soloFiles = Get-ChildItem -LiteralPath $WebsiteFolder -Filter 'solo*.html' -File
+
+    $patched = 0
+    foreach ($soloFile in $soloFiles) {
+        $content = [System.IO.File]::ReadAllText($soloFile.FullName)
+        $original = $content
+
+        # Rewrite the body of window.ETAPE_LOBBY_MAP = { ... up to (but not
+        # including) the closing brace. This keeps whatever closing/};} the
+        # page already uses intact.
+        $content = [regex]::Replace(
+            $content,
+            "(?s)window\.ETAPE_LOBBY_MAP\s*=\s*\{.*?(?=\n\s*\})",
+            [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $lobbyMapReplacement }
+        )
+
+        # Relabel + retarget the back-link. The anchor keeps href="index.html"
+        # (now a redirect to the Unit 1 solo page) but the text becomes a
+        # neutral "Home" instead of "Back to 1v1 lobby".
+        $content = [regex]::Replace(
+            $content,
+            '(?is)(<a\b[^>]*\bid\s*=\s*"back-link"[^>]*>).*?(</a>)',
+            '$1&larr; Home$2'
+        )
+
+        if ($content -ne $original) {
+            Save-Utf8NoBom -Path $soloFile.FullName -Text $content
+            $patched++
+            Write-Host "Patched navigation: $($soloFile.Name)" -ForegroundColor DarkCyan
+        }
+    }
+
+    Write-Ok "Solo-page navigation fixed in $patched file(s)."
+}
+
 function Convert-ToSoloOnly {
     param([string]$WebsiteFolder)
 
@@ -557,46 +609,48 @@ function Convert-ToSoloOnly {
         }
     }
 
-    $landingPage = @'
+    # ------------------------------------------------------------------
+    # The multiplayer lobby (index.html / etape1.html / etape3.html /
+    # etape4.html) needs Firebase, which this local copy does not have.
+    # Instead of hand-writing a brand-new index.html (which dropped the
+    # real étape tab bar and mislabelled the units), we turn the homepage
+    # into a tiny redirect to the Unit 1 solo page. The solo pages already
+    # carry their own étape tab bar, so unit switching keeps working.
+    # ------------------------------------------------------------------
+    $defaultSolo = 'solo1.html'   # solo1.html = Unit 1 (e1, the registry default)
+
+    $redirectPage = @"
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="0; url=$defaultSolo">
   <title>Linear Algebra True or False</title>
+  <script>window.location.replace('$defaultSolo');</script>
   <style>
-    :root { font-family: Inter, system-ui, Arial, sans-serif; color: #172033; background: #f5f7fb; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-    main { width: min(900px, 100%); }
-    h1 { margin-bottom: 8px; font-size: clamp(2rem, 6vw, 3.4rem); }
-    p { color: #536079; font-size: 1.05rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-top: 28px; }
-    a { display: block; padding: 24px; border-radius: 18px; background: white; color: #172033; text-decoration: none;
-        box-shadow: 0 8px 28px rgba(20,35,70,.09); border: 1px solid #e2e7f0; }
-    a:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(20,35,70,.14); }
-    strong { display: block; font-size: 1.25rem; margin-bottom: 6px; }
-    span { color: #65718a; }
-    .note { margin-top: 24px; padding: 14px 16px; border-radius: 12px; background: #eaf7ee; color: #245b34; }
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+         background:#FAF9F6;color:#1F1F1E;margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}
+    a{color:#185FA5}
   </style>
 </head>
 <body>
-  <main>
-    <h1>Linear Algebra: True or False</h1>
-    <p>Choose a unit and practise using local solo flashcards.</p>
-    <section class="grid">
-      <a href="solo.html"><strong>Unit 1</strong><span>Start solo practice</span></a>
-      <a href="solo1.html"><strong>Unit 2</strong><span>Start solo practice</span></a>
-      <a href="solo3.html"><strong>Unit 3</strong><span>Start solo practice</span></a>
-      <a href="solo4.html"><strong>Unit 4</strong><span>Start solo practice</span></a>
-    </section>
-    <div class="note">This website is installed locally on this computer. No GitHub or Firebase account is required.</div>
-  </main>
+  <p>Opening the quiz… If nothing happens, <a href="$defaultSolo">tap here to start</a>.</p>
 </body>
 </html>
-'@
+"@
 
-    Save-Utf8NoBom -Path (Join-Path $WebsiteFolder 'index.html') -Text $landingPage
+    Save-Utf8NoBom -Path (Join-Path $WebsiteFolder 'index.html') -Text $redirectPage
+
+    # ------------------------------------------------------------------
+    # Fix the solo pages so navigation never points at a deleted
+    # multiplayer file. Each solo page hard-codes an ETAPE_LOBBY_MAP that
+    # references index.html / etape1.html / etape3.html / etape4.html and
+    # a back-link labelled "Back to 1v1 lobby". Locally those targets are
+    # gone, so we repoint every lobby target to the matching solo page and
+    # relabel the back-link to a neutral "Home".
+    # ------------------------------------------------------------------
+    Repair-SoloLinks -WebsiteFolder $WebsiteFolder
 
     $readmePath = Join-Path $WebsiteFolder 'README.md'
     $notice = @'
@@ -702,7 +756,7 @@ start "" "%~dp0index.html"
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - LOCAL INSTALLER' -ForegroundColor Magenta
-    Write-Host 'UI VERSION 6 - PARSER FIX' -ForegroundColor DarkCyan
+    Write-Host 'UI VERSION 7 - LOCAL INDEX + BACK-LINK FIX' -ForegroundColor DarkCyan
     Write-Host 'MODE: Local computer only - no GitHub and no Firebase' -ForegroundColor Magenta
     Write-Host 'Nothing needs to be installed except the website files themselves.'
 

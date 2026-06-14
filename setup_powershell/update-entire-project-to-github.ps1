@@ -452,7 +452,35 @@ function Get-OriginUrl {
     return $result.Text
 }
 
-function Test-TargetRepository {
+function Test-ProjectContent {
+    # True when a folder is clearly THIS project, judged purely by its files.
+    # This lets the updater recognise a copy that was downloaded/extracted from
+    # the ZIP and never turned into a connected Git repository yet.
+    param([string]$Folder)
+
+    if ([string]::IsNullOrWhiteSpace($Folder) -or
+        (-not (Test-Path -LiteralPath $Folder -PathType Container))) {
+        return $false
+    }
+
+    # Signature files that, together, uniquely identify this project.
+    $signature = @(
+        'index.html',
+        'solo.html',
+        (Join-Path 'etapes' 'registry.js')
+    )
+
+    foreach ($relative in $signature) {
+        if (-not (Test-Path -LiteralPath (Join-Path $Folder $relative) -PathType Leaf)) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
+function Test-ConnectedRepository {
+    # True only when the folder is a Git repo whose origin points at our repo.
     param(
         [string]$GitExe,
         [string]$Folder
@@ -473,6 +501,92 @@ function Test-TargetRepository {
     return $origin -match (
         [regex]::Escape("$RepositoryOwner/$RepositoryName")
     )
+}
+
+function Test-TargetRepository {
+    # A folder counts as "the project" if EITHER it is already a connected
+    # Git repo for our remote, OR its files match this project's signature.
+    # Content matching is what makes automatic detection reliable for copies
+    # that came straight from the ZIP.
+    param(
+        [string]$GitExe,
+        [string]$Folder
+    )
+
+    if (Test-ConnectedRepository -GitExe $GitExe -Folder $Folder) {
+        return $true
+    }
+
+    return (Test-ProjectContent -Folder $Folder)
+}
+
+function Initialize-ConnectedRepository {
+    # Make sure $Folder is a Git repo on branch main with origin set to our
+    # remote. Safe to call on a folder that is already correctly connected -
+    # in that case it changes nothing.
+    param(
+        [string]$GitExe,
+        [string]$Folder
+    )
+
+    $gitFolderPresent = Test-Path -LiteralPath (Join-Path $Folder '.git') -PathType Container
+
+    if (-not $gitFolderPresent) {
+        Write-Info 'This copy is not a Git repository yet. Connecting it to GitHub now...'
+
+        [void](Invoke-Native `
+            -FilePath $GitExe `
+            -Arguments @('-C', $Folder, 'init') `
+            -FailureMessage 'Git could not initialise the repository.')
+    }
+
+    # Ensure a branch named main exists and is checked out.
+    $branchResult = Invoke-NativeCapture `
+        -FilePath $GitExe `
+        -Arguments @('-C', $Folder, 'branch', '--show-current') `
+        -FailureMessage 'Git could not read the current branch.' `
+        -AllowFailure
+
+    $branch = $branchResult.Text.Trim()
+
+    if ([string]::IsNullOrWhiteSpace($branch)) {
+        # Fresh repo with no commits yet - name the unborn branch main.
+        [void](Invoke-Native `
+            -FilePath $GitExe `
+            -Arguments @('-C', $Folder, 'checkout', '-B', 'main') `
+            -FailureMessage 'Git could not create the main branch.' `
+            -AllowFailure `
+            -Quiet)
+    }
+    elseif ($branch -ne 'main') {
+        [void](Invoke-Native `
+            -FilePath $GitExe `
+            -Arguments @('-C', $Folder, 'branch', '-M', 'main') `
+            -FailureMessage 'Git could not rename the branch to main.' `
+            -AllowFailure `
+            -Quiet)
+    }
+
+    # Ensure origin exists and points at our repository.
+    $origin = Get-OriginUrl -GitExe $GitExe -Folder $Folder
+
+    if ([string]::IsNullOrWhiteSpace($origin)) {
+        [void](Invoke-Native `
+            -FilePath $GitExe `
+            -Arguments @('-C', $Folder, 'remote', 'add', 'origin', $RepositoryGitUrl) `
+            -FailureMessage 'Git could not add the GitHub remote.')
+
+        Write-Ok 'Connected this folder to GitHub.'
+    }
+    elseif ($origin -notmatch [regex]::Escape("$RepositoryOwner/$RepositoryName")) {
+        # An origin exists but points somewhere else - repoint it to ours.
+        [void](Invoke-Native `
+            -FilePath $GitExe `
+            -Arguments @('-C', $Folder, 'remote', 'set-url', 'origin', $RepositoryGitUrl) `
+            -FailureMessage 'Git could not update the GitHub remote.')
+
+        Write-Ok 'Updated the GitHub remote for this folder.'
+    }
 }
 
 function Find-RepositoryFromPath {
@@ -497,12 +611,31 @@ function Find-RepositoryFromPath {
 
     $directory = Get-Item -LiteralPath $candidate
 
+    # 1) Walk upward from the starting folder through its parents.
     while ($null -ne $directory) {
         if (Test-TargetRepository -GitExe $GitExe -Folder $directory.FullName) {
             return $directory.FullName
         }
 
         $directory = $directory.Parent
+    }
+
+    # 2) Also look one level down: the project often sits in a subfolder of
+    #    the starting path (for example Downloads\linear_algebra_true_or_false-main).
+    $children = Get-ChildItem `
+        -LiteralPath $candidate `
+        -Directory `
+        -ErrorAction SilentlyContinue |
+        Sort-Object `
+            @{ Expression = {
+                if ($_.Name -match '(?i)linear.*algebra|true.*false') { 0 } else { 1 }
+            } },
+            @{ Expression = { $_.LastWriteTime }; Descending = $true }
+
+    foreach ($child in $children) {
+        if (Test-TargetRepository -GitExe $GitExe -Folder $child.FullName) {
+            return $child.FullName
+        }
     }
 
     return $null
@@ -560,11 +693,15 @@ function Find-RepositoryAutomatically {
 
     $candidatePaths += @(
         (Join-Path $downloads $RepositoryName),
+        (Join-Path $downloads "$RepositoryName-main"),
         (Join-Path $downloads "$RepositoryName-editor"),
         (Join-Path $downloads "$RepositoryName-fixed-installer-update"),
         (Join-Path $downloads 'Linear Algebra True or False'),
         (Join-Path $documents $RepositoryName),
-        (Join-Path $desktop $RepositoryName)
+        (Join-Path $documents "$RepositoryName-main"),
+        (Join-Path $documents 'Linear Algebra True or False'),
+        (Join-Path $desktop $RepositoryName),
+        (Join-Path $desktop "$RepositoryName-main")
     )
 
     foreach ($candidate in $candidatePaths | Select-Object -Unique) {
@@ -654,7 +791,7 @@ function Choose-RepositoryFolder {
     )
 
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-    $dialog.Description = 'Choose the GitHub repository folder containing the hidden .git folder'
+    $dialog.Description = 'Choose the Linear Algebra project folder (the one containing index.html)'
     $dialog.ShowNewFolderButton = $false
 
     if (-not [string]::IsNullOrWhiteSpace($InitialFolder) -and
@@ -679,11 +816,11 @@ function Choose-RepositoryFolder {
 
     if ([string]::IsNullOrWhiteSpace($repository)) {
         $folderWarningMessage = @"
-The selected folder is not connected to:
+That folder does not look like the Linear Algebra project.
 
-$RepositoryWebUrl
-
-Choose the repository copy that contains the hidden .git folder.
+Choose the folder that contains index.html and the etapes folder
+(it is usually named linear_algebra_true_or_false or
+linear_algebra_true_or_false-main).
 "@
 
         Show-Message `
@@ -924,7 +1061,7 @@ try {
     Clear-Host
 
     Write-Host 'LINEAR ALGEBRA QUIZ - UPDATE ENTIRE PROJECT TO GITHUB' -ForegroundColor Magenta
-    Write-Host 'VERSION 1 - REVIEW ALL CHANGES BEFORE PUSH' -ForegroundColor DarkCyan
+    Write-Host 'VERSION 2 - AUTO-DETECT + AUTO-CONNECT REPO' -ForegroundColor DarkCyan
     Write-Host ''
     Write-Host "Repository: $RepositoryWebUrl" -ForegroundColor White
 
@@ -954,6 +1091,11 @@ $RepositoryWebUrl
     }
 
     Write-Ok "Repository found: $repositoryFolder"
+
+    # Make sure the folder is actually a Git repo on main with our remote.
+    # If it came from the ZIP and was never connected, this wires it up now
+    # so the rest of the update can proceed automatically.
+    Initialize-ConnectedRepository -GitExe $tools.Git -Folder $repositoryFolder
 
     Write-Step 'STEP 3 OF 6 - Signing in and checking the branch'
     $githubUser = Ensure-GitHubLogin -GhExe $tools.Gh
@@ -1067,17 +1209,64 @@ Continue only if you have checked these files carefully.
         ) `
         -FailureMessage 'Git could not set the commit email.')
 
-    [void](Invoke-Native `
+    # Does the local repo have any commits yet? A copy that came straight from
+    # the ZIP and was just connected will not.
+    $headCheck = Invoke-Native `
         -FilePath $tools.Git `
-        -Arguments @(
-            '-C', $repositoryFolder,
-            'pull',
-            '--rebase',
-            '--autostash',
-            'origin',
-            'main'
-        ) `
-        -FailureMessage 'Git could not safely combine the newest GitHub changes with the local project.')
+        -Arguments @('-C', $repositoryFolder, 'rev-parse', '--verify', 'HEAD') `
+        -FailureMessage 'Git could not check the local history.' `
+        -AllowFailure `
+        -Quiet
+
+    $hasLocalCommits = ($headCheck -eq 0)
+
+    if ($hasLocalCommits) {
+        # Normal case: bring in the newest GitHub commits, keeping local edits.
+        [void](Invoke-Native `
+            -FilePath $tools.Git `
+            -Arguments @(
+                '-C', $repositoryFolder,
+                'pull',
+                '--rebase',
+                '--autostash',
+                'origin',
+                'main'
+            ) `
+            -FailureMessage 'Git could not safely combine the newest GitHub changes with the local project.')
+    }
+    else {
+        # Freshly connected copy with no commits. Fetch the existing GitHub
+        # history and adopt it as the starting point, WITHOUT touching the
+        # working files - so the local edits become changes on top of main.
+        Write-Info 'First-time connection: fetching the existing GitHub history...'
+
+        [void](Invoke-Native `
+            -FilePath $tools.Git `
+            -Arguments @('-C', $repositoryFolder, 'fetch', 'origin', 'main') `
+            -FailureMessage 'Git could not download the existing GitHub history.')
+
+        # Point the branch at origin/main while keeping all working-tree files
+        # exactly as they are (mixed reset = move HEAD, leave files untouched).
+        [void](Invoke-Native `
+            -FilePath $tools.Git `
+            -Arguments @('-C', $repositoryFolder, 'reset', '--mixed', 'origin/main') `
+            -FailureMessage 'Git could not align the local branch with GitHub.')
+
+        # Make sure the branch is named main and tracks origin/main.
+        [void](Invoke-Native `
+            -FilePath $tools.Git `
+            -Arguments @('-C', $repositoryFolder, 'branch', '-M', 'main') `
+            -FailureMessage 'Git could not set the branch name to main.' `
+            -AllowFailure `
+            -Quiet)
+
+        [void](Invoke-Native `
+            -FilePath $tools.Git `
+            -Arguments @('-C', $repositoryFolder, 'branch', '--set-upstream-to', 'origin/main', 'main') `
+            -FailureMessage 'Git could not set the upstream branch.' `
+            -AllowFailure `
+            -Quiet)
+    }
 
     [void](Invoke-Native `
         -FilePath $tools.Git `
