@@ -1,6 +1,6 @@
 ﻿#requires -Version 5.1
 <#
-Deploy Firestore Rules — Linear Algebra True or False
+Deploy Firestore Rules - Linear Algebra True or False
 
 Reads the project's firestore.rules file, updates it to match the current
 registry (units) and page settings (match lengths, categories), then
@@ -13,12 +13,14 @@ Run this after:
 
 The script auto-detects the project folder and the Firebase CLI from the
 location the installer downloaded it to. Firebase login is re-used from the
-previous session — you only log in once.
+previous session - you only log in once.
 #>
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$env:FIREBASE_CLI_DISABLE_TELEMETRY = '1'
+$env:NO_UPDATE_NOTIFIER = '1'
 
 # =====================================================================
 # UI palette
@@ -180,14 +182,14 @@ function Update-FirestoreRules {
 
     $rulesPath = Join-Path $ProjectFolder 'firestore.rules'
     if (-not (Test-Path -LiteralPath $rulesPath -PathType Leaf)) {
-        Write-Info 'No firestore.rules found — this is a local-only install, nothing to deploy.'
+        Write-Info 'No firestore.rules found - this is a local-only install, nothing to deploy.'
         return $false
     }
 
     $content = [System.IO.File]::ReadAllText($rulesPath, [System.Text.Encoding]::UTF8)
     $original = $content
 
-    # ---- 1. validEtape — read unit IDs from registry.js ----
+    # ---- 1. validEtape - read unit IDs from registry.js ----
     $registryPath = Join-Path $ProjectFolder (Join-Path 'etapes' 'registry.js')
     $regText = [System.IO.File]::ReadAllText($registryPath, [System.Text.Encoding]::UTF8)
     $etapeIds = @(
@@ -202,7 +204,7 @@ function Update-FirestoreRules {
         "`${1}$etapeList`${2}"
     )
 
-    # ---- 2. length in [...] — read LENGTH_OPTIONS from index.html ----
+    # ---- 2. length in [...] - read LENGTH_OPTIONS from index.html ----
     $indexPath = Join-Path $ProjectFolder 'index.html'
     if (Test-Path -LiteralPath $indexPath -PathType Leaf) {
         $indexText = [System.IO.File]::ReadAllText($indexPath, [System.Text.Encoding]::UTF8)
@@ -220,7 +222,7 @@ function Update-FirestoreRules {
         }
     }
 
-    # ---- 3. validCategory — scan all etape*.js vocab files ----
+    # ---- 3. validCategory - scan all etape*.js vocab files ----
     $allCategories = [System.Collections.Generic.SortedSet[string]]::new()
     [void]$allCategories.Add('all')
     $jsFiles = Get-ChildItem -LiteralPath (Join-Path $ProjectFolder 'etapes') -Filter 'etape*.js' -File -ErrorAction SilentlyContinue
@@ -245,7 +247,7 @@ function Update-FirestoreRules {
         return $true
     }
 
-    Write-Ok 'firestore.rules is already up to date — no changes needed.'
+    Write-Ok 'firestore.rules is already up to date - no changes needed.'
     return $false
 }
 
@@ -253,16 +255,28 @@ function Update-FirestoreRules {
 # Firebase CLI location
 # =====================================================================
 function Find-FirebaseCli {
-    # 1. Check if it is on PATH
-    $onPath = Get-Command 'firebase.exe' -ErrorAction SilentlyContinue
-    if ($null -ne $onPath) { return $onPath.Source }
-    $onPath = Get-Command 'firebase.cmd' -ErrorAction SilentlyContinue
-    if ($null -ne $onPath) { return $onPath.Source }
+    # The connection helper installs firebase-tools locally through npm.
+    # Prefer that firebase.cmd and intentionally ignore the old standalone
+    # firebase.exe, which can crash in firepit/welcome.js on Windows.
+    $localAppData = [Environment]::GetFolderPath('LocalApplicationData')
+    if ([string]::IsNullOrWhiteSpace($localAppData)) { $localAppData = $env:LOCALAPPDATA }
 
-    # 2. Check the LAQuizTools folder the installer downloaded it to
-    $toolRoot = Join-Path $env:LOCALAPPDATA 'LAQuizTools'
-    $fromInstaller = Join-Path $toolRoot 'FirebaseCLI\firebase.exe'
-    if (Test-Path -LiteralPath $fromInstaller -PathType Leaf) { return $fromInstaller }
+    if (-not [string]::IsNullOrWhiteSpace($localAppData)) {
+        $localNpm = [System.IO.Path]::Combine(
+            $localAppData,
+            'LAQuizTools',
+            'FirebaseCLI-NPM',
+            'node_modules',
+            '.bin',
+            'firebase.cmd'
+        )
+        if (Test-Path -LiteralPath $localNpm -PathType Leaf) { return $localNpm }
+    }
+
+    $globalCmd = Get-Command 'firebase.cmd' -ErrorAction SilentlyContinue
+    if ($null -ne $globalCmd -and -not [string]::IsNullOrWhiteSpace($globalCmd.Source)) {
+        return $globalCmd.Source
+    }
 
     return $null
 }
@@ -283,7 +297,7 @@ function Read-ProjectId {
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - DEPLOY FIRESTORE RULES' -ForegroundColor Magenta
-    Write-Host 'VERSION 1 - AUTO-PATCH AND DEPLOY' -ForegroundColor DarkCyan
+    Write-Host 'VERSION 1.1 - WINDOWS POWERSHELL 5.1 SAFE' -ForegroundColor DarkCyan
     Write-Host ''
 
     Initialize-Ui
@@ -309,10 +323,10 @@ try {
     # Check this is an online project
     $rulesPath = Join-Path $projectFolder 'firestore.rules'
     if (-not (Test-Path -LiteralPath $rulesPath -PathType Leaf)) {
-        Show-AppMessage -Title 'Local install — nothing to deploy' `
+        Show-AppMessage -Title 'Local install - nothing to deploy' `
             -Message "This is a local (solo-only) install. It has no firestore.rules and does not use Firebase.`r`n`r`nFirestore rules only apply to the online (Firebase + GitHub) version." `
             -Type 'Info'
-        Write-Info 'Local install — no Firestore rules to deploy.'
+        Write-Info 'Local install - no Firestore rules to deploy.'
         [void](Read-Host 'Press Enter to close')
         exit 0
     }
@@ -320,37 +334,48 @@ try {
     Write-Step 'STEP 2 OF 4 - Updating firestore.rules from current project state'
     [void](Update-FirestoreRules -ProjectFolder $projectFolder)
 
-    # Read project ID
+    Write-Step 'STEP 3 OF 4 - Connecting the Firebase login and project'
+    $connectorScript = Join-Path $PSScriptRoot 'login-and-connect-firebase.ps1'
+    if (-not (Test-Path -LiteralPath $connectorScript -PathType Leaf)) {
+        throw "The Firebase connection helper is missing:`r`n$connectorScript"
+    }
+
+    $powershellExe = Join-Path $PSHOME 'powershell.exe'
+    if (-not (Test-Path -LiteralPath $powershellExe -PathType Leaf)) {
+        $powershellExe = 'powershell.exe'
+    }
+
+    & $powershellExe `
+        -NoLogo `
+        -NoProfile `
+        -STA `
+        -ExecutionPolicy Bypass `
+        -File $connectorScript `
+        -ProjectFolder $projectFolder `
+        -CalledByDeploy
+
+    $connectorExitCode = $LASTEXITCODE
+    if ($connectorExitCode -ne 0) {
+        throw 'Firebase login/project connection was not completed.'
+    }
+
     $projectId = Read-ProjectId -ProjectFolder $projectFolder
     if ([string]::IsNullOrWhiteSpace($projectId)) {
-        throw "Could not read the Firebase project ID from .firebaserc.`r`nMake sure this folder was set up with 'Install Firebase Quiz'."
+        throw 'Firebase connected, but the project ID was not saved in .firebaserc.'
     }
     Write-Ok "Firebase project: $projectId"
 
-    Write-Step 'STEP 3 OF 4 - Finding the Firebase CLI'
     $firebaseExe = Find-FirebaseCli
     if ([string]::IsNullOrWhiteSpace($firebaseExe)) {
-        Show-AppMessage -Title 'Firebase CLI not found' `
-            -Message "The Firebase CLI was not found.`r`n`r`nRun 'Install Firebase Quiz' first — it downloads the Firebase CLI automatically.`r`n`r`nIf you already ran it, try opening the 'LAQuizTools\FirebaseCLI' folder under AppData\Local." `
-            -Type 'Error'
-        throw 'Firebase CLI not found. Run Install Firebase Quiz first.'
+        throw 'Firebase CLI could not be found after the connection helper finished.'
     }
     Write-Ok "Firebase CLI: $firebaseExe"
 
-    # Make sure Firebase CLI is on PATH so it can find its own helpers
-    $firebaseDir = Split-Path -Parent $firebaseExe
-    if ($env:PATH -notlike "*$firebaseDir*") {
+    $firebaseDir = [System.IO.Path]::GetDirectoryName([string]$firebaseExe)
+    if (-not [string]::IsNullOrWhiteSpace($firebaseDir) -and
+        $env:PATH -notlike "*$firebaseDir*") {
         $env:PATH = "$firebaseDir;$env:PATH"
     }
-
-    # Login if needed
-    $loginCheck = Invoke-Native -FilePath $firebaseExe -Arguments @('projects:list','--json') -AllowFailure -Quiet
-    if ($loginCheck -ne 0) {
-        Write-Info 'Firebase login required. The browser will open.'
-        [void](Read-Host 'Press Enter to open the Firebase login page')
-        [void](Invoke-Native -FilePath $firebaseExe -Arguments @('login') -FailureMessage 'Firebase login was not completed.')
-    }
-    Write-Ok 'Firebase login is ready.'
 
     Write-Step 'STEP 4 OF 4 - Deploying firestore.rules'
     Set-Location -LiteralPath $projectFolder
@@ -365,7 +390,7 @@ try {
     Write-Host "Local rules file:  $rulesPath" -ForegroundColor Cyan
 
     Show-AppMessage -Title 'Firestore rules deployed' `
-        -Message "The rules were updated to match the current units, match lengths, and categories, then deployed to Firebase project:`r`n`r`n$projectId`r`n`r`nThe changes take effect immediately — no page refresh needed." `
+        -Message "The rules were updated to match the current units, match lengths, and categories, then deployed to Firebase project:`r`n`r`n$projectId`r`n`r`nThe changes take effect immediately - no page refresh needed." `
         -Type 'Success'
 }
 catch {

@@ -484,3 +484,20 @@ la-quiz-update-error.txt
 ```
 
 in Downloads. Use the popup's **Copy details** or **Open error log** button when asking for help.
+
+## Firebase login/project repair
+
+Run **Login and Connect Firebase.cmd** when a copied/downloaded project is missing
+`.firebaserc`, when the Firebase CLI is not installed, or when the saved Firebase
+login has expired. The command:
+
+- finds the quiz folder automatically;
+- downloads the official Firebase CLI when needed;
+- opens the Google/Firebase browser login when needed;
+- detects the project ID from the website's existing `firebaseConfig`;
+- lets you choose from your Firebase projects only when automatic detection is
+  not possible;
+- saves `.firebaserc` and `firebase.json` for future deployments.
+
+**Deploy Firestore Rules.cmd** now launches the same connection check
+automatically before every deployment.

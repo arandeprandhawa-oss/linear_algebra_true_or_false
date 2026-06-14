@@ -1,0 +1,31 @@
+FIREBASE LOGIN FIX - DIRECTORY CREATION COMPATIBILITY
+
+Fixed the error:
+  A parameter cannot be found that matches parameter name 'LiteralPath'.
+
+Cause:
+  New-Item supports -Path, not -LiteralPath, in Windows PowerShell 5.1.
+
+Fix:
+  The Firebase connection script now uses .NET Directory.CreateDirectory()
+  for its state, npm installation, and backup folders. This avoids the
+  incompatible parameter and works with Windows PowerShell 5.1.
+
+FIREBASE LOGIN FIX
+==================
+
+This version fixes both Firebase login failures seen on Windows:
+
+1. The old portable firebase.exe could crash with:
+     SyntaxError: Unexpected end of JSON input
+     C:\snapshot\firepit\welcome.js
+
+2. A timed-out login check could incorrectly stop with:
+     Cannot bind argument to parameter 'Path' because it is an empty string.
+
+The project now ignores the broken standalone executable, uses the official
+npm firebase-tools command, safely stops a timed-out check even when Windows
+environment variables are missing, and then opens the browser login.
+
+Run Login and Connect Firebase.cmd. Complete the Google sign-in in the
+browser. The selected Firebase project is saved for future rule deployments.
