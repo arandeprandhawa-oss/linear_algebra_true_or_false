@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+#requires -Version 5.1
 <#
 Deploy Firestore Rules — Linear Algebra True or False
 
@@ -15,6 +15,10 @@ The script auto-detects the project folder and the Firebase CLI from the
 location the installer downloaded it to. Firebase login is re-used from the
 previous session — you only log in once.
 #>
+
+param(
+    [string]$ProjectFolder
+)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -136,7 +140,25 @@ function Find-ProjectRootFromPath {
 }
 
 function Find-AutomaticProject {
-    foreach ($mode in @('javascript','local','firebase')) {
+    # A caller such as FIX WEBSITE NOW can explicitly lock this deployment to
+    # the project folder it came from. This prevents an older remembered clone
+    # in Downloads from receiving or deploying the rules by mistake.
+    if (-not [string]::IsNullOrWhiteSpace($ProjectFolder)) {
+        $provided = Find-ProjectRootFromPath -Path $ProjectFolder
+        if (-not [string]::IsNullOrWhiteSpace($provided)) { return $provided }
+    }
+
+    # Prefer the project copy that contains this script before any remembered
+    # editor path. This is essential after extracting a repaired ZIP.
+    $scriptFolder = $PSScriptRoot
+    if ([string]::IsNullOrWhiteSpace($scriptFolder)) { $scriptFolder = (Get-Location).Path }
+    $hit = Find-ProjectRootFromPath -Path $scriptFolder
+    if (-not [string]::IsNullOrWhiteSpace($hit)) { return $hit }
+
+    $hit = Find-ProjectRootFromPath -Path (Get-Location).Path
+    if (-not [string]::IsNullOrWhiteSpace($hit)) { return $hit }
+
+    foreach ($mode in @('firebase','javascript','local')) {
         $f = Join-Path (Get-StateFolder) "last-$mode-project.txt"
         if (Test-Path -LiteralPath $f -PathType Leaf) {
             try {
@@ -145,12 +167,6 @@ function Find-AutomaticProject {
             } catch { }
         }
     }
-    $scriptFolder = $PSScriptRoot
-    if ([string]::IsNullOrWhiteSpace($scriptFolder)) { $scriptFolder = (Get-Location).Path }
-    $hit = Find-ProjectRootFromPath -Path $scriptFolder
-    if (-not [string]::IsNullOrWhiteSpace($hit)) { return $hit }
-    $hit = Find-ProjectRootFromPath -Path (Get-Location).Path
-    if (-not [string]::IsNullOrWhiteSpace($hit)) { return $hit }
     $profilePath = [Environment]::GetFolderPath('UserProfile')
     foreach ($root in @((Get-DownloadsFolder), [Environment]::GetFolderPath('MyDocuments'),
                          [Environment]::GetFolderPath('Desktop'),

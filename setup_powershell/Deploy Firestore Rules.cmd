@@ -25,7 +25,7 @@ if not exist "%POWERSHELL_SCRIPT%" (
 pushd "%SCRIPT_DIR%" >nul
 
 "%POWERSHELL_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "Unblock-File -LiteralPath $env:POWERSHELL_SCRIPT -ErrorAction SilentlyContinue" >nul 2>&1
-"%POWERSHELL_EXE%" -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File "%POWERSHELL_SCRIPT%"
+"%POWERSHELL_EXE%" -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File "%POWERSHELL_SCRIPT%" -ProjectFolder "%SCRIPT_DIR%.."
 set "EXIT_CODE=%ERRORLEVEL%"
 
 popd >nul

@@ -680,10 +680,12 @@ function Find-RepositoryAutomatically {
         $scriptFolder = (Get-Location).Path
     }
 
+    # Prefer the project copy that contains this updater. This is important
+    # when a repaired ZIP is opened while an older broken clone is remembered.
     $candidatePaths = @(
-        (Get-SavedRepositoryPaths),
         $scriptFolder,
-        (Get-Location).Path
+        (Get-Location).Path,
+        (Get-SavedRepositoryPaths)
     )
 
     $downloads = Get-DownloadsFolder

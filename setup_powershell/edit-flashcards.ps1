@@ -8,6 +8,8 @@ Polished automatic flashcard editor for the Linear Algebra True or False quiz.
 - Supports Firebase + GitHub editing and publishing.
 - Creates a timestamped backup before opening a file.
 - Opens the selected file in Notepad.
+- Validates JavaScript before publishing so a broken file cannot take the site offline.
+- Offers to run the Firestore rules updater after a successful Firebase/GitHub publish.
 - Never force-pushes.
 #>
 
@@ -830,6 +832,109 @@ function Invoke-NativeCapture {
     }
 }
 
+
+function Test-FlashcardJavaScript {
+    param([string]$FilePath)
+
+    $problems = New-Object System.Collections.Generic.List[string]
+
+    if ([string]::IsNullOrWhiteSpace($FilePath) -or
+        (-not (Test-Path -LiteralPath $FilePath -PathType Leaf))) {
+        [void]$problems.Add('The selected JavaScript file could not be found.')
+    }
+    else {
+        try {
+            $text = [System.IO.File]::ReadAllText(
+                $FilePath,
+                [System.Text.Encoding]::UTF8
+            )
+
+            if ($text -match '```') {
+                [void]$problems.Add(
+                    'Remove the Markdown code-fence lines containing three backticks (```). Paste only JavaScript into the file.'
+                )
+            }
+
+            if ($text -notmatch 'window\.ETAPE_DATA\s*=') {
+                [void]$problems.Add(
+                    'The file must assign its data with: window.ETAPE_DATA = { ... };'
+                )
+            }
+
+            if ($text -notmatch '(?s)\bvocab\s*:\s*\[') {
+                [void]$problems.Add('The file is missing the vocab: [ ... ] flashcard array.')
+            }
+
+            if ($text -notmatch '(?s)\bcategoryLabels\s*:\s*\{') {
+                [void]$problems.Add('The file is missing the categoryLabels: { ... } object.')
+            }
+
+            $nodePath = Get-CommandPath -Names @('node.exe', 'node')
+
+            if (-not [string]::IsNullOrWhiteSpace($nodePath)) {
+                $syntax = Invoke-NativeCapture `
+                    -FilePath $nodePath `
+                    -Arguments @('--check', $FilePath) `
+                    -FailureMessage 'Node.js could not validate the JavaScript file.' `
+                    -AllowFailure
+
+                if ($syntax.ExitCode -ne 0) {
+                    $details = $syntax.Text
+
+                    if ([string]::IsNullOrWhiteSpace($details)) {
+                        $details = 'Node.js reported invalid JavaScript syntax.'
+                    }
+
+                    [void]$problems.Add($details)
+                }
+            }
+        }
+        catch {
+            [void]$problems.Add($_.Exception.Message)
+        }
+    }
+
+    return [pscustomobject]@{
+        Valid = ($problems.Count -eq 0)
+        Message = ($problems -join "`r`n`r`n")
+    }
+}
+
+function Start-FirestoreRulesUpdater {
+    param([string]$ProjectFolder)
+
+    $setupFolder = Join-Path $ProjectFolder 'setup_powershell'
+    $cmdPath = Join-Path $setupFolder 'Deploy Firestore Rules.cmd'
+    $ps1Path = Join-Path $setupFolder 'deploy-firestore-rules.ps1'
+
+    if (Test-Path -LiteralPath $cmdPath -PathType Leaf) {
+        Start-Process `
+            -FilePath $cmdPath `
+            -WorkingDirectory $setupFolder
+        return
+    }
+
+    if (Test-Path -LiteralPath $ps1Path -PathType Leaf) {
+        $powerShellPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+
+        if (-not (Test-Path -LiteralPath $powerShellPath -PathType Leaf)) {
+            $powerShellPath = 'powershell.exe'
+        }
+
+        Start-Process `
+            -FilePath $powerShellPath `
+            -ArgumentList @(
+                '-NoProfile',
+                '-ExecutionPolicy', 'Bypass',
+                '-File', "`"$ps1Path`""
+            ) `
+            -WorkingDirectory $setupFolder
+        return
+    }
+
+    throw 'The Firestore updater was not found in setup_powershell.'
+}
+
 function Install-PortableGit {
     param([string]$ToolRoot)
 
@@ -1103,7 +1208,7 @@ function Publish-SelectedFile {
             -Title 'No saved changes found' `
             -Message 'The selected file was not changed, so nothing needs to be uploaded.'
 
-        return
+        return $false
     }
 
     $publish = Ask-YesNo `
@@ -1118,7 +1223,7 @@ Choose No to keep the saved change only on this computer.
 "@
 
     if (-not $publish) {
-        return
+        return $false
     }
 
     $defaultMessage = "Update flashcards in $([System.IO.Path]::GetFileName($SelectedFile.RelativePath))"
@@ -1202,6 +1307,8 @@ Choose No to keep the saved change only on this computer.
     Start-Process `
         -FilePath "$RepositoryWebUrl/blob/main/$($SelectedFile.RelativePath.Replace('\', '/'))" `
         -ErrorAction SilentlyContinue
+
+    return $true
 }
 
 function Start-FlashcardEditor {
@@ -1325,7 +1432,7 @@ function Start-FlashcardEditor {
     $leftPanel.Controls.Add($instructionsTitle)
 
     $instructions = New-Object System.Windows.Forms.Label
-    $instructions.Text = "1. Choose Local or Firebase mode.`r`n`r`n2. The project is found automatically.`r`n`r`n3. Pick a flashcard JavaScript file.`r`n`r`n4. Edit in Notepad and press Ctrl+S."
+    $instructions.Text = "1. Choose Local or Firebase mode.`r`n`r`n2. The project is found automatically.`r`n`r`n3. Pick a flashcard JavaScript file.`r`n`r`n4. Edit in Notepad and press Ctrl+S.`r`n`r`n5. The editor checks the JavaScript and offers the Firestore update."
     $instructions.AutoSize = $false
     $instructions.Location = New-Object System.Drawing.Point(24, 62)
     $instructions.Size = New-Object System.Drawing.Size(286, 200)
@@ -1952,14 +2059,88 @@ Choose Cancel to stop without publishing.
                 return
             }
 
+            & $setStatus 'Checking the JavaScript before publishing...' 'Normal'
+            [System.Windows.Forms.Application]::DoEvents()
+
+            $validation = Test-FlashcardJavaScript -FilePath $selected.FullPath
+
+            if (-not $validation.Valid) {
+                $restoreMessage = @"
+The JavaScript file has an error, so it was NOT published.
+
+$($validation.Message)
+
+This commonly happens when Markdown code-fence lines are pasted into the .js file, or when a quoted sentence is split across multiple lines.
+"@
+
+                if (-not [string]::IsNullOrWhiteSpace($backupPath) -and
+                    (Test-Path -LiteralPath $backupPath -PathType Leaf)) {
+                    $restoreMessage += "`r`nChoose Yes to restore the automatic backup now. Choose No to keep the file open for manual repair."
+
+                    if (Ask-YesNo `
+                        -Title 'Invalid JavaScript — restore backup?' `
+                        -Message $restoreMessage) {
+                        Copy-Item `
+                            -LiteralPath $backupPath `
+                            -Destination $selected.FullPath `
+                            -Force
+
+                        & $setStatus 'The invalid edit was replaced with the automatic backup.' 'Warning'
+
+                        Show-EditorMessage `
+                            -Title 'Backup restored' `
+                            -Message 'The broken JavaScript was not published. The previous working flashcard file has been restored.' `
+                            -Type 'Information'
+                    }
+                    else {
+                        & $setStatus 'JavaScript validation failed. Nothing was published.' 'Error'
+                    }
+                }
+                else {
+                    & $setStatus 'JavaScript validation failed. Nothing was published.' 'Error'
+
+                    Show-EditorMessage `
+                        -Title 'Invalid JavaScript — not published' `
+                        -Message $restoreMessage `
+                        -Type 'Error'
+                }
+
+                return
+            }
+
             if ($state.Mode -eq 'Firebase + GitHub') {
-                Publish-SelectedFile `
+                $published = Publish-SelectedFile `
                     -Tools $state.GitTools `
                     -RepositoryFolder $state.ProjectFolder `
                     -SelectedFile $selected `
                     -GitHubUser $state.GitHubUser
 
-                & $setStatus 'The Firebase/GitHub flashcard workflow finished.' 'Success'
+                if ($published) {
+                    & $setStatus 'Flashcards published. Firestore rules may need an update.' 'Success'
+
+                    $runRules = Ask-YesNo `
+                        -Title 'Run the Firestore update now?' `
+                        -Message @"
+The flashcard edit was published successfully.
+
+If you added or renamed a category, Firestore rules must be regenerated and deployed. Running the updater is safe even when you only changed questions.
+
+Choose Yes to open the Firestore Rules updater now.
+Choose No to do it later from:
+setup_powershell\Deploy Firestore Rules.cmd
+"@
+
+                    if ($runRules) {
+                        Start-FirestoreRulesUpdater -ProjectFolder $state.ProjectFolder
+                        & $setStatus 'The Firestore Rules updater was opened.' 'Success'
+                    }
+                    else {
+                        & $setStatus 'Flashcards published. Firestore update was postponed.' 'Warning'
+                    }
+                }
+                else {
+                    & $setStatus 'The saved edit was kept locally and was not published.' 'Warning'
+                }
             }
             else {
                 & $setStatus "Local flashcards saved. Backup: $backupPath" 'Success'
