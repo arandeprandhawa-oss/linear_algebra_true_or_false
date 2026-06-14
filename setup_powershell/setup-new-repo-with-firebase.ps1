@@ -41,6 +41,95 @@ function Wait-ForEnter {
     [void](Read-Host $Message)
 }
 
+
+
+function Initialize-PopupSupport {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    Add-Type -AssemblyName Microsoft.VisualBasic
+    [System.Windows.Forms.Application]::EnableVisualStyles()
+}
+
+function Show-TextPopup {
+    param(
+        [string]$Title,
+        [string]$Prompt,
+        [string]$DefaultValue = ''
+    )
+
+    return [Microsoft.VisualBasic.Interaction]::InputBox(
+        $Prompt,
+        $Title,
+        $DefaultValue
+    )
+}
+
+function Show-MultilinePopup {
+    param(
+        [string]$Title,
+        [string]$Prompt
+    )
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = $Title
+    $form.StartPosition = 'CenterScreen'
+    $form.Size = New-Object System.Drawing.Size(760, 610)
+    $form.MinimumSize = New-Object System.Drawing.Size(620, 480)
+    $form.TopMost = $true
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = $Prompt
+    $label.AutoSize = $false
+    $label.Location = New-Object System.Drawing.Point(18, 16)
+    $label.Size = New-Object System.Drawing.Size(710, 58)
+    $label.Anchor = 'Top,Left,Right'
+    $form.Controls.Add($label)
+
+    $textBox = New-Object System.Windows.Forms.TextBox
+    $textBox.Multiline = $true
+    $textBox.AcceptsReturn = $true
+    $textBox.AcceptsTab = $true
+    $textBox.ScrollBars = 'Both'
+    $textBox.WordWrap = $false
+    $textBox.Font = New-Object System.Drawing.Font('Consolas', 10)
+    $textBox.Location = New-Object System.Drawing.Point(18, 82)
+    $textBox.Size = New-Object System.Drawing.Size(710, 420)
+    $textBox.Anchor = 'Top,Bottom,Left,Right'
+    $form.Controls.Add($textBox)
+
+    $okButton = New-Object System.Windows.Forms.Button
+    $okButton.Text = 'Continue'
+    $okButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $okButton.Location = New-Object System.Drawing.Point(538, 520)
+    $okButton.Size = New-Object System.Drawing.Size(90, 32)
+    $okButton.Anchor = 'Bottom,Right'
+    $form.Controls.Add($okButton)
+
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Text = 'Cancel'
+    $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    $cancelButton.Location = New-Object System.Drawing.Point(638, 520)
+    $cancelButton.Size = New-Object System.Drawing.Size(90, 32)
+    $cancelButton.Anchor = 'Bottom,Right'
+    $form.Controls.Add($cancelButton)
+
+    $form.AcceptButton = $okButton
+    $form.CancelButton = $cancelButton
+    $form.Add_Shown({
+        $textBox.Focus()
+    })
+
+    $result = $form.ShowDialog()
+    $value = $textBox.Text
+    $form.Dispose()
+
+    if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
+        return $null
+    }
+
+    return $value
+}
+
 function Get-DownloadsFolder {
     $knownFolderId = '{374DE290-123F-4565-9164-39C4925E467B}'
     $registryPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
@@ -350,11 +439,23 @@ function Get-NewRepositoryDetails {
     Start-Process 'https://github.com/new' -ErrorAction SilentlyContinue
 
     while ($true) {
-        $link = Read-Host 'After creating it, paste the new GitHub repository link here'
+        $link = Show-TextPopup `
+            -Title 'Paste the new GitHub repository link' `
+            -Prompt 'After creating the empty repository in your browser, paste its full link here. Example: https://github.com/your-name/my-quiz'
+
+        if ([string]::IsNullOrWhiteSpace($link)) {
+            throw 'Repository setup was cancelled before a GitHub link was entered.'
+        }
+
         $repo = Parse-GitHubRepositoryLink -Link $link
 
         if ($null -eq $repo) {
-            Write-Warn 'That does not look like a GitHub repository link. Example: https://github.com/name/my-quiz'
+            [System.Windows.Forms.MessageBox]::Show(
+                'That does not look like a GitHub repository link.',
+                'Invalid repository link',
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            ) | Out-Null
             continue
         }
 
@@ -365,7 +466,12 @@ function Get-NewRepositoryDetails {
             -Quiet
 
         if ($check -ne 0) {
-            Write-Warn 'GitHub cannot find that repository yet. Finish creating it, then paste the link again.'
+            [System.Windows.Forms.MessageBox]::Show(
+                'GitHub cannot find that repository yet. Finish creating it in the browser, then try again.',
+                'Repository not found',
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Warning
+            ) | Out-Null
             continue
         }
 
@@ -618,22 +724,20 @@ function Ensure-FirebaseLogin {
 }
 
 function Read-FirebaseConfig {
-    Write-Host ''
-    Write-Host 'In Firebase: Project settings > General > Your apps > SDK setup and configuration > Config' -ForegroundColor White
-    Write-Host 'Paste the ENTIRE firebaseConfig block below.' -ForegroundColor White
-    Write-Host 'After the final }; line, type END on a new line and press Enter.' -ForegroundColor Yellow
-    Write-Host ''
+    $prompt = @'
+In Firebase, open:
 
-    $lines = New-Object System.Collections.Generic.List[string]
-    while ($true) {
-        $line = Read-Host
-        if ($line.Trim() -eq 'END') {
-            break
-        }
-        $lines.Add($line)
-    }
+Project settings > General > Your apps >
+SDK setup and configuration > Config
 
-    $text = $lines -join [Environment]::NewLine
+Copy the ENTIRE firebaseConfig block and paste it into the large box below.
+Then click Continue.
+'@
+
+    $text = Show-MultilinePopup `
+        -Title 'Paste Firebase configuration' `
+        -Prompt $prompt
+
     if ([string]::IsNullOrWhiteSpace($text)) {
         throw 'No Firebase configuration was pasted.'
     }
@@ -645,7 +749,7 @@ function Read-FirebaseConfig {
             [switch]$Optional
         )
 
-        $pattern = '(?im)\b' + [regex]::Escape($Name) + '\s*:\s*"([^"]*)"'
+        $pattern = '(?im)\b' + [regex]::Escape($Name) + '\s*:\s*["'']([^"'']*)["'']'
         $match = [regex]::Match($ConfigText, $pattern)
 
         if (-not $match.Success) {
@@ -790,9 +894,11 @@ function Deploy-FirestoreRules {
 
 try {
     Clear-Host
-    Write-Host 'LINEAR ALGEBRA QUIZ - CREATE NEW REPOSITORY' -ForegroundColor Magenta
-    Write-Host 'MODE: GitHub + Firebase multiplayer' -ForegroundColor Magenta
+    Write-Host 'LINEAR ALGEBRA QUIZ - ONLINE SETUP WITH FIREBASE' -ForegroundColor Magenta
+    Write-Host 'MODE: GitHub website + Firebase multiplayer (guided pop-ups)' -ForegroundColor Magenta
     Write-Host 'This script starts from a completely fresh template copy.'
+
+    Initialize-PopupSupport
 
     $downloads = Get-DownloadsFolder
     $toolsFolder = Get-ToolRoot
