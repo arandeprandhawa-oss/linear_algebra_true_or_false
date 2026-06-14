@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>French Flashcards · Multiplayer MODL-1101 Étape 4</title>
+<title>French Flashcards · Multiplayer MODL-1101 2nd midterm</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -96,9 +96,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 .flashcard{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem 1.5rem;text-align:center;margin-bottom:1rem;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:200px;justify-content:center}
 .top-badges{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
-.cat-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:var(--surface-2);color:var(--text-2)}
-
-/* ── Étape 1 / 2 / 3 category badge colours (kept for cross-étape join redirect) ── */
+.cat-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
 .cb-classroom{background:#FAEEDA;color:#633806}
 .cb-commands{background:#FAEEDA;color:#854F0B}
 .cb-people{background:#EEEDFE;color:#3C3489}
@@ -111,50 +109,6 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 .cb-useful{background:#EAF3DE;color:#27500A}
 .cb-etre{background:#FCEBEB;color:#791F1F}
 .cb-articles{background:#E6F1FB;color:#0C447C}
-.cb-family{background:#FBEAF0;color:#72243E}
-.cb-relationships{background:#EEEDFE;color:#3C3489}
-.cb-family_phrases{background:#FBEAF0;color:#72243E}
-.cb-description{background:#E6F1FB;color:#0C447C}
-.cb-cognates{background:#E6F1FB;color:#0C447C}
-.cb-personality{background:#EEEDFE;color:#3C3489}
-.cb-possessives{background:#FAEEDA;color:#633806}
-.cb-possession{background:#FAEEDA;color:#633806}
-.cb-er_verbs{background:#EAF3DE;color:#27500A}
-.cb-preference{background:#EAF3DE;color:#27500A}
-.cb-venir{background:#FCEBEB;color:#791F1F}
-.cb-countries{background:#E6F1FB;color:#0C447C}
-.cb-languages{background:#E6F1FB;color:#0C447C}
-.cb-prepositions{background:#FAEEDA;color:#633806}
-.cb-dates{background:#FAEEDA;color:#633806}
-.cb-personal_info{background:#EEEDFE;color:#3C3489}
-.cb-oral_description{background:#FBEAF0;color:#72243E}
-.cb-activities{background:#EAF3DE;color:#27500A}
-
-/* ── Étape 4 / Chapitre 2 category badge colours ── */
-.cb-weather{background:#E6F1FB;color:#0C447C}
-.cb-seasons{background:#EAF3DE;color:#27500A}
-.cb-places{background:#EEEDFE;color:#3C3489}
-.cb-faire{background:#FAEEDA;color:#854F0B}
-.cb-faire-conj{background:#FCEBEB;color:#791F1F}
-.cb-care{background:#FBEAF0;color:#72243E}
-.cb-reflexive{background:#E6F1FB;color:#185FA5}
-.cb-time{background:#FAEEDA;color:#633806}
-.cb-frequency{background:#EAF3DE;color:#27500A}
-.cb-aller{background:#FCEBEB;color:#791F1F}
-.cb-contractions{background:#EEEDFE;color:#3C3489}
-.cb-pronoun_y{background:#E6F1FB;color:#0C447C}
-.cb-futur_proche{background:#FAEEDA;color:#854F0B}
-.cb-time_future{background:#FAEEDA;color:#633806}
-.cb-routine{background:#FBEAF0;color:#72243E}
-.cb-questions{background:#E6F1FB;color:#0C447C}
-.cb-sports{background:#EAF3DE;color:#3B6D11}
-.cb-pouvoir{background:#FCEBEB;color:#791F1F}
-.cb-vouloir{background:#EEEDFE;color:#3C3489}
-.cb-savoir{background:#E6F1FB;color:#0C447C}
-.cb-degree{background:#FAEEDA;color:#633806}
-.cb-on{background:#FBEAF0;color:#72243E}
-.cb-infinitives{background:#EAF3DE;color:#27500A}
-
 .gender-badge{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;letter-spacing:0.02em}
 .gb-m{background:#185FA5;color:#fff}
 .gb-f{background:#D4537E;color:#fff}
@@ -312,26 +266,29 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
 
 <!-- Load registry and the active étape's vocab BEFORE the game module -->
 <script src="etapes/registry.js"></script>
-<script src="etapes/etape4.js"></script>
 <script>
 (function bootEtape(){
-  // This page is the Étape 4 page.
+  // This page is the Étape 2 (default) page. The other étape lives in etape1.html.
   // Map each étape id -> the file that hosts its multiplayer lobby.
-  window.CURRENT_ETAPE_ID = 'e4';
-  window.ETAPE_PAGE_MAP = { e1: 'etape1.html', e2: 'index.html', e3: 'etape3.html', e4: 'etape4.html' };
-  window.ETAPE_SOLO_MAP = { e1: 'solo1.html', e2: 'solo.html', e3: 'solo3.html', e4: 'solo4.html' };
+  window.CURRENT_ETAPE_ID = 'e2';
+  window.ETAPE_PAGE_MAP = {
+  e1: 'etape1.html',
+  e2: 'index.html',
+  e3: 'etape3.html',
+  e4: 'etape4.html'
+};
 
+window.ETAPE_SOLO_MAP = {
+  e1: 'solo1.html',
+  e2: 'solo.html',
+  e3: 'solo3.html',
+  e4: 'solo4.html'
+};
+  // Render the tab bar from the registry. Adding Étape 3 later means:
+  //   1. add an entry to registry.js
+  //   2. add 'e3' to ETAPE_PAGE_MAP and ETAPE_SOLO_MAP in each shell
+  //   3. create etape3.html and solo3.html (copies of these shells with one line changed)
   const tabsEl = document.getElementById('etape-tabs');
-
-  // Defensive: if registry.js failed to load, don't crash the whole page.
-  if(!window.ETAPES || !Array.isArray(window.ETAPES)){
-    console.error('registry.js did not load — window.ETAPES is missing. Check that etapes/registry.js is reachable.');
-    tabsEl.innerHTML = '';
-    // Page still works without tabs; leave the default title in place.
-    return;
-  }
-
-  // Render the tab bar from the registry.
   tabsEl.innerHTML = window.ETAPES.map(e => {
     const isActive = e.id === window.CURRENT_ETAPE_ID;
     const href = window.ETAPE_PAGE_MAP[e.id] || '#';
@@ -341,7 +298,7 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
     return `<a class="etape-tab" href="${href}">${e.label} <span class="e-num">${e.sublabel}</span></a>`;
   }).join('');
 
-  // Set the title from the registry.
+  // Set the title from the registry
   const me = window.ETAPES.find(e => e.id === window.CURRENT_ETAPE_ID);
   if(me){
     document.getElementById('app-title-h1').textContent = me.titleMulti;
@@ -350,10 +307,11 @@ h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,
   }
 })();
 </script>
+<script src="etapes/etape2.js"></script>
 
 
 <!-- Firebase + game logic -->
-<script src="multiplayer-config.js?v=20260614141723"></script>
+<script src="multiplayer-config.js?v=20260614033445"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
