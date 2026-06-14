@@ -5,6 +5,7 @@ This folder contains beginner-friendly Windows PowerShell tools for installing, 
 
 ## Table of contents
 
+- [Double-click launchers](#double-click-launchers)
 - [Files in this folder](#files-in-this-folder)
 - [Requirements](#requirements)
 - [Choose a setup command](#choose-a-setup-command)
@@ -24,6 +25,10 @@ This folder contains beginner-friendly Windows PowerShell tools for installing, 
   - [When no JavaScript files appear](#when-no-javascript-files-appear)
   - [Backups](#backups)
   - [Important editing note](#important-editing-note)
+- [Edit flashcards and publish to GitHub](#edit-flashcards-and-publish)
+  - [Double-click the launcher](#double-click-the-launcher)
+  - [Choose and edit a flashcard file](#choose-and-edit-a-flashcard-file)
+  - [Publish the change](#publish-the-change)
 - [Safety features](#safety-features)
 - [Troubleshooting](#troubleshooting)
   - [PowerShell says scripts are disabled](#powershell-scripts-disabled)
@@ -37,15 +42,44 @@ This folder contains beginner-friendly Windows PowerShell tools for installing, 
 
 ---
 
+
+<a id="double-click-launchers"></a>
+## Double-click launchers
+
+Every PowerShell tool now has a matching `.cmd` launcher. Beginners can double-click the `.cmd` file instead of opening PowerShell and typing a command.
+
+Keep each `.cmd` file in the same folder as its matching `.ps1` file.
+
+| Double-click this file | Runs this PowerShell file | Purpose |
+|---|---|---|
+| `Setup Launcher.cmd` | `setup.ps1` | Finds the installers and lets you choose a setup version. |
+| `Install Local Quiz.cmd` | `setup-new-repo-no-firebase.ps1` | Installs the local, no-Firebase version. |
+| `Install Firebase Quiz.cmd` | `setup-new-repo-with-firebase.ps1` | Installs the GitHub and Firebase version. |
+| `Edit Quiz JavaScript.cmd` | `edit-quiz-javascript.ps1` | Opens the visual JavaScript and HTML editor. |
+| `Edit Flashcards and Publish.cmd` | `edit-flashcards-and-publish.ps1` | Edits a flashcard file and optionally publishes it to GitHub. |
+| `Update GitHub Setup Toolkit.cmd` | `update-github-setup-scripts.ps1` | Updates the repository's setup toolkit and main README. |
+
+Windows may show a security prompt the first time a downloaded file is opened. Confirm only when the file came from this toolkit.
+
+---
+
 <a id="files-in-this-folder"></a>
 ## Files in this folder
 
 | File | Purpose |
 |---|---|
+| `Setup Launcher.cmd` | Double-click launcher for `setup.ps1`. |
 | `setup.ps1` | Optional launcher that can choose between the two installers when both are present. |
+| `Install Local Quiz.cmd` | Double-click launcher for the local installer. |
 | `setup-new-repo-no-firebase.ps1` | Installs a local, solo-only copy of the website on the computer. No GitHub or Firebase account is required. |
+| `Install Firebase Quiz.cmd` | Double-click launcher for the Firebase installer. |
 | `setup-new-repo-with-firebase.ps1` | Creates a local copy, connects it to a new GitHub repository, guides the Firebase setup, deploys Firestore rules, and prepares GitHub Pages. |
+| `Edit Quiz JavaScript.cmd` | Double-click launcher for the visual JavaScript editor. |
 | `edit-quiz-javascript.ps1` | Opens a visual editor that lets you choose a JavaScript file from a drop-down menu and open it in Notepad. |
+| `Edit Flashcards and Publish.cmd` | Double-click launcher for editing a flashcard file and publishing the saved change to GitHub. |
+| `edit-flashcards-and-publish.ps1` | Companion PowerShell program used by the double-click launcher. It prepares Git, opens Notepad, creates a backup, and asks before pushing. |
+| `Update GitHub Setup Toolkit.cmd` | Double-click launcher for the repository updater. |
+| `update-github-setup-scripts.ps1` | Updates the repository setup toolkit and the main README. |
 | `README.md` | The guide you are reading. |
 
 <a id="requirements"></a>
@@ -65,12 +99,20 @@ You do **not** need to install Python, Node.js, npm, Git, GitHub CLI, or Firebas
 <a id="choose-a-setup-command"></a>
 ## Step 3 — Choose one setup command
 
-Open PowerShell, then copy and run **one** of the following commands.
+The easiest method is to double-click the matching `.cmd` file. PowerShell commands are also provided as a fallback.
 
 <a id="local-version-no-firebase"></a>
 ### Local version — no Firebase
 
+Double-click:
+
+```text
+Install Local Quiz.cmd
+```
+
 Use this when the website should stay on the computer and does not need Firebase or online multiplayer.
+
+PowerShell fallback:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup-new-repo-no-firebase.ps1"
@@ -79,7 +121,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downlo
 <a id="online-version-with-firebase"></a>
 ### Online version — with Firebase
 
+Double-click:
+
+```text
+Install Firebase Quiz.cmd
+```
+
 Use this when the website needs GitHub, Firebase, Firestore, or multiplayer features.
+
+PowerShell fallback:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup-new-repo-with-firebase.ps1"
@@ -250,6 +300,72 @@ The backup feature can be turned off, but keeping it enabled is recommended.
 The editor changes the **local files on the computer**. It does not automatically upload those edits to GitHub.
 
 To update an online website after editing, commit and push the changed files using Git, GitHub Desktop, or GitHub's website.
+
+---
+
+
+<a id="edit-flashcards-and-publish"></a>
+## Edit flashcards and publish to GitHub
+
+Use these two files together:
+
+```text
+Edit Flashcards and Publish.cmd
+edit-flashcards-and-publish.ps1
+```
+
+The `.cmd` file is the one to double-click. It opens PowerShell and runs the companion `.ps1` file automatically.
+
+The tool is preconfigured for:
+
+```text
+https://github.com/arandeprandhawa-oss/linear_algebra_true_or_false
+```
+
+It downloads portable Git and GitHub CLI when needed, guides the GitHub browser login, downloads or reuses a local repository copy, creates a backup, opens the selected flashcard file in Notepad, and asks before committing and pushing.
+
+<a id="double-click-the-launcher"></a>
+### Double-click the launcher
+
+Keep both files in the same folder, then double-click:
+
+```text
+Edit Flashcards and Publish.cmd
+```
+
+Do not move the `.cmd` file away from its companion `.ps1` file.
+
+<a id="choose-and-edit-a-flashcard-file"></a>
+### Choose and edit a flashcard file
+
+1. Sign into GitHub in the browser when requested.
+2. Choose an HTML, JavaScript, or JSON file from the file window.
+3. In Notepad, press **Ctrl+F** to find the question you want to change.
+4. Edit the flashcard.
+5. Press **Ctrl+S** to save.
+6. Return to the PowerShell helper and click **OK**.
+
+A timestamped backup is created under:
+
+```text
+backups\flashcard-editor\<date-and-time>\
+```
+
+The backup is not staged for the GitHub commit.
+
+<a id="publish-the-change"></a>
+### Publish the change
+
+After Notepad is saved, the tool checks the selected file.
+
+- Choose **Yes** when asked to upload it.
+- Enter a short GitHub commit message, or keep the suggested message.
+- The tool stages only the selected flashcard file.
+- It pulls the newest GitHub changes safely.
+- It commits and pushes to `main`.
+- It opens the changed file on GitHub when finished.
+
+The tool never force-pushes. Choosing **No** keeps the saved edit only on the computer.
 
 ---
 
