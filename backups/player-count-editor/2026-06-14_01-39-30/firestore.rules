@@ -1,8 +1,5 @@
 rules_version = '2';
 
-// Configured default for newly created matches: 2 players.
-// The rules intentionally support every value from 2 through 6 so the
-// Change Player Count tool can switch the website without another rules redesign.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -12,6 +9,10 @@ service cloud.firestore {
         return matchId.matches('^[A-Z]{4}$');
       }
 
+      function validStatus(s) {
+        return s in ['waiting', 'playing', 'done', 'resigned'];
+      }
+
       function validEtape(e) {
         return e in ['e1', 'e2', 'e3', 'e4'];
       }
@@ -19,17 +20,10 @@ service cloud.firestore {
       function validCategory(c) {
         return c in [
           'all',
-          'determinants',
-          'eigenvalues',
-          'independence',
-          'inverses',
-          'lu',
-          'markov',
-          'matrices',
-          'span',
-          'subspaces',
-          'systems',
-          'transformations'
+          'systems', 'span', 'independence',
+          'matrices', 'inverses', 'lu',
+          'determinants', 'transformations',
+          'subspaces', 'eigenvalues', 'markov'
         ];
       }
 
@@ -85,14 +79,14 @@ service cloud.firestore {
       function validCreate() {
         return validCode()
           && request.resource.data.keys().hasOnly([
-            'createdAt', 'lastUpdate', 'status', 'etape', 'cards', 'length',
-            'category', 'requiredPlayers',
-            'p1Joined', 'p1Ready', 'p1Score', 'p1Done', 'p1Time', 'p1CurrentCard', 'p1Id',
-            'p2Joined', 'p2Ready', 'p2Score', 'p2Done', 'p2Time', 'p2CurrentCard', 'p2Id',
-            'p3Joined', 'p3Ready', 'p3Score', 'p3Done', 'p3Time', 'p3CurrentCard', 'p3Id',
-            'p4Joined', 'p4Ready', 'p4Score', 'p4Done', 'p4Time', 'p4CurrentCard', 'p4Id',
-            'p5Joined', 'p5Ready', 'p5Score', 'p5Done', 'p5Time', 'p5CurrentCard', 'p5Id',
-            'p6Joined', 'p6Ready', 'p6Score', 'p6Done', 'p6Time', 'p6CurrentCard', 'p6Id'
+            'createdAt', 'lastUpdate', 'status', 'etape', 'cards', 'length', 'category',
+            'requiredPlayers', 'p1Joined', 'p1Ready', 'p1Score', 'p1Done', 'p1Time',
+            'p1CurrentCard', 'p1Id', 'p2Joined', 'p2Ready', 'p2Score', 'p2Done', 'p2Time',
+            'p2CurrentCard', 'p2Id', 'p3Joined', 'p3Ready', 'p3Score', 'p3Done', 'p3Time',
+            'p3CurrentCard', 'p3Id', 'p4Joined', 'p4Ready', 'p4Score', 'p4Done', 'p4Time',
+            'p4CurrentCard', 'p4Id', 'p5Joined', 'p5Ready', 'p5Score', 'p5Done', 'p5Time',
+            'p5CurrentCard', 'p5Id', 'p6Joined', 'p6Ready', 'p6Score', 'p6Done', 'p6Time',
+            'p6CurrentCard', 'p6Id'
           ])
           && request.resource.data.status == 'waiting'
           && validEtape(request.resource.data.etape)
@@ -114,11 +108,8 @@ service cloud.firestore {
       function validLobbyUpdate() {
         return resource.data.status == 'waiting'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'lastUpdate', 'status', 'p1Ready',
-            'p2Joined', 'p2Ready', 'p2Id',
-            'p3Joined', 'p3Ready', 'p3Id',
-            'p4Joined', 'p4Ready', 'p4Id',
-            'p5Joined', 'p5Ready', 'p5Id',
+            'lastUpdate', 'status', 'p1Ready', 'p2Joined', 'p2Ready', 'p2Id', 'p3Joined',
+            'p3Ready', 'p3Id', 'p4Joined', 'p4Ready', 'p4Id', 'p5Joined', 'p5Ready', 'p5Id',
             'p6Joined', 'p6Ready', 'p6Id'
           ])
           && request.resource.data.status in ['waiting', 'playing']
@@ -131,13 +122,11 @@ service cloud.firestore {
       function validGameUpdate() {
         return resource.data.status == 'playing'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'lastUpdate', 'status',
-            'p1Score', 'p1Done', 'p1Time', 'p1CurrentCard',
-            'p2Score', 'p2Done', 'p2Time', 'p2CurrentCard',
-            'p3Score', 'p3Done', 'p3Time', 'p3CurrentCard',
-            'p4Score', 'p4Done', 'p4Time', 'p4CurrentCard',
-            'p5Score', 'p5Done', 'p5Time', 'p5CurrentCard',
-            'p6Score', 'p6Done', 'p6Time', 'p6CurrentCard'
+            'lastUpdate', 'status', 'p1Score', 'p1Done', 'p1Time', 'p1CurrentCard', 'p2Score',
+            'p2Done', 'p2Time', 'p2CurrentCard', 'p3Score', 'p3Done', 'p3Time',
+            'p3CurrentCard', 'p4Score', 'p4Done', 'p4Time', 'p4CurrentCard', 'p5Score',
+            'p5Done', 'p5Time', 'p5CurrentCard', 'p6Score', 'p6Done', 'p6Time',
+            'p6CurrentCard'
           ])
           && request.resource.data.status in ['playing', 'done']
           && validPlayers(request.resource.data);

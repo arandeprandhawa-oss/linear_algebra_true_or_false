@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 Adjust Timers — Linear Algebra True or False
 
@@ -11,7 +11,7 @@ SOLO pages (solo*.html) — spaced repetition:
   - Learning steps: the two short intervals (in minutes) used while a card is
     still being learned. These drive the times shown on the Again / Good buttons.
 
-1v1 pages (index.html, etape*.html) — head-to-head game:
+multiplayer pages (index.html, etape*.html) — head-to-head game:
   - Auto-advance delay: how long the answer/explanation stays on screen before
     the next card. The countdown bar and the actual delay are kept in sync.
 
@@ -64,7 +64,7 @@ function New-AppWindow {
     $form.MinimumSize = New-Object System.Drawing.Size(860, 680)
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
-    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
     $form.ShowIcon = $false
 
     $header = New-Object System.Windows.Forms.Panel
@@ -131,6 +131,49 @@ function Save-Utf8NoBom {
 # =====================================================================
 # Project detection (compact version of the editor's logic)
 # =====================================================================
+function Update-FirestoreRules {
+    param([string]$ProjectFolder)
+    $rulesPath = Join-Path $ProjectFolder 'firestore.rules'
+    if (-not (Test-Path -LiteralPath $rulesPath -PathType Leaf)) { return $false }
+    $content = [System.IO.File]::ReadAllText($rulesPath, [System.Text.Encoding]::UTF8)
+    $original = $content
+
+    $regText = [System.IO.File]::ReadAllText((Join-Path $ProjectFolder (Join-Path 'etapes' 'registry.js')), [System.Text.Encoding]::UTF8)
+    $etapeIds = @([regex]::Matches($regText, "id\s*:\s*'(e\d+)'") | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    $etapeList = ($etapeIds | ForEach-Object { "'$_'" }) -join ', '
+    $content = [regex]::Replace($content, "(function validEtape\(e\)\s*\{\s*return e in \[)[^\]]*(\])", "`${1}$etapeList`${2}")
+
+    $indexPath = Join-Path $ProjectFolder 'index.html'
+    if (Test-Path -LiteralPath $indexPath -PathType Leaf) {
+        $indexText = [System.IO.File]::ReadAllText($indexPath, [System.Text.Encoding]::UTF8)
+        $lm = [regex]::Match($indexText, "const LENGTH_OPTIONS\s*=\s*\[([^\]]+)\]")
+        if ($lm.Success) {
+            $lengths = $lm.Groups[1].Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' }
+            $lengthList = $lengths -join ', '
+            $content = [regex]::Replace($content, "(\&\& request\.resource\.data\.length in \[)[^\]]*(\])", "`${1}$lengthList`${2}")
+        }
+    }
+
+    $cats = [System.Collections.Generic.SortedSet[string]]::new()
+    [void]$cats.Add('all')
+    $jsFiles = Get-ChildItem -LiteralPath (Join-Path $ProjectFolder 'etapes') -Filter 'etape*.js' -File -ErrorAction SilentlyContinue
+    foreach ($jsFile in $jsFiles) {
+        $jsText = [System.IO.File]::ReadAllText($jsFile.FullName, [System.Text.Encoding]::UTF8)
+        foreach ($m in [regex]::Matches($jsText, 'category\s*:\s*["\x27]([^"\x27\s]+)["\x27]')) {
+            $cat = $m.Groups[1].Value.Trim()
+            if (-not [string]::IsNullOrWhiteSpace($cat)) { [void]$cats.Add($cat) }
+        }
+    }
+    $catList = ($cats | ForEach-Object { "'$_'" }) -join ",`n          "
+    $content = [regex]::Replace($content, "(?s)(function validCategory\(c\)\s*\{\s*return c in \[).*?(\]\s*;)", "`${1}`n          $catList`n        `${2}")
+
+    if ($content -ne $original) {
+        Save-Utf8NoBom -Path $rulesPath -Text $content
+        return $true
+    }
+    return $false
+}
+
 function Get-DownloadsFolder {
     try {
         $item = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name '{374DE290-123F-4565-9164-39C4925E467B}' -ErrorAction Stop
@@ -156,7 +199,7 @@ function Get-RememberedProject {
         $stateFile = Join-Path (Get-StateFolder) "last-$mode-project.txt"
         if (Test-Path -LiteralPath $stateFile -PathType Leaf) {
             try {
-                $saved = [System.IO.File]::ReadAllText($stateFile).Trim()
+                $saved = [System.IO.File]::ReadAllText($stateFile, [System.Text.Encoding]::UTF8).Trim()
                 if (Test-QuizProject -Path $saved) { return $saved }
             }
             catch { }
@@ -268,19 +311,26 @@ function Read-CurrentTimers {
     $stepAgain = 1
     $stepGood = 10
     $gameDelayMs = 2000
+    $easyMs = 9000
+    $goodMs = 14000
 
     $soloPages = @(Get-SoloPages -P $ProjectFolder)
     if ($soloPages.Count -gt 0) {
-        $t = [System.IO.File]::ReadAllText($soloPages[0].FullName)
+        $t = [System.IO.File]::ReadAllText($soloPages[0].FullName, [System.Text.Encoding]::UTF8)
         $m = [regex]::Match($t, "const\s+autoDelay\s*=\s*(\d+)")
         if ($m.Success) { $soloDelayMs = [int]$m.Groups[1].Value }
         $sm = [regex]::Match($t, "steps\s*:\s*\[\s*(\d+)\s*,\s*(\d+)\s*\]")
         if ($sm.Success) { $stepAgain = [int]$sm.Groups[1].Value; $stepGood = [int]$sm.Groups[2].Value }
+        # autoRate() speed thresholds: faster-than-Easy -> Easy(3), faster-than-Good -> Good(2)
+        $em = [regex]::Match($t, "if\s*\(\s*elapsed\s*<\s*(\d+)\s*\)\s*return\s*3\s*;")
+        if ($em.Success) { $easyMs = [int]$em.Groups[1].Value }
+        $gm2 = [regex]::Match($t, "if\s*\(\s*elapsed\s*<\s*(\d+)\s*\)\s*return\s*2\s*;")
+        if ($gm2.Success) { $goodMs = [int]$gm2.Groups[1].Value }
     }
 
     $gamePages = @(Get-GamePages -P $ProjectFolder)
     if ($gamePages.Count -gt 0) {
-        $t = [System.IO.File]::ReadAllText($gamePages[0].FullName)
+        $t = [System.IO.File]::ReadAllText($gamePages[0].FullName, [System.Text.Encoding]::UTF8)
         $gm = [regex]::Match($t, "setTimeout\(\(\)=>\{autoTimer=null;nextCard\(\);\}\s*,\s*(\d+)\)")
         if ($gm.Success) { $gameDelayMs = [int]$gm.Groups[1].Value }
     }
@@ -290,6 +340,8 @@ function Read-CurrentTimers {
         StepAgain = $stepAgain
         StepGood = $stepGood
         GameDelayMs = $gameDelayMs
+        EasyMs = $easyMs
+        GoodMs = $goodMs
         SoloCount = $soloPages.Count
         GameCount = $gamePages.Count
     }
@@ -303,18 +355,21 @@ function Backup-File {
 }
 
 function Set-SoloTimers {
-    param([string]$FilePath, [int]$DelayMs, [int]$StepAgain, [int]$StepGood)
-    $c = [System.IO.File]::ReadAllText($FilePath)
+    param([string]$FilePath, [int]$DelayMs, [int]$StepAgain, [int]$StepGood, [int]$EasyMs, [int]$GoodMs)
+    $c = [System.IO.File]::ReadAllText($FilePath, [System.Text.Encoding]::UTF8)
     $o = $c
     $c = [regex]::Replace($c, "(const\s+autoDelay\s*=\s*)\d+", "`${1}$DelayMs")
     $c = [regex]::Replace($c, "(steps\s*:\s*\[\s*)\d+(\s*,\s*)\d+(\s*\])", "`${1}$StepAgain`${2}$StepGood`${3}")
+    # autoRate() speed thresholds — Easy(3) is the faster cutoff, Good(2) the slower one
+    $c = [regex]::Replace($c, "(if\s*\(\s*elapsed\s*<\s*)\d+(\s*\)\s*return\s*3\s*;)", "`${1}$EasyMs`${2}")
+    $c = [regex]::Replace($c, "(if\s*\(\s*elapsed\s*<\s*)\d+(\s*\)\s*return\s*2\s*;)", "`${1}$GoodMs`${2}")
     if ($c -ne $o) { Save-Utf8NoBom -Path $FilePath -Text $c; return $true }
     return $false
 }
 
 function Set-GameTimer {
     param([string]$FilePath, [int]$DelayMs)
-    $c = [System.IO.File]::ReadAllText($FilePath)
+    $c = [System.IO.File]::ReadAllText($FilePath, [System.Text.Encoding]::UTF8)
     $o = $c
     $seconds = [math]::Round($DelayMs / 1000.0, 2)
     $secondsText = ($seconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)).TrimEnd('0').TrimEnd('.')
@@ -405,15 +460,15 @@ try {
 
     Write-Step 'STEP 2 OF 3 - Reading current timers'
     $cur = Read-CurrentTimers -ProjectFolder $projectFolder
-    Write-Ok ("Solo delay {0:n1}s | learning steps {1}/{2} min | 1v1 delay {3:n1}s" -f ($cur.SoloDelayMs/1000.0), $cur.StepAgain, $cur.StepGood, ($cur.GameDelayMs/1000.0))
+    Write-Ok ("Solo delay {0:n1}s | learning steps {1}/{2} min | auto-select Easy<{3:n1}s / Good<{4:n1}s | multiplayer delay {5:n1}s" -f ($cur.SoloDelayMs/1000.0), $cur.StepAgain, $cur.StepGood, ($cur.EasyMs/1000.0), ($cur.GoodMs/1000.0), ($cur.GameDelayMs/1000.0))
 
     if ($cur.SoloCount -eq 0 -and $cur.GameCount -eq 0) {
         throw 'No solo or game pages were found in the project.'
     }
 
     # ---------- Build the window ----------
-    $subtitle = "Type the values you want, then apply. Solo pages: $($cur.SoloCount)   1v1 pages: $($cur.GameCount)."
-    $ui = New-AppWindow -Title 'Adjust timers' -Subtitle $subtitle
+    $subtitle = "Type the values you want, then apply. Solo pages: $($cur.SoloCount)   multiplayer pages: $($cur.GameCount)."
+    $ui = New-AppWindow -Title 'Adjust timers' -Subtitle $subtitle -Height 940
     $form = $ui.Form
 
     $panel = New-Object System.Windows.Forms.Panel
@@ -432,6 +487,18 @@ try {
         -Value (("{0:n1}" -f ($cur.SoloDelayMs/1000.0)) -replace '\.0$','') `
         -Suffix 'seconds'
 
+    $easyBox = Add-NumberField -Panel $panel -Y $yref `
+        -Title 'Auto-select speed — Easy cutoff' `
+        -Hint 'In Solo, the rating is chosen from how fast you answered. Answer a correct card faster than this and it is auto-rated Easy.' `
+        -Value ((("{0:n1}" -f ($cur.EasyMs/1000.0)) -replace '\.0$','')) `
+        -Suffix 'seconds'
+
+    $goodCutoffBox = Add-NumberField -Panel $panel -Y $yref `
+        -Title 'Auto-select speed — Good cutoff' `
+        -Hint 'A correct answer slower than the Easy cutoff but faster than this is auto-rated Good. Anything slower is auto-rated Hard. (Must be larger than the Easy cutoff.)' `
+        -Value ((("{0:n1}" -f ($cur.GoodMs/1000.0)) -replace '\.0$','')) `
+        -Suffix 'seconds'
+
     $againBox = Add-NumberField -Panel $panel -Y $yref `
         -Title 'Learning step 1 — the "Again" interval' `
         -Hint 'When a card in the learning phase is rated Again, it comes back after this many minutes. This is the time shown on the Again button.' `
@@ -445,7 +512,7 @@ try {
         -Suffix 'minutes'
 
     $gameDelayBox = Add-NumberField -Panel $panel -Y $yref `
-        -Title 'Auto-advance delay — 1v1 game' `
+        -Title 'Auto-advance delay — multiplayer game' `
         -Hint 'On the head-to-head pages, how long the answer and explanation stay on screen before the next card. The countdown bar matches this automatically.' `
         -Value (("{0:n1}" -f ($cur.GameDelayMs/1000.0)) -replace '\.0$','') `
         -Suffix 'seconds'
@@ -466,6 +533,8 @@ try {
     $result = $form.ShowDialog()
 
     $soloDelayText = $soloDelayBox.Text
+    $easyText = $easyBox.Text
+    $goodCutoffText = $goodCutoffBox.Text
     $againText = $againBox.Text
     $goodText = $goodBox.Text
     $gameDelayText = $gameDelayBox.Text
@@ -482,21 +551,26 @@ try {
     $gameDelayMs = [int]([math]::Round((Parse-PositiveNumber -Text $gameDelayText -Fallback ($cur.GameDelayMs/1000.0)) * 1000))
     $stepAgain = [int][math]::Round((Parse-PositiveNumber -Text $againText -Fallback $cur.StepAgain))
     $stepGood = [int][math]::Round((Parse-PositiveNumber -Text $goodText -Fallback $cur.StepGood))
+    $easyMs = [int]([math]::Round((Parse-PositiveNumber -Text $easyText -Fallback ($cur.EasyMs/1000.0)) * 1000))
+    $goodMs = [int]([math]::Round((Parse-PositiveNumber -Text $goodCutoffText -Fallback ($cur.GoodMs/1000.0)) * 1000))
 
     if ($soloDelayMs -lt 200) { $soloDelayMs = 200 }
     if ($gameDelayMs -lt 200) { $gameDelayMs = 200 }
     if ($stepAgain -lt 1) { $stepAgain = 1 }
     if ($stepGood -lt 1) { $stepGood = 1 }
+    if ($easyMs -lt 500) { $easyMs = 500 }
+    # The Good cutoff must be strictly slower than the Easy cutoff, or the Good band vanishes.
+    if ($goodMs -le $easyMs) { $goodMs = $easyMs + 1000 }
 
     Write-Step 'STEP 3 OF 3 - Applying changes'
-    Write-Info ("Solo delay -> {0:n1}s | steps -> {1}/{2} min | 1v1 delay -> {3:n1}s" -f ($soloDelayMs/1000.0), $stepAgain, $stepGood, ($gameDelayMs/1000.0))
+    Write-Info ("Solo delay -> {0:n1}s | steps -> {1}/{2} min | auto-select Easy<{3:n1}s / Good<{4:n1}s | multiplayer delay -> {5:n1}s" -f ($soloDelayMs/1000.0), $stepAgain, $stepGood, ($easyMs/1000.0), ($goodMs/1000.0), ($gameDelayMs/1000.0))
 
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $changed = 0
 
     foreach ($page in (Get-SoloPages -P $projectFolder)) {
         Backup-File -ProjectFolder $projectFolder -FilePath $page.FullName -Stamp $stamp
-        if (Set-SoloTimers -FilePath $page.FullName -DelayMs $soloDelayMs -StepAgain $stepAgain -StepGood $stepGood) {
+        if (Set-SoloTimers -FilePath $page.FullName -DelayMs $soloDelayMs -StepAgain $stepAgain -StepGood $stepGood -EasyMs $easyMs -GoodMs $goodMs) {
             $changed++; Write-Host "  Updated solo: $($page.Name)" -ForegroundColor DarkCyan
         }
     }
@@ -504,15 +578,22 @@ try {
     foreach ($page in (Get-GamePages -P $projectFolder)) {
         Backup-File -ProjectFolder $projectFolder -FilePath $page.FullName -Stamp $stamp
         if (Set-GameTimer -FilePath $page.FullName -DelayMs $gameDelayMs) {
-            $changed++; Write-Host "  Updated 1v1: $($page.Name)" -ForegroundColor DarkCyan
+            $changed++; Write-Host "  Updated multiplayer: $($page.Name)" -ForegroundColor DarkCyan
         }
     }
 
     Write-Ok "Applied to $changed page(s). Backups in backups\timing-editor\$stamp."
 
+    # Keep firestore.rules in sync — the length list may have changed
+    $rulesUpdated = Update-FirestoreRules -ProjectFolder $projectFolder
+    if ($rulesUpdated) {
+        Write-Ok 'firestore.rules was updated to match the new match lengths.'
+        Write-Info 'Run "Deploy Firestore Rules" to push the updated rules to Firebase.'
+    }
+
     Write-Host ''
     Write-Host 'DONE' -ForegroundColor Green
-    Show-AppMessage -Title 'Timers updated' -Message "Updated $changed page(s).`r`n`r`nSolo auto-advance: $('{0:n1}' -f ($soloDelayMs/1000.0)) s`r`nLearning steps: $stepAgain min / $stepGood min`r`n1v1 auto-advance: $('{0:n1}' -f ($gameDelayMs/1000.0)) s`r`n`r`nA backup of each page was saved. Refresh the website to see the changes, then push with 'Update Entire Project to GitHub'." -Type 'Success'
+    Show-AppMessage -Title 'Timers updated' -Message "Updated $changed page(s).`r`n`r`nSolo auto-advance: $('{0:n1}' -f ($soloDelayMs/1000.0)) s`r`nAuto-select: Easy if under $('{0:n1}' -f ($easyMs/1000.0)) s, Good if under $('{0:n1}' -f ($goodMs/1000.0)) s, otherwise Hard`r`nLearning steps: $stepAgain min / $stepGood min`r`nmultiplayer auto-advance: $('{0:n1}' -f ($gameDelayMs/1000.0)) s`r`n`r`nA backup of each page was saved.$(if($rulesUpdated){"`r`n`r`nfirestore.rules was also updated with the new match lengths — run 'Deploy Firestore Rules' to push changes to Firebase."})`r`n`r`nRefresh the website to see the changes, then push with 'Update Entire Project to GitHub'." -Type 'Success'
 }
 catch {
     Write-Host ''

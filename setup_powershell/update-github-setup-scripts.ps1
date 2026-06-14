@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 Updates the complete Linear Algebra quiz toolkit in GitHub.
 
@@ -42,7 +42,11 @@ $ToolkitFiles = @(
     'add-new-unit.ps1',
     'Add New Unit.cmd',
     'adjust-timing-and-length.ps1',
-    'Adjust Timing and Length.cmd'
+    'Adjust Timing and Length.cmd',
+    'change-player-count.ps1',
+    'Change Player Count.cmd',
+    'deploy-firestore-rules.ps1',
+    'Deploy Firestore Rules.cmd'
 )
 
 function Write-Step {

@@ -1,6 +1,6 @@
 # Linear Algebra: True or False
 
-A web-based flashcard quiz for **MATH 2210 Applied Linear Algebra**. Practise the true/false concept checks for each unit, either **solo** (with spaced repetition) or **head-to-head 1v1** against a friend using a shared match code.
+A web-based flashcard quiz for **MATH 2210 Applied Linear Algebra**. Practise the true/false concept checks for each unit, either **solo** (with spaced repetition) or in a configurable **2-to-6-player multiplayer race** using a shared match code.
 
 **Live website:** <https://arandeprandhawa-oss.github.io/linear_algebra_true_or_false/>
 
@@ -16,9 +16,10 @@ A web-based flashcard quiz for **MATH 2210 Applied Linear Algebra**. Practise th
 - [Tutorial 3 — Edit the quiz questions](#tutorial-3-edit-questions)
 - [Tutorial 4 — Edit the flashcard data](#tutorial-4-edit-flashcards)
 - [Tutorial 5 — Add a new unit](#tutorial-5-add-unit)
-- [Tutorial 6 — Adjust the timers](#tutorial-6-timing)
-- [Tutorial 7 — Push your changes to GitHub](#tutorial-7-push)
-- [Tutorial 8 — Update the toolkit itself](#tutorial-8-update-toolkit)
+- [Tutorial 6 — Choose 2–6 multiplayer players](#tutorial-6-player-count)
+- [Tutorial 7 — Adjust the timers](#tutorial-7-timing)
+- [Tutorial 8 — Push your changes to GitHub](#tutorial-8-push)
+- [Tutorial 9 — Update the toolkit itself](#tutorial-9-update-toolkit)
 - [Project file layout](#project-file-layout)
 - [Safety features](#safety-features)
 - [Troubleshooting](#troubleshooting)
@@ -33,7 +34,7 @@ This repository holds two things:
 1. **The website** — plain HTML/CSS/JavaScript flashcard pages. No build step, no framework. Open `index.html` in a browser and it works.
 2. **A setup toolkit** — a folder of friendly double-click tools (in `setup_powershell/`) for installing, editing, and publishing the site on Windows. You never have to type a single command.
 
-The online version uses **Firebase / Firestore** for the 1v1 multiplayer matches. The local version strips that out and runs entirely offline as solo-only.
+The online version uses **Firebase / Firestore** for configurable 2-to-6-player multiplayer matches. The local version strips that out and runs entirely offline as solo-only.
 
 ---
 
@@ -51,12 +52,12 @@ The quiz is split into four **units**, matching the course:
 
 Each unit has two pages:
 
-- A **1v1 lobby** page (`index.html`, `etape1.html`, `etape3.html`, `etape4.html`) — create or join a match, or jump to solo.
+- A **multiplayer lobby** page (`index.html`, `etape1.html`, `etape3.html`, `etape4.html`) — create or join a match, or jump to solo.
 - A **solo** page (`solo.html`, `solo1.html`, `solo3.html`, `solo4.html`) — practise on your own with spaced repetition.
 
 A tab bar at the top of every page lets you switch units. The question/answer content for each unit lives in `etapes/etape1.js` … `etape4.js`, and the unit list itself is defined in `etapes/registry.js`.
 
-> **Page-to-unit mapping (worth knowing):** `index.html` = Unit 2's 1v1 page, `solo.html` = Unit 2's solo page. `solo1.html` = Unit 1, `solo3.html` = Unit 3, `solo4.html` = Unit 4. The `1` / `3` / `4` in the filename is the unit number; the unnumbered files are Unit 2.
+> **Page-to-unit mapping (worth knowing):** `index.html` = Unit 2's multiplayer page, `solo.html` = Unit 2's solo page. `solo1.html` = Unit 1, `solo3.html` = Unit 3, `solo4.html` = Unit 4. The `1` / `3` / `4` in the filename is the unit number; the unnumbered files are Unit 2.
 
 ---
 
@@ -73,6 +74,7 @@ Everything lives in the **`setup_powershell`** folder. Each tool is a `.cmd` fil
 | **Edit Quiz JavaScript** | Visual editor to open and edit the quiz logic / question files. |
 | **Edit Flashcards** | Visual editor for the flashcard vocabulary data. |
 | **Add New Unit** | Creates a brand-new unit and wires it into the registry, pages, and tabs automatically. |
+| **Change Player Count** | Opens a visual editor to choose 2, 3, 4, 5, or 6 players and updates the site configuration and Firestore rules. |
 | **Adjust Timing and Length** | Type in the auto-advance delays and learning-step times; applies to all pages. |
 | **Update Entire Project to GitHub** | Commits **every** change in the project and pushes it to GitHub. |
 | **Update GitHub Setup Toolkit** | Pushes only the `setup_powershell` toolkit files to GitHub. |
@@ -101,7 +103,7 @@ Use this when you just want the quiz on your own machine, offline, solo-only.
 <a id="tutorial-2-online"></a>
 ## Tutorial 2 — Create your own online copy (GitHub + Firebase)
 
-Use this to publish the full site, with working 1v1 multiplayer, on the web.
+Use this to publish the full site, with working 2-to-6-player multiplayer, on the web.
 
 1. Double-click **Install Firebase Quiz** in `setup_powershell`.
 2. **GitHub step** — when the browser opens:
@@ -160,14 +162,32 @@ This builds a whole new unit and connects it everywhere for you — no hand-edit
    - Optionally, pick an existing unit to **copy its questions** as a starting point.
 3. Click **Create unit**.
 
-It creates the unit's data file (`etapes/etapeN.js`), adds it to `registry.js`, creates the solo page (and the 1v1 page too, if you're on the online layout), and refreshes the unit tabs and navigation on every page. Then use **Edit Quiz JavaScript** to fill in the real questions.
+It creates the unit's data file (`etapes/etapeN.js`), adds it to `registry.js`, creates the solo page (and the multiplayer page too, if you're on the online layout), and refreshes the unit tabs and navigation on every page. Then use **Edit Quiz JavaScript** to fill in the real questions.
 
-> It detects your layout automatically: a local (solo-only) install gets just a solo page; an online install gets both the 1v1 and solo pages.
+> It detects your layout automatically: a local (solo-only) install gets just a solo page; an online install gets both the multiplayer and solo pages.
 
 ---
 
-<a id="tutorial-6-timing"></a>
-## Tutorial 6 — Adjust the timers
+<a id="tutorial-6-player-count"></a>
+## Tutorial 6 — Choose 2–6 multiplayer players
+
+Use the new visual tool to change the number of players for every multiplayer unit at once.
+
+1. Open `setup_powershell`.
+2. Double-click **Change Player Count**.
+3. The project folder is detected automatically. If needed, use **Choose a different folder**.
+4. Choose **2, 3, 4, 5, or 6 players** from the drop-down.
+5. Leave **Create timestamped backups** checked, then click **Apply player count**.
+6. Double-click **Deploy Firestore Rules**, followed by **Update Entire Project to GitHub**.
+
+The tool updates `multiplayer-config.js`, verifies every multiplayer page loads it, and rebuilds `firestore.rules` for Player 1 through Player 6. In the waiting room, each joined player gets their own ready state, such as **Player 1 is ready** and **Player 3 joined — not ready**. The match begins only when every required player has joined and pressed **I am ready**.
+
+> Existing match codes keep the player count that was stored when each match was created. Create a new match after changing the setting.
+
+---
+
+<a id="tutorial-7-timing"></a>
+## Tutorial 7 — Adjust the timers
 
 This tool lets you **type** the timing values for the quiz. The project is detected automatically.
 
@@ -176,17 +196,17 @@ This tool lets you **type** the timing values for the quiz. The project is detec
    - **Auto-advance delay — Solo practice**: after you answer, how long the Again / Hard / Good / Easy panel stays before the card auto-advances with the suggested rating (seconds).
    - **Learning step 1 — the "Again" interval**: when a learning card is rated Again, how soon it returns (minutes). This is the time shown on the Again button.
    - **Learning step 2 — the "Good" interval**: the next learning step before a card graduates (minutes). This is the time shown on the Good button.
-   - **Auto-advance delay — 1v1 game**: on the head-to-head pages, how long the answer/explanation stays before the next card (seconds). The countdown bar stays in sync automatically.
+   - **Auto-advance delay — multiplayer game**: on the head-to-head pages, how long the answer/explanation stays before the next card (seconds). The countdown bar stays in sync automatically.
 3. Click **Apply to all pages**.
 
-It writes the solo values to every `solo*.html` page and the 1v1 value to every game page, saving a backup of each under `backups\timing-editor` first. Refresh the site to see the effect.
+It writes the solo values to every `solo*.html` page and the multiplayer value to every game page, saving a backup of each under `backups\timing-editor` first. Refresh the site to see the effect.
 
-> A local (solo-only) install has the solo timing controls; an online install has both the solo and the 1v1 controls. The tool fills the boxes with the current values so you can see what they are before changing them.
+> A local (solo-only) install has the solo timing controls; an online install has both the solo and the multiplayer controls. The tool fills the boxes with the current values so you can see what they are before changing them.
 
 ---
 
-<a id="tutorial-7-push"></a>
-## Tutorial 7 — Push your changes to GitHub
+<a id="tutorial-8-push"></a>
+## Tutorial 8 — Push your changes to GitHub
 
 After editing anything locally, the changes are only on your computer until you push them.
 
@@ -200,15 +220,15 @@ That single action publishes everything — edited questions, flashcards, new un
 
 ---
 
-<a id="tutorial-8-update-toolkit"></a>
-## Tutorial 8 — Update the toolkit itself
+<a id="tutorial-9-update-toolkit"></a>
+## Tutorial 9 — Update the toolkit itself
 
 If you only changed files inside `setup_powershell` and want to publish just those:
 
 1. Double-click **Update GitHub Setup Toolkit**.
 2. It stages, commits, and pushes only the toolkit folder to `main`.
 
-For most cases, **Update Entire Project to GitHub** (Tutorial 7) already covers this too.
+For most cases, **Update Entire Project to GitHub** (Tutorial 8) already covers this too.
 
 ---
 
@@ -217,15 +237,16 @@ For most cases, **Update Entire Project to GitHub** (Tutorial 7) already covers 
 
 ```
 linear_algebra_true_or_false/
-├── index.html              1v1 lobby — Unit 2 (and the site entry point)
-├── etape1.html             1v1 lobby — Unit 1
-├── etape3.html             1v1 lobby — Unit 3
-├── etape4.html             1v1 lobby — Unit 4
+├── index.html              Multiplayer lobby — Unit 2 (site entry point)
+├── etape1.html             Multiplayer lobby — Unit 1
+├── etape3.html             Multiplayer lobby — Unit 3
+├── etape4.html             Multiplayer lobby — Unit 4
 ├── solo.html               Solo practice — Unit 2
 ├── solo1.html              Solo practice — Unit 1
 ├── solo3.html              Solo practice — Unit 3
 ├── solo4.html              Solo practice — Unit 4
 ├── script-simulations.html Interactive terminal simulator
+├── multiplayer-config.js  Shared 2–6 player setting
 ├── firestore.rules         Firestore security rules (online version)
 ├── etapes/
 │   ├── registry.js         The list of units

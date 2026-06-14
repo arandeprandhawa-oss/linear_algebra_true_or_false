@@ -25,6 +25,7 @@ This folder contains beginner-friendly Windows PowerShell tools for installing, 
   - [When no JavaScript files appear](#when-no-javascript-files-appear)
   - [Backups](#backups)
   - [Important editing note](#important-editing-note)
+- [Change the multiplayer player count](#change-player-count)
 - [Edit flashcards and publish to GitHub](#edit-flashcards-and-publish)
   - [Double-click the launcher](#double-click-the-launcher)
   - [Choose and edit a flashcard file](#choose-and-edit-a-flashcard-file)
@@ -56,6 +57,7 @@ Keep each `.cmd` file in the same folder as its matching `.ps1` file.
 | `Install Local Quiz.cmd` | `setup-new-repo-no-firebase.ps1` | Installs the local, no-Firebase version. |
 | `Install Firebase Quiz.cmd` | `setup-new-repo-with-firebase.ps1` | Installs the GitHub and Firebase version. |
 | `Edit Quiz JavaScript.cmd` | `edit-quiz-javascript.ps1` | Opens the visual JavaScript and HTML editor. |
+| `Change Player Count.cmd` | `change-player-count.ps1` | Opens a visual editor for choosing 2–6 multiplayer players and updates configuration plus Firestore rules. |
 | `Edit Flashcards and Publish.cmd` | `edit-flashcards-and-publish.ps1` | Edits a flashcard file and optionally publishes it to GitHub. |
 | `Update GitHub Setup Toolkit.cmd` | `update-github-setup-scripts.ps1` | Updates the repository's setup toolkit and main README. |
 
@@ -75,6 +77,8 @@ Windows may show a security prompt the first time a downloaded file is opened. C
 | `Install Firebase Quiz.cmd` | Double-click launcher for the Firebase installer. |
 | `setup-new-repo-with-firebase.ps1` | Creates a local copy, connects it to a new GitHub repository, guides the Firebase setup, deploys Firestore rules, and prepares GitHub Pages. |
 | `Edit Quiz JavaScript.cmd` | Double-click launcher for the visual JavaScript editor. |
+| `Change Player Count.cmd` | Double-click launcher for the 2–6 player configuration editor. |
+| `change-player-count.ps1` | Visual tool that updates `multiplayer-config.js`, checks every multiplayer page, and rebuilds `firestore.rules`. |
 | `edit-quiz-javascript.ps1` | Opens a visual editor that lets you choose a JavaScript file from a drop-down menu and open it in Notepad. |
 | `Edit Flashcards and Publish.cmd` | Double-click launcher for editing a flashcard file and publishing the saved change to GitHub. |
 | `edit-flashcards-and-publish.ps1` | Companion PowerShell program used by the double-click launcher. It prepares Git, opens Notepad, creates a backup, and asks before pushing. |
@@ -236,6 +240,19 @@ In Firebase Console:
 8. Click **Use this config**.
 
 Paste only the normal Firebase web configuration. Never paste a service-account private key into the website or upload one to GitHub.
+
+---
+
+<a id="change-player-count"></a>
+## Change the multiplayer player count
+
+1. Double-click `Change Player Count.cmd`.
+2. Confirm the automatically detected project folder.
+3. Choose 2, 3, 4, 5, or 6 players.
+4. Click **Apply player count**.
+5. Run `Deploy Firestore Rules.cmd`, then `Update Entire Project to GitHub.cmd`.
+
+The command saves backups, writes the shared `multiplayer-config.js` setting, verifies the multiplayer pages, and regenerates rules for Player 1 through Player 6. Every required player must join and press **I am ready** before the match starts.
 
 ---
 

@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 Beginner-friendly editor for the Linear Algebra True/False website.
 
@@ -164,7 +164,7 @@ function Get-RememberedProject {
     }
 
     try {
-        $savedPath = [System.IO.File]::ReadAllText($stateFile).Trim()
+        $savedPath = [System.IO.File]::ReadAllText($stateFile, [System.Text.Encoding]::UTF8).Trim()
 
         if (Test-QuizProject -Path $savedPath) {
             return $savedPath
@@ -685,7 +685,7 @@ function Start-JavaScriptEditor {
     $form.MinimumSize = New-Object System.Drawing.Size(900, 650)
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
-    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
     $form.AllowDrop = $true
     $form.ShowIcon = $false
 

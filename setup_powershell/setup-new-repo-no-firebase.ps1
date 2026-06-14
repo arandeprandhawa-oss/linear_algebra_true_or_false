@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 LOCAL-ONLY installer for the Linear Algebra True/False website.
 
@@ -98,7 +98,7 @@ function New-SetupWindow {
     $form.MinimumSize = New-Object System.Drawing.Size([Math]::Min($Width, 660), [Math]::Min($Height, 390))
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
-    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
     $form.TopMost = $true
     $form.ShowIcon = $false
     $form.MaximizeBox = $Resizable.IsPresent
@@ -460,7 +460,7 @@ function Backup-ExistingFolder {
 function Remove-AudioFromHtml {
     param([string]$Path)
 
-    $content = [System.IO.File]::ReadAllText($Path)
+    $content = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
     $original = $content
 
     $audioScriptPattern = @'
@@ -474,7 +474,7 @@ function Remove-AudioFromHtml {
     $content = [regex]::Replace($content, $audioButtonPattern.Trim(), '')
 
     $content = $content.Replace(
-        'Audio pronunciation added! Hear every card read aloud in Solo and 1v1 modes.',
+        'Audio pronunciation added! Hear every card read aloud in Solo and multiplayer modes.',
         ''
     )
 
@@ -543,7 +543,7 @@ function Repair-SoloLinks {
     # In every solo page, repoint the lobby map so each étape's "lobby"
     # target is its own solo page (the multiplayer shells are deleted in a
     # local install), and relabel the back-link so it no longer says
-    # "Back to 1v1 lobby" or points at a missing file.
+    # "Back to multiplayer lobby" or points at a missing file.
     # index.html is now a redirect to the Unit 1 solo page, so every
     # étape's "lobby"/home target is simply index.html.
     $lobbyMapReplacement = @"
@@ -558,7 +558,7 @@ window.ETAPE_LOBBY_MAP = {
 
     $patched = 0
     foreach ($soloFile in $soloFiles) {
-        $content = [System.IO.File]::ReadAllText($soloFile.FullName)
+        $content = [System.IO.File]::ReadAllText($soloFile.FullName, [System.Text.Encoding]::UTF8)
         $original = $content
 
         # Rewrite the body of window.ETAPE_LOBBY_MAP = { ... up to (but not
@@ -572,7 +572,7 @@ window.ETAPE_LOBBY_MAP = {
 
         # Relabel + retarget the back-link. The anchor keeps href="index.html"
         # (now a redirect to the Unit 1 solo page) but the text becomes a
-        # neutral "Home" instead of "Back to 1v1 lobby".
+        # neutral "Home" instead of "Back to multiplayer lobby".
         $content = [regex]::Replace(
             $content,
             '(?is)(<a\b[^>]*\bid\s*=\s*"back-link"[^>]*>).*?(</a>)',
@@ -597,6 +597,7 @@ function Convert-ToSoloOnly {
         'etape3.html',
         'etape4.html',
         'firestore.rules',
+        'multiplayer-config.js',
         'firebase.json',
         '.firebaserc'
     )
@@ -646,7 +647,7 @@ function Convert-ToSoloOnly {
     # Fix the solo pages so navigation never points at a deleted
     # multiplayer file. Each solo page hard-codes an ETAPE_LOBBY_MAP that
     # references index.html / etape1.html / etape3.html / etape4.html and
-    # a back-link labelled "Back to 1v1 lobby". Locally those targets are
+    # a back-link labelled "Back to multiplayer lobby". Locally those targets are
     # gone, so we repoint every lobby target to the matching solo page and
     # relabel the back-link to a neutral "Home".
     # ------------------------------------------------------------------
@@ -667,7 +668,7 @@ This copy is installed locally on the computer.
 '@
 
     if (Test-Path -LiteralPath $readmePath) {
-        $existing = [System.IO.File]::ReadAllText($readmePath)
+        $existing = [System.IO.File]::ReadAllText($readmePath, [System.Text.Encoding]::UTF8)
         Save-Utf8NoBom -Path $readmePath -Text ($notice + "`r`n---`r`n`r`n" + $existing)
     }
     else {

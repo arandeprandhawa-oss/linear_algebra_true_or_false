@@ -1,18 +1,18 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 Add New Unit — Linear Algebra True or False
 
 Adds a brand-new unit (étape) to the quiz and wires it into everything:
 - Creates etapes/etapeN.js from a starter template (or an empty shell).
 - Registers the unit in etapes/registry.js.
-- Creates the 1v1 page (etapeN.html) by cloning an existing 1v1 page, and/or
+- Creates the multiplayer page (etapeN.html) by cloning an existing multiplayer page, and/or
   the solo page (soloN.html) by cloning an existing solo page.
 - Rebuilds the ETAPE_PAGE_MAP / ETAPE_SOLO_MAP / ETAPE_LOBBY_MAP blocks in
   EVERY page from the registry, so navigation stays consistent.
 
 Works for both layouts automatically:
 - LOCAL (solo-only) install: only solo pages exist, so only a solo page is made.
-- ONLINE (full) install: both the 1v1 page and the solo page are made.
+- ONLINE (full) install: both the multiplayer page and the solo page are made.
 
 The project folder is detected automatically (same logic as the editors).
 #>
@@ -72,7 +72,7 @@ function New-AppWindow {
     $form.MinimumSize = New-Object System.Drawing.Size(860, 640)
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
-    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
     $form.ShowIcon = $false
 
     $header = New-Object System.Windows.Forms.Panel
@@ -153,6 +153,57 @@ function Save-Utf8NoBom {
 # =====================================================================
 # Project detection (compact version of the editor's logic)
 # =====================================================================
+function Update-FirestoreRules {
+    # Auto-patches firestore.rules so validEtape, length choices, and
+    # validCategory always match the current registry and page settings.
+    # Returns $true if the file was changed, $false if unchanged or absent.
+    param([string]$ProjectFolder)
+
+    $rulesPath = Join-Path $ProjectFolder 'firestore.rules'
+    if (-not (Test-Path -LiteralPath $rulesPath -PathType Leaf)) { return $false }
+
+    $content = [System.IO.File]::ReadAllText($rulesPath, [System.Text.Encoding]::UTF8)
+    $original = $content
+
+    # 1. validEtape — from registry.js
+    $regText = [System.IO.File]::ReadAllText((Join-Path $ProjectFolder (Join-Path 'etapes' 'registry.js')), [System.Text.Encoding]::UTF8)
+    $etapeIds = @([regex]::Matches($regText, "id\s*:\s*'(e\d+)'") | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    $etapeList = ($etapeIds | ForEach-Object { "'$_'" }) -join ', '
+    $content = [regex]::Replace($content, "(function validEtape\(e\)\s*\{\s*return e in \[)[^\]]*(\])", "`${1}$etapeList`${2}")
+
+    # 2. length in [...] — from index.html LENGTH_OPTIONS
+    $indexPath = Join-Path $ProjectFolder 'index.html'
+    if (Test-Path -LiteralPath $indexPath -PathType Leaf) {
+        $indexText = [System.IO.File]::ReadAllText($indexPath, [System.Text.Encoding]::UTF8)
+        $lm = [regex]::Match($indexText, "const LENGTH_OPTIONS\s*=\s*\[([^\]]+)\]")
+        if ($lm.Success) {
+            $lengths = $lm.Groups[1].Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' }
+            $lengthList = $lengths -join ', '
+            $content = [regex]::Replace($content, "(\&\& request\.resource\.data\.length in \[)[^\]]*(\])", "`${1}$lengthList`${2}")
+        }
+    }
+
+    # 3. validCategory — from all etape*.js vocab files
+    $cats = [System.Collections.Generic.SortedSet[string]]::new()
+    [void]$cats.Add('all')
+    $jsFiles = Get-ChildItem -LiteralPath (Join-Path $ProjectFolder 'etapes') -Filter 'etape*.js' -File -ErrorAction SilentlyContinue
+    foreach ($jsFile in $jsFiles) {
+        $jsText = [System.IO.File]::ReadAllText($jsFile.FullName, [System.Text.Encoding]::UTF8)
+        foreach ($m in [regex]::Matches($jsText, 'category\s*:\s*["\x27]([^"\x27\s]+)["\x27]')) {
+            $cat = $m.Groups[1].Value.Trim()
+            if (-not [string]::IsNullOrWhiteSpace($cat)) { [void]$cats.Add($cat) }
+        }
+    }
+    $catList = ($cats | ForEach-Object { "'$_'" }) -join ",`n          "
+    $content = [regex]::Replace($content, "(?s)(function validCategory\(c\)\s*\{\s*return c in \[).*?(\]\s*;)", "`${1}`n          $catList`n        `${2}")
+
+    if ($content -ne $original) {
+        Save-Utf8NoBom -Path $rulesPath -Text $content
+        return $true
+    }
+    return $false
+}
+
 function Get-DownloadsFolder {
     try {
         $item = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name '{374DE290-123F-4565-9164-39C4925E467B}' -ErrorAction Stop
@@ -178,7 +229,7 @@ function Get-RememberedProject {
         $stateFile = Join-Path (Get-StateFolder) "last-$mode-project.txt"
         if (Test-Path -LiteralPath $stateFile -PathType Leaf) {
             try {
-                $saved = [System.IO.File]::ReadAllText($stateFile).Trim()
+                $saved = [System.IO.File]::ReadAllText($stateFile, [System.Text.Encoding]::UTF8).Trim()
                 if (Test-QuizProject -Path $saved) { return $saved }
             }
             catch { }
@@ -302,7 +353,7 @@ function Get-RegistryUnits {
         throw "registry.js was not found at: $registryPath"
     }
 
-    $text = [System.IO.File]::ReadAllText($registryPath)
+    $text = [System.IO.File]::ReadAllText($registryPath, [System.Text.Encoding]::UTF8)
 
     $units = @()
     # Match each { ... } object block inside the ETAPES array.
@@ -326,14 +377,14 @@ function Get-RegistryUnits {
 function Get-DefaultEtape {
     param([string]$ProjectFolder)
     $registryPath = Join-Path $ProjectFolder (Join-Path 'etapes' 'registry.js')
-    $text = [System.IO.File]::ReadAllText($registryPath)
+    $text = [System.IO.File]::ReadAllText($registryPath, [System.Text.Encoding]::UTF8)
     $m = [regex]::Match($text, "DEFAULT_ETAPE\s*=\s*'([^']+)'")
     if ($m.Success) { return $m.Groups[1].Value }
     return 'e1'
 }
 
 function Get-PageForEtape {
-    # Returns the 1v1/lobby page filename for a unit id. e2 = index.html.
+    # Returns the multiplayer/lobby page filename for a unit id. e2 = index.html.
     param([string]$EtapeId)
     $num = $EtapeId -replace '^e', ''
     if ($num -eq '2') { return 'index.html' }
@@ -376,14 +427,14 @@ function Update-MapsInFile {
 
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) { return $false }
 
-    $content = [System.IO.File]::ReadAllText($FilePath)
+    $content = [System.IO.File]::ReadAllText($FilePath, [System.Text.Encoding]::UTF8)
     $original = $content
 
     $pageMap = Build-MapBlock -VariableName 'window.ETAPE_PAGE_MAP' -Units $Units -ValueFor { param($id) Get-PageForEtape -EtapeId $id }
     $soloMap = Build-MapBlock -VariableName 'window.ETAPE_SOLO_MAP' -Units $Units -ValueFor { param($id) Get-SoloPageForEtape -EtapeId $id }
-    # LOBBY_MAP: in a local install index.html is a redirect, so if the 1v1
+    # LOBBY_MAP: in a local install index.html is a redirect, so if the multiplayer
     # pages are absent we point lobby targets at index.html. Otherwise the
-    # lobby target is the unit's 1v1 page.
+    # lobby target is the unit's multiplayer page.
     $projectFolder = Split-Path -Parent $FilePath
     $hasMultiplayerPages = Test-Path -LiteralPath (Join-Path $projectFolder 'etape1.html') -PathType Leaf
     $lobbyMap = Build-MapBlock -VariableName 'window.ETAPE_LOBBY_MAP' -Units $Units -ValueFor {
@@ -414,7 +465,7 @@ function Add-RegistryEntry {
     )
 
     $registryPath = Join-Path $ProjectFolder (Join-Path 'etapes' 'registry.js')
-    $text = [System.IO.File]::ReadAllText($registryPath)
+    $text = [System.IO.File]::ReadAllText($registryPath, [System.Text.Encoding]::UTF8)
 
     $escTopic = $Topic.Replace("\", "\\").Replace("'", "\'")
     $escLabel = $Label.Replace("\", "\\").Replace("'", "\'")
@@ -501,7 +552,7 @@ function New-UnitPageFromTemplate {
         [int]$UnitNumber
     )
 
-    $content = [System.IO.File]::ReadAllText($TemplatePath)
+    $content = [System.IO.File]::ReadAllText($TemplatePath, [System.Text.Encoding]::UTF8)
 
     # 1) Swap CURRENT_ETAPE_ID = '...'
     $content = [regex]::Replace($content, "window\.CURRENT_ETAPE_ID\s*=\s*'[^']+'", "window.CURRENT_ETAPE_ID = '$NewEtapeId'")
@@ -536,9 +587,9 @@ try {
     }
     Write-Ok "Project: $projectFolder"
 
-    # Detect layout: does this install have the 1v1 pages, or is it solo-only?
+    # Detect layout: does this install have the multiplayer pages, or is it solo-only?
     $hasMultiplayer = Test-Path -LiteralPath (Join-Path $projectFolder 'etape1.html') -PathType Leaf
-    $layoutName = if ($hasMultiplayer) { 'Online (1v1 + solo)' } else { 'Local (solo only)' }
+    $layoutName = if ($hasMultiplayer) { 'Online (multiplayer + solo)' } else { 'Local (solo only)' }
     Write-Info "Detected layout: $layoutName"
 
     Write-Step 'STEP 2 OF 5 - Reading the current units'
@@ -682,10 +733,10 @@ try {
     New-UnitPageFromTemplate -TemplatePath $soloTemplate -NewPagePath $newSoloPage -NewEtapeId $newEtapeId -UnitNumber $nextNumber
     Write-Ok "Created solo page: $(Split-Path -Leaf $newSoloPage)"
 
-    # 1v1 page (only when the online layout is present).
+    # multiplayer page (only when the online layout is present).
     if ($hasMultiplayer) {
         $multiTemplateId = $existingUnits[0].id
-        # Prefer a numbered 1v1 page as template (not index.html) for simplicity.
+        # Prefer a numbered multiplayer page as template (not index.html) for simplicity.
         foreach ($u in $existingUnits) {
             if (($u.id -replace '^e', '') -ne '2') { $multiTemplateId = $u.id; break }
         }
@@ -695,10 +746,10 @@ try {
         }
         $newMultiPage = Join-Path $projectFolder (Get-PageForEtape -EtapeId $newEtapeId)
         New-UnitPageFromTemplate -TemplatePath $multiTemplate -NewPagePath $newMultiPage -NewEtapeId $newEtapeId -UnitNumber $nextNumber
-        Write-Ok "Created 1v1 page: $(Split-Path -Leaf $newMultiPage)"
+        Write-Ok "Created multiplayer page: $(Split-Path -Leaf $newMultiPage)"
     }
     else {
-        Write-Info 'Local layout — skipping the 1v1 page (solo only).'
+        Write-Info 'Local layout — skipping the multiplayer page (solo only).'
     }
 
     Write-Step 'STEP 5 OF 5 - Updating navigation on every page'
@@ -716,13 +767,20 @@ try {
     }
     Write-Ok "Navigation maps refreshed in $updated page(s)."
 
+    # ---- Patch firestore.rules so the new unit is allowed in multiplayer matches ----
+    $rulesUpdated = Update-FirestoreRules -ProjectFolder $projectFolder
+    if ($rulesUpdated) {
+        Write-Ok 'firestore.rules was updated to include the new unit.'
+        Write-Info 'Run "Deploy Firestore Rules" to push the updated rules to Firebase.'
+    }
+
     Write-Host ''
     Write-Host 'DONE' -ForegroundColor Green
     Write-Host "New unit: $label ($newEtapeId)" -ForegroundColor Cyan
     Write-Host "Edit its questions in: etapes\etape$nextNumber.js" -ForegroundColor Cyan
     Write-Host 'Tip: use Edit Quiz JavaScript to fill in the real questions.' -ForegroundColor Yellow
 
-    Show-AppMessage -Title 'New unit added' -Message "Added $label ($newEtapeId).`r`n`r`nData file: etapes\etape$nextNumber.js`r`nSolo page: $(Split-Path -Leaf $newSoloPage)$(if($hasMultiplayer){"`r`n1v1 page: $(Split-Path -Leaf (Join-Path $projectFolder (Get-PageForEtape -EtapeId $newEtapeId)))"})`r`n`r`nNavigation was updated on every page. Use 'Edit Quiz JavaScript' to add the real questions, then push with 'Update Entire Project to GitHub'." -Type 'Success'
+    Show-AppMessage -Title 'New unit added' -Message "Added $label ($newEtapeId).`r`n`r`nData file: etapes\etape$nextNumber.js`r`nSolo page: $(Split-Path -Leaf $newSoloPage)$(if($hasMultiplayer){"`r`nmultiplayer page: $(Split-Path -Leaf (Join-Path $projectFolder (Get-PageForEtape -EtapeId $newEtapeId)))"})`r`n`r`nNavigation was updated on every page.$(if($rulesUpdated){"`r`n`r`nfirestore.rules was also updated — run 'Deploy Firestore Rules' to push the new rules to Firebase so multiplayer matches work on this unit."})`r`n`r`nUse 'Edit Quiz JavaScript' to add the real questions, then push with 'Update Entire Project to GitHub'." -Type 'Success'
 }
 catch {
     Write-Host ''

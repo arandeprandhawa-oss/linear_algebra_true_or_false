@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 This script is designed for a fresh Windows computer.
 It finds the current user's Downloads folder, installs portable tools when
@@ -94,7 +94,7 @@ function New-SetupWindow {
     $form.MinimumSize = New-Object System.Drawing.Size([Math]::Min($Width, 660), [Math]::Min($Height, 390))
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
-    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
     $form.TopMost = $true
     $form.ShowIcon = $false
     $form.MaximizeBox = $Resizable.IsPresent
@@ -791,7 +791,7 @@ function Backup-ExistingFolder {
 function Remove-AudioFromHtml {
     param([string]$Path)
 
-    $content = [System.IO.File]::ReadAllText($Path)
+    $content = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
     $original = $content
 
     $audioScriptPattern = @'
@@ -805,7 +805,7 @@ function Remove-AudioFromHtml {
     $content = [regex]::Replace($content, $audioButtonPattern.Trim(), '')
 
     $content = $content.Replace(
-        'Audio pronunciation added! Hear every card read aloud in Solo and 1v1 modes.',
+        'Audio pronunciation added! Hear every card read aloud in Solo and multiplayer modes.',
         ''
     )
 
@@ -1102,7 +1102,7 @@ function Apply-FirebaseConfig {
         Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' }
 
     foreach ($htmlFile in $htmlFiles) {
-        $content = [System.IO.File]::ReadAllText($htmlFile.FullName)
+        $content = [System.IO.File]::ReadAllText($htmlFile.FullName, [System.Text.Encoding]::UTF8)
         if ($content -notmatch '\bfirebaseConfig\b') {
             continue
         }

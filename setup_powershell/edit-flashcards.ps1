@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 Polished automatic flashcard editor for the Linear Algebra True or False quiz.
 
@@ -200,7 +200,7 @@ function Get-RememberedProject {
     }
 
     try {
-        $savedPath = [System.IO.File]::ReadAllText($stateFile).Trim()
+        $savedPath = [System.IO.File]::ReadAllText($stateFile, [System.Text.Encoding]::UTF8).Trim()
 
         if (Test-QuizProject -Path $savedPath) {
             return $savedPath
@@ -1223,7 +1223,7 @@ function Start-FlashcardEditor {
     $form.MinimumSize = New-Object System.Drawing.Size(1080, 740)
     $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
     $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
-    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
     $form.ShowIcon = $false
 
     # A table layout keeps the header and content from covering each other.

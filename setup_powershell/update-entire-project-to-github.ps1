@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 Beginner-friendly full-project GitHub updater.
 
@@ -657,7 +657,7 @@ function Get-SavedRepositoryPaths {
         }
 
         try {
-            $saved = [System.IO.File]::ReadAllText($stateFile).Trim()
+            $saved = [System.IO.File]::ReadAllText($stateFile, [System.Text.Encoding]::UTF8).Trim()
 
             if (-not [string]::IsNullOrWhiteSpace($saved)) {
                 $paths += $saved

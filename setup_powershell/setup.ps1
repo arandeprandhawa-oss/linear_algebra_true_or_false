@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 Beginner-friendly launcher for the Linear Algebra True or False setup toolkit.
 
