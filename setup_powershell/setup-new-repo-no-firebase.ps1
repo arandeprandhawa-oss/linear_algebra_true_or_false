@@ -135,7 +135,7 @@ function New-SetupWindow {
     $headingLabel.Text = $Heading
     $headingLabel.AutoSize = $false
     $headingLabel.Location = New-Object System.Drawing.Point(25, 40)
-    $headingLabel.Size = New-Object System.Drawing.Size($Width - 70, 31)
+    $headingLabel.Size = [System.Drawing.Size]::new(($Width - 70), 31)
     $headingLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $headingLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 16)
     $headingLabel.ForeColor = [System.Drawing.Color]::White
@@ -145,7 +145,7 @@ function New-SetupWindow {
     $descriptionLabel.Text = $Description
     $descriptionLabel.AutoSize = $false
     $descriptionLabel.Location = New-Object System.Drawing.Point(28, 75)
-    $descriptionLabel.Size = New-Object System.Drawing.Size($Width - 75, 28)
+    $descriptionLabel.Size = [System.Drawing.Size]::new(($Width - 75), 28)
     $descriptionLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $descriptionLabel.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
     $descriptionLabel.ForeColor = [System.Drawing.Color]::FromArgb(203, 213, 225)
@@ -906,7 +906,7 @@ start "" "%~dp0index.html"
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - LOCAL INSTALLER' -ForegroundColor Magenta
-    Write-Host 'UI VERSION 2 - POLISHED WINDOWS DIALOGS' -ForegroundColor DarkCyan
+    Write-Host 'UI VERSION 3 - POWERSHELL 5.1 SIZE FIX' -ForegroundColor DarkCyan
     Write-Host 'MODE: Local computer only - no GitHub and no Firebase' -ForegroundColor Magenta
     Write-Host 'Nothing needs to be installed except the website files themselves.'
 
