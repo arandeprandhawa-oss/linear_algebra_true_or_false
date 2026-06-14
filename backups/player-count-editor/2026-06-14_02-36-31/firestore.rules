@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Configured default for newly created matches: 2 players.
+// Configured default for newly created matches: 4 players.
 // The rules intentionally support every value from 2 through 6 so the
 // Change Player Count tool can switch the website without another rules redesign.
 service cloud.firestore {
