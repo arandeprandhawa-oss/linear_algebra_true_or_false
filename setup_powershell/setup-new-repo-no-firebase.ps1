@@ -753,6 +753,14 @@ try {
     Write-Step 'STEP 4 OF 5 - Creating an easy desktop shortcut'
     $indexPath = Create-LocalLaunchers -WebsiteFolder $websiteFolder
 
+    $editorStateFolder = Join-Path $env:LOCALAPPDATA 'LAQuizTools'
+    New-Item -ItemType Directory -Path $editorStateFolder -Force | Out-Null
+    [System.IO.File]::WriteAllText(
+        (Join-Path $editorStateFolder 'last-local-project.txt'),
+        $websiteFolder,
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+
     Write-Step 'STEP 5 OF 5 - Opening the local website'
     Write-Host ''
     Write-Host 'DONE' -ForegroundColor Green

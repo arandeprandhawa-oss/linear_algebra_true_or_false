@@ -1253,6 +1253,14 @@ try {
     $siteUrl = "https://$($newRepository.Owner).github.io/$($newRepository.Name)/"
 
     Write-Host ''
+    $editorStateFolder = Join-Path $env:LOCALAPPDATA 'LAQuizTools'
+    New-Item -ItemType Directory -Path $editorStateFolder -Force | Out-Null
+    [System.IO.File]::WriteAllText(
+        (Join-Path $editorStateFolder 'last-firebase-project.txt'),
+        $repositoryFolder,
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+
     Write-Host 'DONE' -ForegroundColor Green
     Write-Host "Local folder:    $repositoryFolder" -ForegroundColor Cyan
     Write-Host "Repository:      $($newRepository.WebUrl)" -ForegroundColor Cyan

@@ -75,6 +75,33 @@ function Show-EditorMessage {
     ) | Out-Null
 }
 
+function Get-DownloadsFolder {
+    $knownFolderId = '{374DE290-123F-4565-9164-39C4925E467B}'
+    $registryPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
+
+    try {
+        $item = Get-ItemProperty `
+            -Path $registryPath `
+            -Name $knownFolderId `
+            -ErrorAction Stop
+
+        $downloads = [Environment]::ExpandEnvironmentVariables(
+            $item.$knownFolderId
+        )
+    }
+    catch {
+        $profilePath = [Environment]::GetFolderPath('UserProfile')
+
+        if ([string]::IsNullOrWhiteSpace($profilePath)) {
+            $profilePath = $env:USERPROFILE
+        }
+
+        $downloads = Join-Path $profilePath 'Downloads'
+    }
+
+    return $downloads
+}
+
 function Get-RelativePathSafe {
     param(
         [string]$BasePath,
@@ -84,7 +111,89 @@ function Get-RelativePathSafe {
     $baseUri = New-Object System.Uri(($BasePath.TrimEnd('\') + '\'))
     $fileUri = New-Object System.Uri($FullPath)
     $relative = $baseUri.MakeRelativeUri($fileUri).ToString()
+
     return [System.Uri]::UnescapeDataString($relative).Replace('/', '\')
+}
+
+function Get-EditorStateFolder {
+    $root = $env:LOCALAPPDATA
+
+    if ([string]::IsNullOrWhiteSpace($root)) {
+        $root = Join-Path `
+            ([Environment]::GetFolderPath('UserProfile')) `
+            'AppData\Local'
+    }
+
+    $stateFolder = Join-Path $root 'LAQuizTools'
+    New-Item -ItemType Directory -Path $stateFolder -Force | Out-Null
+
+    return $stateFolder
+}
+
+function Save-RememberedProject {
+    param(
+        [ValidateSet('local', 'firebase', 'javascript')]
+        [string]$Mode,
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or
+        (-not (Test-Path -LiteralPath $Path -PathType Container))) {
+        return
+    }
+
+    $stateFile = Join-Path (Get-EditorStateFolder) "last-$Mode-project.txt"
+    [System.IO.File]::WriteAllText(
+        $stateFile,
+        $Path,
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+}
+
+function Get-RememberedProject {
+    param(
+        [ValidateSet('local', 'firebase', 'javascript')]
+        [string]$Mode
+    )
+
+    $stateFile = Join-Path (Get-EditorStateFolder) "last-$Mode-project.txt"
+
+    if (-not (Test-Path -LiteralPath $stateFile -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        $savedPath = [System.IO.File]::ReadAllText($stateFile).Trim()
+
+        if (Test-QuizProject -Path $savedPath) {
+            return $savedPath
+        }
+    }
+    catch {
+        return $null
+    }
+
+    return $null
+}
+
+function Test-QuizProject {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or
+        (-not (Test-Path -LiteralPath $Path -PathType Container))) {
+        return $false
+    }
+
+    $hasIndex = Test-Path -LiteralPath (Join-Path $Path 'index.html') -PathType Leaf
+    $hasSoloPage =
+        (Test-Path -LiteralPath (Join-Path $Path 'solo.html') -PathType Leaf) -or
+        (Test-Path -LiteralPath (Join-Path $Path 'solo1.html') -PathType Leaf) -or
+        (Test-Path -LiteralPath (Join-Path $Path 'solo3.html') -PathType Leaf) -or
+        (Test-Path -LiteralPath (Join-Path $Path 'solo4.html') -PathType Leaf)
+    $hasSetupFolder = Test-Path -LiteralPath (Join-Path $Path 'setup_powershell') -PathType Container
+    $nameMatches = (Split-Path -Leaf $Path) -match '(?i)linear.*algebra|true.*false'
+
+    return $hasIndex -and ($hasSoloPage -or $hasSetupFolder -or $nameMatches)
 }
 
 function Find-ProjectRootFromPath {
@@ -95,6 +204,7 @@ function Find-ProjectRootFromPath {
     }
 
     $candidate = $Path
+
     if (Test-Path -LiteralPath $candidate -PathType Leaf) {
         $candidate = Split-Path -Parent $candidate
     }
@@ -104,43 +214,250 @@ function Find-ProjectRootFromPath {
     }
 
     $directory = Get-Item -LiteralPath $candidate
-    $fallback = $directory.FullName
 
     while ($null -ne $directory) {
-        $hasIndex = Test-Path -LiteralPath (Join-Path $directory.FullName 'index.html')
-        $hasGit = Test-Path -LiteralPath (Join-Path $directory.FullName '.git')
-        $hasSetup = Test-Path -LiteralPath (Join-Path $directory.FullName 'setup_powershell')
-
-        if ($hasIndex -or $hasGit -or $hasSetup) {
+        if (Test-QuizProject -Path $directory.FullName) {
             return $directory.FullName
         }
 
         $directory = $directory.Parent
     }
 
-    return $fallback
+    return $null
 }
 
-function Get-AutomaticProjectFolder {
-    $scriptFolder = $PSScriptRoot
+function Get-LimitedDirectories {
+    param(
+        [string]$Root,
+        [int]$MaximumDepth = 3,
+        [int]$MaximumDirectories = 1400
+    )
 
-    if (-not [string]::IsNullOrWhiteSpace($scriptFolder)) {
-        $scriptFolderItem = Get-Item -LiteralPath $scriptFolder
+    $results = New-Object System.Collections.ArrayList
 
-        if ($scriptFolderItem.Name -ieq 'setup_powershell' -and $null -ne $scriptFolderItem.Parent) {
-            $parent = $scriptFolderItem.Parent.FullName
-            if (Test-Path -LiteralPath (Join-Path $parent 'index.html')) {
-                return $parent
-            }
+    if ([string]::IsNullOrWhiteSpace($Root) -or
+        (-not (Test-Path -LiteralPath $Root -PathType Container))) {
+        return @()
+    }
+
+    $queue = New-Object System.Collections.Queue
+    $queue.Enqueue([pscustomobject]@{
+        Path = $Root
+        Depth = 0
+    })
+
+    $visited = 0
+    $skipNames = @(
+        '.git',
+        'node_modules',
+        'backups',
+        'AppData',
+        '$RECYCLE.BIN',
+        'System Volume Information'
+    )
+
+    while ($queue.Count -gt 0 -and $visited -lt $MaximumDirectories) {
+        $entry = $queue.Dequeue()
+        $visited++
+
+        [void]$results.Add($entry.Path)
+
+        if ($entry.Depth -ge $MaximumDepth) {
+            continue
         }
 
-        $detected = Find-ProjectRootFromPath -Path $scriptFolder
-        if ($null -ne $detected -and (Test-Path -LiteralPath (Join-Path $detected 'index.html'))) {
-            return $detected
+        $children = Get-ChildItem `
+            -LiteralPath $entry.Path `
+            -Directory `
+            -Force `
+            -ErrorAction SilentlyContinue |
+            Where-Object {
+                $skipNames -notcontains $_.Name -and
+                -not ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint)
+            }
+
+        foreach ($child in $children) {
+            $queue.Enqueue([pscustomobject]@{
+                Path = $child.FullName
+                Depth = $entry.Depth + 1
+            })
         }
     }
 
-    return $null
+    return @($results)
+}
+
+function Get-ProjectScore {
+    param(
+        [string]$Path,
+        [string]$ScriptFolder,
+        [string[]]$RememberedPaths,
+        [switch]$PreferGit
+    )
+
+    $score = 0
+
+    if ($RememberedPaths -contains $Path) {
+        $score += 1000
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ScriptFolder)) {
+        $scriptFull = [System.IO.Path]::GetFullPath($ScriptFolder)
+        $pathFull = [System.IO.Path]::GetFullPath($Path)
+
+        if ($scriptFull.StartsWith(
+            $pathFull.TrimEnd('\') + '\',
+            [System.StringComparison]::OrdinalIgnoreCase
+        )) {
+            $score += 900
+        }
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $Path '.git') -PathType Container) {
+        $score += 220
+
+        if ($PreferGit) {
+            $score += 500
+        }
+    }
+    elseif ($PreferGit) {
+        $score -= 300
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $Path 'setup_powershell') -PathType Container) {
+        $score += 120
+    }
+
+    $leaf = Split-Path -Leaf $Path
+
+    if ($leaf -match '(?i)^linear_algebra_true_or_false') {
+        $score += 180
+    }
+    elseif ($leaf -match '(?i)linear.*algebra|true.*false') {
+        $score += 110
+    }
+
+    foreach ($pageName in @('solo.html', 'solo1.html', 'solo3.html', 'solo4.html')) {
+        if (Test-Path -LiteralPath (Join-Path $Path $pageName) -PathType Leaf) {
+            $score += 20
+        }
+    }
+
+    try {
+        $indexFile = Get-Item -LiteralPath (Join-Path $Path 'index.html')
+        $ageDays = ((Get-Date) - $indexFile.LastWriteTime).TotalDays
+
+        if ($ageDays -lt 2) {
+            $score += 50
+        }
+        elseif ($ageDays -lt 30) {
+            $score += 25
+        }
+    }
+    catch {
+        # The basic project check already verifies index.html.
+    }
+
+    return $score
+}
+
+function Find-AutomaticQuizProject {
+    param(
+        [ValidateSet('local', 'firebase', 'javascript')]
+        [string]$Mode = 'javascript'
+    )
+
+    $scriptFolder = $PSScriptRoot
+
+    if ([string]::IsNullOrWhiteSpace($scriptFolder)) {
+        $scriptFolder = (Get-Location).Path
+    }
+
+    $remembered = @()
+
+    foreach ($rememberMode in @($Mode, 'local', 'firebase', 'javascript') | Select-Object -Unique) {
+        $rememberedPath = Get-RememberedProject -Mode $rememberMode
+
+        if (-not [string]::IsNullOrWhiteSpace($rememberedPath)) {
+            $remembered += $rememberedPath
+        }
+    }
+
+    $candidatePaths = New-Object System.Collections.ArrayList
+
+    foreach ($rememberedPath in $remembered) {
+        [void]$candidatePaths.Add($rememberedPath)
+    }
+
+    $ancestorProject = Find-ProjectRootFromPath -Path $scriptFolder
+
+    if (-not [string]::IsNullOrWhiteSpace($ancestorProject)) {
+        [void]$candidatePaths.Add($ancestorProject)
+    }
+
+    $currentProject = Find-ProjectRootFromPath -Path (Get-Location).Path
+
+    if (-not [string]::IsNullOrWhiteSpace($currentProject)) {
+        [void]$candidatePaths.Add($currentProject)
+    }
+
+    $profile = [Environment]::GetFolderPath('UserProfile')
+    $documents = [Environment]::GetFolderPath('MyDocuments')
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $downloads = Get-DownloadsFolder
+
+    $searchRoots = @(
+        $documents,
+        $desktop,
+        $downloads,
+        (Join-Path $profile 'OneDrive\Documents'),
+        (Join-Path $profile 'OneDrive\Desktop')
+    ) | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_) -and
+        (Test-Path -LiteralPath $_ -PathType Container)
+    } | Select-Object -Unique
+
+    foreach ($root in $searchRoots) {
+        foreach ($directory in Get-LimitedDirectories -Root $root -MaximumDepth 3) {
+            if (Test-QuizProject -Path $directory) {
+                [void]$candidatePaths.Add($directory)
+            }
+        }
+    }
+
+    $uniqueCandidates = @($candidatePaths | Select-Object -Unique)
+
+    if ($uniqueCandidates.Count -eq 0) {
+        return $null
+    }
+
+    $preferGit = $Mode -eq 'firebase'
+    $ranked = @()
+
+    foreach ($candidate in $uniqueCandidates) {
+        $ranked += [pscustomobject]@{
+            Path = $candidate
+            Score = Get-ProjectScore `
+                -Path $candidate `
+                -ScriptFolder $scriptFolder `
+                -RememberedPaths $remembered `
+                -PreferGit:$preferGit
+        }
+    }
+
+    $best = $ranked |
+        Sort-Object Score -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $best) {
+        return $null
+    }
+
+    return $best.Path
+}
+
+function Get-AutomaticProjectFolder {
+    return Find-AutomaticQuizProject -Mode 'javascript'
 }
 
 function Get-EditableFiles {
@@ -351,11 +668,11 @@ function Start-JavaScriptEditor {
     $dropText.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
     $dropPanel.Controls.Add($dropText)
 
-    $browseButton = New-EditorButton -Text 'Choose project folder' -Width 270
+    $browseButton = New-EditorButton -Text 'Choose a different folder' -Width 270
     $browseButton.Location = New-Object System.Drawing.Point(22, 416)
     $leftPanel.Controls.Add($browseButton)
 
-    $openFolderButton = New-EditorButton -Text 'Open project folder' -Width 270
+    $openFolderButton = New-EditorButton -Text 'Find project automatically' -Width 270
     $openFolderButton.Location = New-Object System.Drawing.Point(22, 465)
     $leftPanel.Controls.Add($openFolderButton)
 
@@ -520,6 +837,7 @@ function Start-JavaScriptEditor {
         }
 
         $projectPathBox.Text = $script:ProjectFolder
+        Save-RememberedProject -Mode 'javascript' -Path $script:ProjectFolder
         $script:EditableFiles = @(Get-EditableFiles `
             -ProjectFolder $script:ProjectFolder `
             -IncludeHtml $includeHtmlCheck.Checked)
@@ -623,16 +941,31 @@ function Start-JavaScriptEditor {
     }.GetNewClosure())
 
     $openFolderButton.Add_Click({
-        if ([string]::IsNullOrWhiteSpace($script:ProjectFolder) -or
-            (-not (Test-Path -LiteralPath $script:ProjectFolder -PathType Container))) {
-            Show-EditorMessage `
-                -Title 'Choose a project first' `
-                -Message 'Choose or drag a project folder before opening it.' `
-                -Type 'Information'
-            return
-        }
+        & $setStatus 'Searching Documents, Desktop, and Downloads...' 'Normal'
+        $form.UseWaitCursor = $true
+        [System.Windows.Forms.Application]::DoEvents()
 
-        Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$script:ProjectFolder`""
+        try {
+            $detected = Get-AutomaticProjectFolder
+
+            if ([string]::IsNullOrWhiteSpace($detected)) {
+                & $setStatus 'No Linear Algebra quiz project was found automatically.' 'Warning'
+
+                Show-EditorMessage `
+                    -Title 'Project not found automatically' `
+                    -Message 'Use Choose a different folder, or install the quiz first.' `
+                    -Type 'Information'
+
+                return
+            }
+
+            $script:ProjectFolder = $detected
+            & $loadFiles $null
+            & $setStatus "Automatically found: $detected" 'Success'
+        }
+        finally {
+            $form.UseWaitCursor = $false
+        }
     }.GetNewClosure())
 
     $includeHtmlCheck.Add_CheckedChanged({
@@ -689,9 +1022,10 @@ function Start-JavaScriptEditor {
     $form.Add_Shown({
         if (-not [string]::IsNullOrWhiteSpace($script:ProjectFolder)) {
             & $loadFiles $null
+            & $setStatus "Automatically found: $script:ProjectFolder" 'Success'
         }
         else {
-            & $setStatus 'Drag a project folder here or use Choose project folder.' 'Normal'
+            & $setStatus 'No project was found automatically. Use Choose a different folder.' 'Warning'
         }
     }.GetNewClosure())
 

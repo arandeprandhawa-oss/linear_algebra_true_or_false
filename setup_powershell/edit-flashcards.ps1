@@ -1,16 +1,14 @@
 #requires -Version 5.1
 <#
-Beginner-friendly flashcard editor for both setup types.
+Polished automatic flashcard editor for the Linear Algebra True or False quiz.
 
-Modes:
-- Local-only mode:
-  Edits flashcard files on this computer and does not use GitHub.
-- Firebase + GitHub mode:
-  Edits a repository file, creates a backup, and optionally commits and pushes
-  the selected file to GitHub.
-
-Use "Edit Flashcards.cmd" to launch this file.
-Keep the .cmd and .ps1 files together in the same folder.
+- Automatically searches Documents, Desktop, Downloads, remembered locations,
+  and the folder containing this script.
+- Supports local-only editing.
+- Supports Firebase + GitHub editing and publishing.
+- Creates a timestamped backup before opening a file.
+- Opens the selected file in Notepad.
+- Never force-pushes.
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -21,15 +19,44 @@ $RepositoryOwner = 'arandeprandhawa-oss'
 $RepositoryName = 'linear_algebra_true_or_false'
 $RepositoryWebUrl = "https://github.com/$RepositoryOwner/$RepositoryName"
 $RepositoryGitUrl = "$RepositoryWebUrl.git"
-$ToolRootName = 'LAQuizTools'
 
-function Initialize-Ui {
+function Initialize-EditorUi {
     Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
     Add-Type -AssemblyName Microsoft.VisualBasic
     [System.Windows.Forms.Application]::EnableVisualStyles()
 }
 
-function Show-Message {
+function New-EditorButton {
+    param(
+        [string]$Text,
+        [switch]$Primary,
+        [int]$Width = 145
+    )
+
+    $button = New-Object System.Windows.Forms.Button
+    $button.Text = $Text
+    $button.Size = New-Object System.Drawing.Size($Width, 40)
+    $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $button.Cursor = [System.Windows.Forms.Cursors]::Hand
+    $button.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 9.5)
+    $button.FlatAppearance.BorderSize = 1
+
+    if ($Primary) {
+        $button.BackColor = [System.Drawing.Color]::FromArgb(37, 99, 235)
+        $button.ForeColor = [System.Drawing.Color]::White
+        $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(37, 99, 235)
+    }
+    else {
+        $button.BackColor = [System.Drawing.Color]::White
+        $button.ForeColor = [System.Drawing.Color]::FromArgb(30, 41, 59)
+        $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(203, 213, 225)
+    }
+
+    return $button
+}
+
+function Show-EditorMessage {
     param(
         [string]$Title,
         [string]$Message,
@@ -64,8 +91,7 @@ function Ask-YesNo {
         $Message,
         $Title,
         [System.Windows.Forms.MessageBoxButtons]::YesNo,
-        [System.Windows.Forms.MessageBoxIcon]::Question,
-        [System.Windows.Forms.MessageBoxDefaultButton]::Button1
+        [System.Windows.Forms.MessageBoxIcon]::Question
     )
 
     return $result -eq [System.Windows.Forms.DialogResult]::Yes
@@ -81,57 +107,10 @@ function Ask-OkCancel {
         $Message,
         $Title,
         [System.Windows.Forms.MessageBoxButtons]::OKCancel,
-        [System.Windows.Forms.MessageBoxIcon]::Information,
-        [System.Windows.Forms.MessageBoxDefaultButton]::Button1
+        [System.Windows.Forms.MessageBoxIcon]::Information
     )
 
     return $result -eq [System.Windows.Forms.DialogResult]::OK
-}
-
-function Choose-Mode {
-    $message = @'
-Choose how you want to edit the flashcards.
-
-YES = Firebase + GitHub version
-Edit a repository file and optionally publish it to GitHub.
-
-NO = Local-only version
-Edit a file on this computer without GitHub.
-
-CANCEL = Exit
-'@
-
-    return [System.Windows.Forms.MessageBox]::Show(
-        $message,
-        'Choose the flashcard editor mode',
-        [System.Windows.Forms.MessageBoxButtons]::YesNoCancel,
-        [System.Windows.Forms.MessageBoxIcon]::Question,
-        [System.Windows.Forms.MessageBoxDefaultButton]::Button2
-    )
-}
-
-function Write-Step {
-    param([string]$Message)
-
-    Write-Host ''
-    Write-Host '====================================================================' -ForegroundColor DarkGray
-    Write-Host $Message -ForegroundColor Cyan
-    Write-Host '====================================================================' -ForegroundColor DarkGray
-}
-
-function Write-Ok {
-    param([string]$Message)
-    Write-Host "[OK] $Message" -ForegroundColor Green
-}
-
-function Write-Info {
-    param([string]$Message)
-    Write-Host "[INFO] $Message" -ForegroundColor Yellow
-}
-
-function Write-Warn {
-    param([string]$Message)
-    Write-Host "[WARNING] $Message" -ForegroundColor DarkYellow
 }
 
 function Get-DownloadsFolder {
@@ -144,7 +123,7 @@ function Get-DownloadsFolder {
             -Name $knownFolderId `
             -ErrorAction Stop
 
-        $downloads = [Environment]::ExpandEnvironmentVariables(
+        return [Environment]::ExpandEnvironmentVariables(
             $item.$knownFolderId
         )
     }
@@ -155,29 +134,8 @@ function Get-DownloadsFolder {
             $profilePath = $env:USERPROFILE
         }
 
-        $downloads = Join-Path $profilePath 'Downloads'
+        return Join-Path $profilePath 'Downloads'
     }
-
-    if (-not (Test-Path -LiteralPath $downloads -PathType Container)) {
-        New-Item -ItemType Directory -Path $downloads -Force | Out-Null
-    }
-
-    return $downloads
-}
-
-function Get-ToolRoot {
-    $baseFolder = $env:LOCALAPPDATA
-
-    if ([string]::IsNullOrWhiteSpace($baseFolder)) {
-        $baseFolder = Join-Path `
-            ([Environment]::GetFolderPath('UserProfile')) `
-            'AppData\Local'
-    }
-
-    $toolRoot = Join-Path $baseFolder $ToolRootName
-    New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
-
-    return $toolRoot
 }
 
 function Get-RelativePathSafe {
@@ -193,14 +151,453 @@ function Get-RelativePathSafe {
     return [System.Uri]::UnescapeDataString($relative).Replace('/', '\')
 }
 
-function Select-ProjectFolder {
+function Get-EditorStateFolder {
+    $root = $env:LOCALAPPDATA
+
+    if ([string]::IsNullOrWhiteSpace($root)) {
+        $root = Join-Path `
+            ([Environment]::GetFolderPath('UserProfile')) `
+            'AppData\Local'
+    }
+
+    $stateFolder = Join-Path $root 'LAQuizTools'
+    New-Item -ItemType Directory -Path $stateFolder -Force | Out-Null
+
+    return $stateFolder
+}
+
+function Save-RememberedProject {
     param(
-        [string]$Title,
-        [string]$InitialFolder
+        [ValidateSet('local', 'firebase', 'javascript')]
+        [string]$Mode,
+        [string]$Path
     )
 
+    if ([string]::IsNullOrWhiteSpace($Path) -or
+        (-not (Test-Path -LiteralPath $Path -PathType Container))) {
+        return
+    }
+
+    $stateFile = Join-Path (Get-EditorStateFolder) "last-$Mode-project.txt"
+    [System.IO.File]::WriteAllText(
+        $stateFile,
+        $Path,
+        (New-Object System.Text.UTF8Encoding($false))
+    )
+}
+
+function Get-RememberedProject {
+    param(
+        [ValidateSet('local', 'firebase', 'javascript')]
+        [string]$Mode
+    )
+
+    $stateFile = Join-Path (Get-EditorStateFolder) "last-$Mode-project.txt"
+
+    if (-not (Test-Path -LiteralPath $stateFile -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        $savedPath = [System.IO.File]::ReadAllText($stateFile).Trim()
+
+        if (Test-QuizProject -Path $savedPath) {
+            return $savedPath
+        }
+    }
+    catch {
+        return $null
+    }
+
+    return $null
+}
+
+function Test-QuizProject {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or
+        (-not (Test-Path -LiteralPath $Path -PathType Container))) {
+        return $false
+    }
+
+    $hasIndex = Test-Path -LiteralPath (Join-Path $Path 'index.html') -PathType Leaf
+    $hasSoloPage =
+        (Test-Path -LiteralPath (Join-Path $Path 'solo.html') -PathType Leaf) -or
+        (Test-Path -LiteralPath (Join-Path $Path 'solo1.html') -PathType Leaf) -or
+        (Test-Path -LiteralPath (Join-Path $Path 'solo3.html') -PathType Leaf) -or
+        (Test-Path -LiteralPath (Join-Path $Path 'solo4.html') -PathType Leaf)
+    $hasSetupFolder = Test-Path -LiteralPath (Join-Path $Path 'setup_powershell') -PathType Container
+    $nameMatches = (Split-Path -Leaf $Path) -match '(?i)linear.*algebra|true.*false'
+
+    return $hasIndex -and ($hasSoloPage -or $hasSetupFolder -or $nameMatches)
+}
+
+function Find-ProjectRootFromPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    $candidate = $Path
+
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+        $candidate = Split-Path -Parent $candidate
+    }
+
+    if (-not (Test-Path -LiteralPath $candidate -PathType Container)) {
+        return $null
+    }
+
+    $directory = Get-Item -LiteralPath $candidate
+
+    while ($null -ne $directory) {
+        if (Test-QuizProject -Path $directory.FullName) {
+            return $directory.FullName
+        }
+
+        $directory = $directory.Parent
+    }
+
+    return $null
+}
+
+function Get-LimitedDirectories {
+    param(
+        [string]$Root,
+        [int]$MaximumDepth = 3,
+        [int]$MaximumDirectories = 1400
+    )
+
+    $results = New-Object System.Collections.ArrayList
+
+    if ([string]::IsNullOrWhiteSpace($Root) -or
+        (-not (Test-Path -LiteralPath $Root -PathType Container))) {
+        return @()
+    }
+
+    $queue = New-Object System.Collections.Queue
+    $queue.Enqueue([pscustomobject]@{
+        Path = $Root
+        Depth = 0
+    })
+
+    $visited = 0
+    $skipNames = @(
+        '.git',
+        'node_modules',
+        'backups',
+        'AppData',
+        '$RECYCLE.BIN',
+        'System Volume Information'
+    )
+
+    while ($queue.Count -gt 0 -and $visited -lt $MaximumDirectories) {
+        $entry = $queue.Dequeue()
+        $visited++
+
+        [void]$results.Add($entry.Path)
+
+        if ($entry.Depth -ge $MaximumDepth) {
+            continue
+        }
+
+        $children = Get-ChildItem `
+            -LiteralPath $entry.Path `
+            -Directory `
+            -Force `
+            -ErrorAction SilentlyContinue |
+            Where-Object {
+                $skipNames -notcontains $_.Name -and
+                -not ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint)
+            }
+
+        foreach ($child in $children) {
+            $queue.Enqueue([pscustomobject]@{
+                Path = $child.FullName
+                Depth = $entry.Depth + 1
+            })
+        }
+    }
+
+    return @($results)
+}
+
+function Get-ProjectScore {
+    param(
+        [string]$Path,
+        [string]$ScriptFolder,
+        [string[]]$RememberedPaths,
+        [switch]$PreferGit
+    )
+
+    $score = 0
+
+    if ($RememberedPaths -contains $Path) {
+        $score += 1000
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ScriptFolder)) {
+        $scriptFull = [System.IO.Path]::GetFullPath($ScriptFolder)
+        $pathFull = [System.IO.Path]::GetFullPath($Path)
+
+        if ($scriptFull.StartsWith(
+            $pathFull.TrimEnd('\') + '\',
+            [System.StringComparison]::OrdinalIgnoreCase
+        )) {
+            $score += 900
+        }
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $Path '.git') -PathType Container) {
+        $score += 220
+
+        if ($PreferGit) {
+            $score += 500
+        }
+    }
+    elseif ($PreferGit) {
+        $score -= 300
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $Path 'setup_powershell') -PathType Container) {
+        $score += 120
+    }
+
+    $leaf = Split-Path -Leaf $Path
+
+    if ($leaf -match '(?i)^linear_algebra_true_or_false') {
+        $score += 180
+    }
+    elseif ($leaf -match '(?i)linear.*algebra|true.*false') {
+        $score += 110
+    }
+
+    foreach ($pageName in @('solo.html', 'solo1.html', 'solo3.html', 'solo4.html')) {
+        if (Test-Path -LiteralPath (Join-Path $Path $pageName) -PathType Leaf) {
+            $score += 20
+        }
+    }
+
+    try {
+        $indexFile = Get-Item -LiteralPath (Join-Path $Path 'index.html')
+        $ageDays = ((Get-Date) - $indexFile.LastWriteTime).TotalDays
+
+        if ($ageDays -lt 2) {
+            $score += 50
+        }
+        elseif ($ageDays -lt 30) {
+            $score += 25
+        }
+    }
+    catch {
+        # The basic project check already verifies index.html.
+    }
+
+    return $score
+}
+
+function Find-AutomaticQuizProject {
+    param(
+        [ValidateSet('local', 'firebase', 'javascript')]
+        [string]$Mode = 'javascript'
+    )
+
+    $scriptFolder = $PSScriptRoot
+
+    if ([string]::IsNullOrWhiteSpace($scriptFolder)) {
+        $scriptFolder = (Get-Location).Path
+    }
+
+    $remembered = @()
+
+    foreach ($rememberMode in @($Mode, 'local', 'firebase', 'javascript') | Select-Object -Unique) {
+        $rememberedPath = Get-RememberedProject -Mode $rememberMode
+
+        if (-not [string]::IsNullOrWhiteSpace($rememberedPath)) {
+            $remembered += $rememberedPath
+        }
+    }
+
+    $candidatePaths = New-Object System.Collections.ArrayList
+
+    foreach ($rememberedPath in $remembered) {
+        [void]$candidatePaths.Add($rememberedPath)
+    }
+
+    $ancestorProject = Find-ProjectRootFromPath -Path $scriptFolder
+
+    if (-not [string]::IsNullOrWhiteSpace($ancestorProject)) {
+        [void]$candidatePaths.Add($ancestorProject)
+    }
+
+    $currentProject = Find-ProjectRootFromPath -Path (Get-Location).Path
+
+    if (-not [string]::IsNullOrWhiteSpace($currentProject)) {
+        [void]$candidatePaths.Add($currentProject)
+    }
+
+    $profile = [Environment]::GetFolderPath('UserProfile')
+    $documents = [Environment]::GetFolderPath('MyDocuments')
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $downloads = Get-DownloadsFolder
+
+    $searchRoots = @(
+        $documents,
+        $desktop,
+        $downloads,
+        (Join-Path $profile 'OneDrive\Documents'),
+        (Join-Path $profile 'OneDrive\Desktop')
+    ) | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_) -and
+        (Test-Path -LiteralPath $_ -PathType Container)
+    } | Select-Object -Unique
+
+    foreach ($root in $searchRoots) {
+        foreach ($directory in Get-LimitedDirectories -Root $root -MaximumDepth 3) {
+            if (Test-QuizProject -Path $directory) {
+                [void]$candidatePaths.Add($directory)
+            }
+        }
+    }
+
+    $uniqueCandidates = @($candidatePaths | Select-Object -Unique)
+
+    if ($uniqueCandidates.Count -eq 0) {
+        return $null
+    }
+
+    $preferGit = $Mode -eq 'firebase'
+    $ranked = @()
+
+    foreach ($candidate in $uniqueCandidates) {
+        $ranked += [pscustomobject]@{
+            Path = $candidate
+            Score = Get-ProjectScore `
+                -Path $candidate `
+                -ScriptFolder $scriptFolder `
+                -RememberedPaths $remembered `
+                -PreferGit:$preferGit
+        }
+    }
+
+    $best = $ranked |
+        Sort-Object Score -Descending |
+        Select-Object -First 1
+
+    if ($null -eq $best) {
+        return $null
+    }
+
+    return $best.Path
+}
+
+function Get-FlashcardFiles {
+    param([string]$ProjectFolder)
+
+    if (-not (Test-QuizProject -Path $ProjectFolder)) {
+        return @()
+    }
+
+    $files = Get-ChildItem `
+        -LiteralPath $ProjectFolder `
+        -File `
+        -Recurse `
+        -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.Extension.ToLowerInvariant() -in @('.html', '.js', '.json') -and
+            $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+            $_.FullName -notmatch '[\\/]node_modules[\\/]' -and
+            $_.FullName -notmatch '[\\/]backups[\\/]' -and
+            $_.FullName -notmatch '[\\/]setup_powershell[\\/]'
+        }
+
+    $results = @()
+
+    foreach ($file in $files) {
+        $relative = Get-RelativePathSafe `
+            -BasePath $ProjectFolder `
+            -FullPath $file.FullName
+
+        $priority = 100
+
+        if ($file.Name -match '(?i)^solo\d*\.html$') {
+            $priority = 1
+        }
+        elseif ($file.Name -match '(?i)^etape\d*\.html$') {
+            $priority = 10
+        }
+        elseif ($file.Name -match '(?i)flash|card|question|quiz') {
+            $priority = 20
+        }
+        elseif ($file.Name -ieq 'index.html') {
+            $priority = 80
+        }
+
+        $results += [pscustomobject]@{
+            Display = $relative
+            RelativePath = $relative
+            FullPath = $file.FullName
+            Extension = $file.Extension
+            SizeBytes = $file.Length
+            LastWriteTime = $file.LastWriteTime
+            Priority = $priority
+        }
+    }
+
+    return @(
+        $results |
+            Sort-Object Priority, RelativePath
+    )
+}
+
+function Format-FileSize {
+    param([long]$Bytes)
+
+    if ($Bytes -ge 1MB) {
+        return ('{0:N2} MB' -f ($Bytes / 1MB))
+    }
+
+    if ($Bytes -ge 1KB) {
+        return ('{0:N1} KB' -f ($Bytes / 1KB))
+    }
+
+    return "$Bytes bytes"
+}
+
+function Create-FileBackup {
+    param(
+        [string]$ProjectFolder,
+        [pscustomobject]$SelectedFile,
+        [string]$Mode
+    )
+
+    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $category = if ($Mode -eq 'Firebase + GitHub') {
+        'firebase-flashcard-editor'
+    }
+    else {
+        'local-flashcard-editor'
+    }
+
+    $backupRoot = Join-Path `
+        $ProjectFolder `
+        (Join-Path 'backups' (Join-Path $category $timestamp))
+
+    $backupFile = Join-Path $backupRoot $SelectedFile.RelativePath
+    $backupDirectory = Split-Path -Parent $backupFile
+
+    New-Item -ItemType Directory -Path $backupDirectory -Force | Out-Null
+    Copy-Item -LiteralPath $SelectedFile.FullPath -Destination $backupFile -Force
+
+    return $backupFile
+}
+
+function Show-ProjectFolderDialog {
+    param([string]$InitialFolder)
+
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-    $dialog.Description = $Title
+    $dialog.Description = 'Choose the main Linear Algebra quiz folder'
     $dialog.ShowNewFolderButton = $false
 
     if (-not [string]::IsNullOrWhiteSpace($InitialFolder) -and
@@ -217,206 +614,6 @@ function Select-ProjectFolder {
 
     $dialog.Dispose()
     return $selected
-}
-
-function Select-FlashcardFile {
-    param([string]$ProjectFolder)
-
-    $dialog = New-Object System.Windows.Forms.OpenFileDialog
-    $dialog.Title = 'Choose the flashcard file to edit'
-    $dialog.InitialDirectory = $ProjectFolder
-    $dialog.Filter = (
-        'Flashcard files (*.html;*.js;*.json)|*.html;*.js;*.json|' +
-        'HTML files (*.html)|*.html|' +
-        'JavaScript files (*.js)|*.js|' +
-        'JSON files (*.json)|*.json|' +
-        'All files (*.*)|*.*'
-    )
-    $dialog.Multiselect = $false
-    $dialog.CheckFileExists = $true
-    $dialog.RestoreDirectory = $true
-
-    $commonFiles = @(
-        'solo.html',
-        'solo1.html',
-        'solo3.html',
-        'solo4.html',
-        'index.html'
-    )
-
-    foreach ($commonFile in $commonFiles) {
-        if (Test-Path -LiteralPath (Join-Path $ProjectFolder $commonFile)) {
-            $dialog.FileName = $commonFile
-            break
-        }
-    }
-
-    $result = $dialog.ShowDialog()
-    $selected = $null
-
-    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-        $selected = $dialog.FileName
-    }
-
-    $dialog.Dispose()
-
-    if ([string]::IsNullOrWhiteSpace($selected)) {
-        return $null
-    }
-
-    $rootPath = [System.IO.Path]::GetFullPath($ProjectFolder).TrimEnd('\') + '\'
-    $filePath = [System.IO.Path]::GetFullPath($selected)
-
-    if (-not $filePath.StartsWith(
-        $rootPath,
-        [System.StringComparison]::OrdinalIgnoreCase
-    )) {
-        Show-Message `
-            -Title 'Choose a project file' `
-            -Message 'Choose a flashcard file inside the selected project folder.' `
-            -Type 'Warning'
-
-        return $null
-    }
-
-    if ($filePath -match '[\\/]\.git[\\/]') {
-        Show-Message `
-            -Title 'Protected Git folder' `
-            -Message 'Files inside the hidden .git folder cannot be edited.' `
-            -Type 'Warning'
-
-        return $null
-    }
-
-    return $filePath
-}
-
-function Create-Backup {
-    param(
-        [string]$ProjectFolder,
-        [string]$SelectedFile,
-        [string]$BackupCategory
-    )
-
-    $relativePath = Get-RelativePathSafe `
-        -BasePath $ProjectFolder `
-        -FullPath $SelectedFile
-
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $backupRoot = Join-Path `
-        $ProjectFolder `
-        (Join-Path 'backups' (Join-Path $BackupCategory $timestamp))
-
-    $backupFile = Join-Path $backupRoot $relativePath
-    $backupDirectory = Split-Path -Parent $backupFile
-
-    New-Item -ItemType Directory -Path $backupDirectory -Force | Out-Null
-    Copy-Item -LiteralPath $SelectedFile -Destination $backupFile -Force
-
-    return $backupFile
-}
-
-function Open-FileForEditing {
-    param(
-        [string]$ProjectFolder,
-        [string]$SelectedFile,
-        [string]$BackupCategory
-    )
-
-    $backupFile = Create-Backup `
-        -ProjectFolder $ProjectFolder `
-        -SelectedFile $SelectedFile `
-        -BackupCategory $BackupCategory
-
-    Write-Ok "Backup created: $backupFile"
-
-    Start-Process `
-        -FilePath 'notepad.exe' `
-        -ArgumentList "`"$SelectedFile`""
-
-    return Ask-OkCancel `
-        -Title 'Finish editing the flashcards' `
-        -Message @"
-The flashcard file is open in Notepad.
-
-1. Press Ctrl+F to find a question.
-2. Make the change.
-3. Press Ctrl+S to save.
-4. Return here and choose OK.
-
-Choose Cancel to stop.
-"@
-}
-
-function Open-LocalWebsite {
-    param([string]$ProjectFolder)
-
-    $indexPath = Join-Path $ProjectFolder 'index.html'
-
-    if (Test-Path -LiteralPath $indexPath -PathType Leaf) {
-        Start-Process -FilePath $indexPath -ErrorAction SilentlyContinue
-    }
-    else {
-        Start-Process -FilePath $ProjectFolder -ErrorAction SilentlyContinue
-    }
-}
-
-function Start-LocalEditor {
-    $downloads = Get-DownloadsFolder
-
-    Show-Message `
-        -Title 'Local flashcard editor' `
-        -Message @"
-Choose the main local quiz folder.
-
-It is usually the folder containing index.html, solo.html, or other quiz pages.
-
-This mode does not use GitHub or Firebase.
-"@
-
-    $projectFolder = Select-ProjectFolder `
-        -Title 'Choose the main local Linear Algebra quiz folder' `
-        -InitialFolder $downloads
-
-    if ([string]::IsNullOrWhiteSpace($projectFolder)) {
-        return
-    }
-
-    $editAnother = $true
-
-    while ($editAnother) {
-        $selectedFile = Select-FlashcardFile `
-            -ProjectFolder $projectFolder
-
-        if ([string]::IsNullOrWhiteSpace($selectedFile)) {
-            return
-        }
-
-        $finished = Open-FileForEditing `
-            -ProjectFolder $projectFolder `
-            -SelectedFile $selectedFile `
-            -BackupCategory 'local-flashcard-editor'
-
-        if (-not $finished) {
-            return
-        }
-
-        Show-Message `
-            -Title 'Local flashcards saved' `
-            -Message @"
-Your saved changes remain on this computer.
-
-A backup was created before editing.
-
-The local website will open next so you can test the change.
-"@
-
-        Open-LocalWebsite -ProjectFolder $projectFolder
-
-        $editAnother = Ask-YesNo `
-            -Title 'Edit another local flashcard file?' `
-            -Message 'Choose Yes to edit another file, or No to finish.'
-    }
 }
 
 function Invoke-WebDownload {
@@ -511,8 +708,6 @@ function Invoke-NativeCapture {
 function Install-PortableGit {
     param([string]$ToolRoot)
 
-    Write-Info 'Git was not found. Downloading portable Git...'
-
     $release = Invoke-RestMethod `
         -Uri 'https://api.github.com/repos/git-for-windows/git/releases/latest' `
         -Headers @{ 'User-Agent' = 'LA-Quiz-Flashcard-Editor' }
@@ -559,8 +754,6 @@ function Install-PortableGit {
 function Install-PortableGitHubCli {
     param([string]$ToolRoot)
 
-    Write-Info 'GitHub CLI was not found. Downloading portable GitHub CLI...'
-
     $release = Invoke-RestMethod `
         -Uri 'https://api.github.com/repos/cli/cli/releases/latest' `
         -Headers @{ 'User-Agent' = 'LA-Quiz-Flashcard-Editor' }
@@ -600,8 +793,7 @@ function Install-PortableGitHubCli {
 }
 
 function Ensure-GitTools {
-    $toolRoot = Get-ToolRoot
-
+    $toolRoot = Get-EditorStateFolder
     $gitExe = Get-CommandPath -Names @('git.exe', 'git')
 
     if ([string]::IsNullOrWhiteSpace($gitExe)) {
@@ -614,8 +806,6 @@ function Ensure-GitTools {
             $gitExe = Install-PortableGit -ToolRoot $toolRoot
         }
     }
-
-    Write-Ok "Git ready: $gitExe"
 
     $ghExe = Get-CommandPath -Names @('gh.exe', 'gh')
 
@@ -636,8 +826,6 @@ function Ensure-GitTools {
         }
     }
 
-    Write-Ok "GitHub CLI ready: $ghExe"
-
     $env:PATH = "$(Split-Path -Parent $gitExe);$(Split-Path -Parent $ghExe);$env:PATH"
 
     return [pscustomobject]@{
@@ -657,13 +845,9 @@ function Ensure-GitHubLogin {
         -Quiet
 
     if ($status -ne 0) {
-        Show-Message `
+        Show-EditorMessage `
             -Title 'GitHub login required' `
-            -Message @"
-PowerShell will show a one-time code and open GitHub in your browser.
-
-Complete the login, then return to PowerShell.
-"@
+            -Message 'A one-time code will appear in PowerShell and GitHub will open in your browser.'
 
         [void](Read-Host 'Press Enter to begin GitHub login')
 
@@ -684,17 +868,16 @@ Complete the login, then return to PowerShell.
         -Arguments @('auth', 'setup-git') `
         -FailureMessage 'GitHub authentication could not be connected to Git.')
 
-    $user = Invoke-NativeCapture `
+    $userResult = Invoke-NativeCapture `
         -FilePath $GhExe `
         -Arguments @('api', 'user', '--jq', '.login') `
         -FailureMessage 'Could not read the signed-in GitHub username.'
 
-    if ([string]::IsNullOrWhiteSpace($user.Text)) {
+    if ([string]::IsNullOrWhiteSpace($userResult.Text)) {
         throw 'GitHub returned an empty username.'
     }
 
-    Write-Ok "Signed in as: $($user.Text)"
-    return $user.Text
+    return $userResult.Text
 }
 
 function Test-CorrectRepository {
@@ -722,121 +905,77 @@ function Test-CorrectRepository {
     )
 }
 
-function Get-OrCloneRepository {
+function Get-OrCloneFirebaseRepository {
     param(
-        [string]$GitExe,
-        [string]$DownloadsFolder
+        [string]$CurrentProject,
+        [pscustomobject]$Tools
     )
 
-    $candidateFolders = @()
-
-    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
-        $scriptFolder = Get-Item -LiteralPath $PSScriptRoot
-
-        if ($scriptFolder.Name -ieq 'setup_powershell' -and
-            $null -ne $scriptFolder.Parent) {
-            $candidateFolders += $scriptFolder.Parent.FullName
-        }
-
-        $candidateFolders += $scriptFolder.FullName
+    if (Test-CorrectRepository -GitExe $Tools.Git -Folder $CurrentProject) {
+        Save-RememberedProject -Mode 'firebase' -Path $CurrentProject
+        return $CurrentProject
     }
 
-    $candidateFolders += @(
-        (Join-Path $DownloadsFolder $RepositoryName),
-        (Join-Path $DownloadsFolder "$RepositoryName-editor"),
-        (Join-Path $DownloadsFolder "$RepositoryName-fixed-installer-update")
-    )
+    $detected = Find-AutomaticQuizProject -Mode 'firebase'
 
-    foreach ($candidate in $candidateFolders | Select-Object -Unique) {
-        if (Test-CorrectRepository -GitExe $GitExe -Folder $candidate) {
-            Write-Ok "Using local repository: $candidate"
-            return $candidate
-        }
+    if (Test-CorrectRepository -GitExe $Tools.Git -Folder $detected) {
+        Save-RememberedProject -Mode 'firebase' -Path $detected
+        return $detected
     }
 
-    $editorFolder = Join-Path $DownloadsFolder "$RepositoryName-editor"
+    $downloads = Get-DownloadsFolder
+    $destination = Join-Path $downloads "$RepositoryName-editor"
 
-    if (Test-Path -LiteralPath $editorFolder) {
+    if (Test-Path -LiteralPath $destination) {
+        if (Test-CorrectRepository -GitExe $Tools.Git -Folder $destination) {
+            Save-RememberedProject -Mode 'firebase' -Path $destination
+            return $destination
+        }
+
         $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-        $backup = "$editorFolder-backup-$timestamp"
-        Move-Item -LiteralPath $editorFolder -Destination $backup
-        Write-Info "Existing folder backed up to: $backup"
+        Move-Item `
+            -LiteralPath $destination `
+            -Destination "$destination-backup-$timestamp"
     }
 
     [void](Invoke-Native `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             'clone',
             '--branch', 'main',
             '--single-branch',
             $RepositoryGitUrl,
-            $editorFolder
+            $destination
         ) `
         -FailureMessage 'The GitHub repository could not be downloaded.')
 
-    Write-Ok "Repository downloaded to: $editorFolder"
-    return $editorFolder
+    Save-RememberedProject -Mode 'firebase' -Path $destination
+    return $destination
 }
 
-function Sync-Repository {
+function Publish-SelectedFile {
     param(
-        [string]$GitExe,
-        [string]$RepositoryFolder
-    )
-
-    $status = Invoke-NativeCapture `
-        -FilePath $GitExe `
-        -Arguments @('-C', $RepositoryFolder, 'status', '--porcelain') `
-        -FailureMessage 'Git could not inspect the local repository.' `
-        -AllowFailure
-
-    if (-not [string]::IsNullOrWhiteSpace($status.Text)) {
-        Write-Warn 'The local repository already has uncommitted changes.'
-        Write-Warn 'They will be preserved, but an automatic pull is being skipped.'
-        return
-    }
-
-    $pull = Invoke-Native `
-        -FilePath $GitExe `
-        -Arguments @('-C', $RepositoryFolder, 'pull', '--rebase', 'origin', 'main') `
-        -FailureMessage 'Git could not pull the latest changes.' `
-        -AllowFailure
-
-    if ($pull -eq 0) {
-        Write-Ok 'The local repository is up to date.'
-    }
-    else {
-        Write-Warn 'The newest GitHub changes could not be pulled automatically.'
-    }
-}
-
-function Publish-File {
-    param(
-        [string]$GitExe,
+        [pscustomobject]$Tools,
         [string]$RepositoryFolder,
-        [string]$SelectedFile,
+        [pscustomobject]$SelectedFile,
         [string]$GitHubUser
     )
 
-    $relativePath = Get-RelativePathSafe `
-        -BasePath $RepositoryFolder `
-        -FullPath $SelectedFile
-
     $status = Invoke-NativeCapture `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             '-C', $RepositoryFolder,
             'status',
             '--porcelain',
             '--',
-            $relativePath
+            $SelectedFile.RelativePath
         ) `
-        -FailureMessage 'Git could not check the selected file.' `
+        -FailureMessage 'Git could not inspect the selected file.' `
         -AllowFailure
 
     if ([string]::IsNullOrWhiteSpace($status.Text)) {
-        Show-Message `
-            -Title 'No changes found' `
+        Show-EditorMessage `
+            -Title 'No saved changes found' `
             -Message 'The selected file was not changed, so nothing needs to be uploaded.'
 
         return
@@ -847,21 +986,17 @@ function Publish-File {
         -Message @"
 A saved change was found in:
 
-$relativePath
+$($SelectedFile.RelativePath)
 
 Choose Yes to commit and push only this file to GitHub.
-Choose No to keep the change only on this computer.
+Choose No to keep the saved change only on this computer.
 "@
 
     if (-not $publish) {
-        Show-Message `
-            -Title 'Change kept locally' `
-            -Message 'The file remains changed on this computer and was not uploaded.'
-
         return
     }
 
-    $defaultMessage = "Update flashcards in $([System.IO.Path]::GetFileName($relativePath))"
+    $defaultMessage = "Update flashcards in $([System.IO.Path]::GetFileName($SelectedFile.RelativePath))"
 
     $commitMessage = [Microsoft.VisualBasic.Interaction]::InputBox(
         'Enter a short description for the GitHub update:',
@@ -874,7 +1009,7 @@ Choose No to keep the change only on this computer.
     }
 
     [void](Invoke-Native `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             '-C', $RepositoryFolder,
             'config',
@@ -884,7 +1019,7 @@ Choose No to keep the change only on this computer.
         -FailureMessage 'Git could not set the commit username.')
 
     [void](Invoke-Native `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             '-C', $RepositoryFolder,
             'config',
@@ -894,7 +1029,7 @@ Choose No to keep the change only on this computer.
         -FailureMessage 'Git could not set the commit email.')
 
     [void](Invoke-Native `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             '-C', $RepositoryFolder,
             'pull',
@@ -903,20 +1038,20 @@ Choose No to keep the change only on this computer.
             'origin',
             'main'
         ) `
-        -FailureMessage 'Git could not safely combine the latest GitHub changes.')
+        -FailureMessage 'Git could not combine the newest GitHub changes safely.')
 
     [void](Invoke-Native `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             '-C', $RepositoryFolder,
             'add',
             '--',
-            $relativePath
+            $SelectedFile.RelativePath
         ) `
-        -FailureMessage 'Git could not stage the selected flashcard file.')
+        -FailureMessage 'Git could not stage the selected file.')
 
     [void](Invoke-Native `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             '-C', $RepositoryFolder,
             'commit',
@@ -926,7 +1061,7 @@ Choose No to keep the change only on this computer.
         -FailureMessage 'Git could not create the flashcard update commit.')
 
     [void](Invoke-Native `
-        -FilePath $GitExe `
+        -FilePath $Tools.Git `
         -Arguments @(
             '-C', $RepositoryFolder,
             'push',
@@ -935,137 +1070,567 @@ Choose No to keep the change only on this computer.
         ) `
         -FailureMessage 'GitHub rejected the flashcard update.')
 
-    $encodedParts = @()
-
-    foreach ($part in $relativePath.Replace('\', '/').Split('/')) {
-        $encodedParts += [System.Uri]::EscapeDataString($part)
-    }
-
-    $fileUrl = "$RepositoryWebUrl/blob/main/$($encodedParts -join '/')"
-
-    Show-Message `
+    Show-EditorMessage `
         -Title 'Flashcards published' `
-        -Message @"
-The selected flashcard file was committed and pushed to GitHub.
+        -Message 'The selected flashcard file was committed and pushed to GitHub.'
 
-$fileUrl
-"@
-
-    Start-Process -FilePath $fileUrl -ErrorAction SilentlyContinue
+    Start-Process `
+        -FilePath "$RepositoryWebUrl/blob/main/$($SelectedFile.RelativePath.Replace('\', '/'))" `
+        -ErrorAction SilentlyContinue
 }
 
-function Start-FirebaseEditor {
-    Write-Step 'Preparing the Firebase + GitHub flashcard editor'
+function Start-FlashcardEditor {
+    $script:Mode = 'Local only'
+    $script:ProjectFolder = Find-AutomaticQuizProject -Mode 'local'
+    $script:EditableFiles = @()
+    $script:GitTools = $null
+    $script:GitHubUser = $null
 
-    $downloads = Get-DownloadsFolder
-    $tools = Ensure-GitTools
-    $githubUser = Ensure-GitHubLogin -GhExe $tools.Gh
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = 'Linear Algebra Quiz Flashcard Editor'
+    $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $form.Size = New-Object System.Drawing.Size(1120, 760)
+    $form.MinimumSize = New-Object System.Drawing.Size(1000, 700)
+    $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
+    $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.5)
+    $form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Dpi
+    $form.AllowDrop = $true
+    $form.ShowIcon = $false
 
-    $repoCheck = Invoke-Native `
-        -FilePath $tools.Gh `
-        -Arguments @('repo', 'view', "$RepositoryOwner/$RepositoryName") `
-        -FailureMessage 'GitHub could not access the repository.' `
-        -AllowFailure `
-        -Quiet
+    $header = New-Object System.Windows.Forms.Panel
+    $header.Dock = [System.Windows.Forms.DockStyle]::Top
+    $header.Height = 124
+    $header.BackColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
+    $form.Controls.Add($header)
 
-    if ($repoCheck -ne 0) {
-        throw "GitHub could not access $RepositoryOwner/$RepositoryName using account $githubUser."
-    }
+    $accent = New-Object System.Windows.Forms.Panel
+    $accent.Dock = [System.Windows.Forms.DockStyle]::Left
+    $accent.Width = 8
+    $accent.BackColor = [System.Drawing.Color]::FromArgb(56, 189, 248)
+    $header.Controls.Add($accent)
 
-    $repositoryFolder = Get-OrCloneRepository `
-        -GitExe $tools.Git `
-        -DownloadsFolder $downloads
+    $brand = New-Object System.Windows.Forms.Label
+    $brand.Text = 'LINEAR ALGEBRA TRUE OR FALSE'
+    $brand.AutoSize = $true
+    $brand.Location = New-Object System.Drawing.Point(31, 18)
+    $brand.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 8.5)
+    $brand.ForeColor = [System.Drawing.Color]::FromArgb(125, 211, 252)
+    $header.Controls.Add($brand)
 
-    Sync-Repository `
-        -GitExe $tools.Git `
-        -RepositoryFolder $repositoryFolder
+    $title = New-Object System.Windows.Forms.Label
+    $title.Text = 'Beginner flashcard editor'
+    $title.AutoSize = $true
+    $title.Location = New-Object System.Drawing.Point(28, 43)
+    $title.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 18)
+    $title.ForeColor = [System.Drawing.Color]::White
+    $header.Controls.Add($title)
 
-    $editAnother = $true
+    $subtitle = New-Object System.Windows.Forms.Label
+    $subtitle.Text = 'The project is found automatically. Choose a flashcard page, edit it safely, and publish when using Firebase mode.'
+    $subtitle.AutoSize = $true
+    $subtitle.Location = New-Object System.Drawing.Point(31, 84)
+    $subtitle.Font = New-Object System.Drawing.Font('Segoe UI', 9.8)
+    $subtitle.ForeColor = [System.Drawing.Color]::FromArgb(203, 213, 225)
+    $header.Controls.Add($subtitle)
 
-    while ($editAnother) {
-        Show-Message `
-            -Title 'Firebase + GitHub flashcard editor' `
-            -Message @"
-Choose an HTML, JavaScript, or JSON file from the repository.
+    $leftPanel = New-Object System.Windows.Forms.Panel
+    $leftPanel.Dock = [System.Windows.Forms.DockStyle]::Left
+    $leftPanel.Width = 330
+    $leftPanel.Padding = New-Object System.Windows.Forms.Padding(22)
+    $leftPanel.BackColor = [System.Drawing.Color]::White
+    $form.Controls.Add($leftPanel)
 
-Common flashcard pages begin with "solo".
+    $rightPanel = New-Object System.Windows.Forms.Panel
+    $rightPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $rightPanel.Padding = New-Object System.Windows.Forms.Padding(28, 22, 28, 22)
+    $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
+    $rightPanel.AutoScroll = $true
+    $form.Controls.Add($rightPanel)
 
-After Notepad opens:
-1. Find the question with Ctrl+F.
-2. Make the change.
-3. Save with Ctrl+S.
-4. Return here and choose OK.
+    $header.BringToFront()
+
+    $instructionsTitle = New-Object System.Windows.Forms.Label
+    $instructionsTitle.Text = 'How to use it'
+    $instructionsTitle.AutoSize = $true
+    $instructionsTitle.Location = New-Object System.Drawing.Point(22, 24)
+    $instructionsTitle.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 12)
+    $instructionsTitle.ForeColor = [System.Drawing.Color]::FromArgb(15, 23, 42)
+    $leftPanel.Controls.Add($instructionsTitle)
+
+    $instructions = New-Object System.Windows.Forms.Label
+    $instructions.Text = "1. Choose Local or Firebase mode.`r`n`r`n2. The project is found automatically.`r`n`r`n3. Pick a flashcard file.`r`n`r`n4. Edit in Notepad and press Ctrl+S."
+    $instructions.AutoSize = $false
+    $instructions.Location = New-Object System.Drawing.Point(22, 59)
+    $instructions.Size = New-Object System.Drawing.Size(282, 195)
+    $instructions.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $instructions.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
+    $leftPanel.Controls.Add($instructions)
+
+    $foundPanel = New-Object System.Windows.Forms.Panel
+    $foundPanel.Location = New-Object System.Drawing.Point(22, 265)
+    $foundPanel.Size = New-Object System.Drawing.Size(282, 145)
+    $foundPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+    $foundPanel.BackColor = [System.Drawing.Color]::FromArgb(239, 246, 255)
+    $leftPanel.Controls.Add($foundPanel)
+
+    $foundTitle = New-Object System.Windows.Forms.Label
+    $foundTitle.Text = 'Automatic project detection'
+    $foundTitle.AutoSize = $false
+    $foundTitle.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $foundTitle.Location = New-Object System.Drawing.Point(10, 24)
+    $foundTitle.Size = New-Object System.Drawing.Size(260, 28)
+    $foundTitle.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10.5)
+    $foundTitle.ForeColor = [System.Drawing.Color]::FromArgb(30, 64, 175)
+    $foundPanel.Controls.Add($foundTitle)
+
+    $foundText = New-Object System.Windows.Forms.Label
+    $foundText.Text = 'Searching for the installed quiz...'
+    $foundText.AutoSize = $false
+    $foundText.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $foundText.Location = New-Object System.Drawing.Point(14, 58)
+    $foundText.Size = New-Object System.Drawing.Size(252, 66)
+    $foundText.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
+    $foundPanel.Controls.Add($foundText)
+
+    $autoButton = New-EditorButton -Text 'Find automatically' -Width 282
+    $autoButton.Location = New-Object System.Drawing.Point(22, 430)
+    $leftPanel.Controls.Add($autoButton)
+
+    $browseButton = New-EditorButton -Text 'Choose a different folder' -Width 282
+    $browseButton.Location = New-Object System.Drawing.Point(22, 480)
+    $leftPanel.Controls.Add($browseButton)
+
+    $openFolderButton = New-EditorButton -Text 'Open project folder' -Width 282
+    $openFolderButton.Location = New-Object System.Drawing.Point(22, 530)
+    $leftPanel.Controls.Add($openFolderButton)
+
+    $backupBox = New-Object System.Windows.Forms.Panel
+    $backupBox.Location = New-Object System.Drawing.Point(22, 588)
+    $backupBox.Size = New-Object System.Drawing.Size(282, 74)
+    $backupBox.BackColor = [System.Drawing.Color]::FromArgb(240, 253, 244)
+    $leftPanel.Controls.Add($backupBox)
+
+    $backupHelp = New-Object System.Windows.Forms.Label
+    $backupHelp.Text = "Backups are created inside:`r`nbackups\local-flashcard-editor"
+    $backupHelp.AutoSize = $false
+    $backupHelp.Location = New-Object System.Drawing.Point(13, 12)
+    $backupHelp.Size = New-Object System.Drawing.Size(256, 52)
+    $backupHelp.ForeColor = [System.Drawing.Color]::FromArgb(22, 101, 52)
+    $backupBox.Controls.Add($backupHelp)
+
+    $modeLabel = New-Object System.Windows.Forms.Label
+    $modeLabel.Text = 'Editing mode'
+    $modeLabel.AutoSize = $true
+    $modeLabel.Location = New-Object System.Drawing.Point(28, 24)
+    $modeLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
+    $rightPanel.Controls.Add($modeLabel)
+
+    $modeCombo = New-Object System.Windows.Forms.ComboBox
+    $modeCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    $modeCombo.Location = New-Object System.Drawing.Point(28, 52)
+    $modeCombo.Size = New-Object System.Drawing.Size(680, 32)
+    $modeCombo.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    [void]$modeCombo.Items.Add('Local only')
+    [void]$modeCombo.Items.Add('Firebase + GitHub')
+    $modeCombo.SelectedIndex = 0
+    $rightPanel.Controls.Add($modeCombo)
+
+    $projectLabel = New-Object System.Windows.Forms.Label
+    $projectLabel.Text = 'Automatically detected project folder'
+    $projectLabel.AutoSize = $true
+    $projectLabel.Location = New-Object System.Drawing.Point(28, 105)
+    $projectLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
+    $rightPanel.Controls.Add($projectLabel)
+
+    $projectPathBox = New-Object System.Windows.Forms.TextBox
+    $projectPathBox.ReadOnly = $true
+    $projectPathBox.Location = New-Object System.Drawing.Point(28, 133)
+    $projectPathBox.Size = New-Object System.Drawing.Size(680, 31)
+    $projectPathBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $projectPathBox.BackColor = [System.Drawing.Color]::White
+    $rightPanel.Controls.Add($projectPathBox)
+
+    $fileLabel = New-Object System.Windows.Forms.Label
+    $fileLabel.Text = 'Choose a flashcard file'
+    $fileLabel.AutoSize = $true
+    $fileLabel.Location = New-Object System.Drawing.Point(28, 184)
+    $fileLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
+    $rightPanel.Controls.Add($fileLabel)
+
+    $fileCombo = New-Object System.Windows.Forms.ComboBox
+    $fileCombo.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+    $fileCombo.Location = New-Object System.Drawing.Point(28, 212)
+    $fileCombo.Size = New-Object System.Drawing.Size(680, 32)
+    $fileCombo.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $rightPanel.Controls.Add($fileCombo)
+
+    $detailsPanel = New-Object System.Windows.Forms.Panel
+    $detailsPanel.Location = New-Object System.Drawing.Point(28, 267)
+    $detailsPanel.Size = New-Object System.Drawing.Size(680, 172)
+    $detailsPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $detailsPanel.BackColor = [System.Drawing.Color]::White
+    $detailsPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+    $rightPanel.Controls.Add($detailsPanel)
+
+    $detailsHeading = New-Object System.Windows.Forms.Label
+    $detailsHeading.Text = 'Selected file details'
+    $detailsHeading.AutoSize = $true
+    $detailsHeading.Location = New-Object System.Drawing.Point(18, 17)
+    $detailsHeading.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10.5)
+    $detailsPanel.Controls.Add($detailsHeading)
+
+    $detailsText = New-Object System.Windows.Forms.Label
+    $detailsText.Text = 'The editor is finding your quiz project.'
+    $detailsText.AutoSize = $false
+    $detailsText.Location = New-Object System.Drawing.Point(18, 51)
+    $detailsText.Size = New-Object System.Drawing.Size(640, 100)
+    $detailsText.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $detailsText.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
+    $detailsPanel.Controls.Add($detailsText)
+
+    $backupCheck = New-Object System.Windows.Forms.CheckBox
+    $backupCheck.Text = 'Create a timestamped backup before editing'
+    $backupCheck.Checked = $true
+    $backupCheck.AutoSize = $true
+    $backupCheck.Location = New-Object System.Drawing.Point(30, 462)
+    $rightPanel.Controls.Add($backupCheck)
+
+    $refreshButton = New-EditorButton -Text 'Refresh files'
+    $refreshButton.Location = New-Object System.Drawing.Point(28, 505)
+    $rightPanel.Controls.Add($refreshButton)
+
+    $editButton = New-EditorButton -Text 'Edit in Notepad' -Primary -Width 180
+    $editButton.Location = New-Object System.Drawing.Point(528, 505)
+    $editButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
+    $editButton.Enabled = $false
+    $rightPanel.Controls.Add($editButton)
+
+    $statusPanel = New-Object System.Windows.Forms.Panel
+    $statusPanel.Location = New-Object System.Drawing.Point(28, 565)
+    $statusPanel.Size = New-Object System.Drawing.Size(680, 70)
+    $statusPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $statusPanel.BackColor = [System.Drawing.Color]::FromArgb(241, 245, 249)
+    $rightPanel.Controls.Add($statusPanel)
+
+    $statusLabel = New-Object System.Windows.Forms.Label
+    $statusLabel.Text = 'Searching automatically...'
+    $statusLabel.AutoSize = $false
+    $statusLabel.Location = New-Object System.Drawing.Point(15, 13)
+    $statusLabel.Size = New-Object System.Drawing.Size(646, 44)
+    $statusLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105)
+    $statusPanel.Controls.Add($statusLabel)
+
+    $setStatus = {
+        param(
+            [string]$Message,
+            [ValidateSet('Normal', 'Success', 'Warning', 'Error')]
+            [string]$Kind = 'Normal'
+        )
+
+        $statusLabel.Text = $Message
+
+        switch ($Kind) {
+            'Success' { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(22, 101, 52) }
+            'Warning' { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(180, 83, 9) }
+            'Error'   { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(185, 28, 28) }
+            default   { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105) }
+        }
+    }.GetNewClosure()
+
+    $updateFileDetails = {
+        if ($fileCombo.SelectedIndex -lt 0 -or
+            $fileCombo.SelectedIndex -ge $script:EditableFiles.Count) {
+            $detailsText.Text = 'Choose a flashcard file.'
+            $editButton.Enabled = $false
+            return
+        }
+
+        $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
+        $detailsText.Text = "Path: $($selected.RelativePath)`r`nType: $($selected.Extension)`r`nSize: $(Format-FileSize -Bytes $selected.SizeBytes)`r`nLast changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))"
+        $editButton.Enabled = $true
+    }.GetNewClosure()
+
+    $loadFiles = {
+        param([string]$PreferredFile)
+
+        $fileCombo.Items.Clear()
+        $script:EditableFiles = @()
+
+        if (-not (Test-QuizProject -Path $script:ProjectFolder)) {
+            $projectPathBox.Text = ''
+            $foundText.Text = 'No project found yet.'
+            $detailsText.Text = 'Use Find automatically or Choose a different folder.'
+            $editButton.Enabled = $false
+            & $setStatus 'No Linear Algebra quiz project is selected.' 'Warning'
+            return
+        }
+
+        $projectPathBox.Text = $script:ProjectFolder
+        $foundText.Text = "Found:`r`n$script:ProjectFolder"
+
+        $rememberMode = if ($script:Mode -eq 'Firebase + GitHub') {
+            'firebase'
+        }
+        else {
+            'local'
+        }
+
+        Save-RememberedProject `
+            -Mode $rememberMode `
+            -Path $script:ProjectFolder
+
+        $script:EditableFiles = @(Get-FlashcardFiles -ProjectFolder $script:ProjectFolder)
+
+        foreach ($file in $script:EditableFiles) {
+            [void]$fileCombo.Items.Add($file.Display)
+        }
+
+        if ($script:EditableFiles.Count -eq 0) {
+            $detailsText.Text = 'No HTML, JavaScript, or JSON flashcard files were found.'
+            $editButton.Enabled = $false
+            & $setStatus 'The project was found, but it contains no editable flashcard files.' 'Warning'
+            return
+        }
+
+        $selectedIndex = 0
+
+        if (-not [string]::IsNullOrWhiteSpace($PreferredFile)) {
+            for ($index = 0; $index -lt $script:EditableFiles.Count; $index++) {
+                if ($script:EditableFiles[$index].FullPath -ieq $PreferredFile) {
+                    $selectedIndex = $index
+                    break
+                }
+            }
+        }
+
+        $fileCombo.SelectedIndex = $selectedIndex
+        & $setStatus "Automatically loaded $($script:EditableFiles.Count) editable file(s)." 'Success'
+    }.GetNewClosure()
+
+    $findProject = {
+        $form.UseWaitCursor = $true
+        [System.Windows.Forms.Application]::DoEvents()
+
+        try {
+            $modeKey = if ($script:Mode -eq 'Firebase + GitHub') {
+                'firebase'
+            }
+            else {
+                'local'
+            }
+
+            $detected = Find-AutomaticQuizProject -Mode $modeKey
+
+            if ([string]::IsNullOrWhiteSpace($detected)) {
+                $script:ProjectFolder = $null
+                & $loadFiles $null
+                return
+            }
+
+            $script:ProjectFolder = $detected
+            & $loadFiles $null
+        }
+        finally {
+            $form.UseWaitCursor = $false
+        }
+    }.GetNewClosure()
+
+    $modeCombo.Add_SelectedIndexChanged({
+        $script:Mode = [string]$modeCombo.SelectedItem
+        $backupHelp.Text = if ($script:Mode -eq 'Firebase + GitHub') {
+            "Backups are created inside:`r`nbackups\firebase-flashcard-editor"
+        }
+        else {
+            "Backups are created inside:`r`nbackups\local-flashcard-editor"
+        }
+
+        & $findProject
+    }.GetNewClosure())
+
+    $autoButton.Add_Click({
+        & $setStatus 'Searching Documents, Desktop, and Downloads...' 'Normal'
+        & $findProject
+    }.GetNewClosure())
+
+    $browseButton.Add_Click({
+        $selected = Show-ProjectFolderDialog -InitialFolder $script:ProjectFolder
+
+        if (-not [string]::IsNullOrWhiteSpace($selected)) {
+            $root = Find-ProjectRootFromPath -Path $selected
+
+            if ([string]::IsNullOrWhiteSpace($root)) {
+                Show-EditorMessage `
+                    -Title 'Quiz project not found' `
+                    -Message 'Choose the main folder containing index.html and the solo quiz pages.' `
+                    -Type 'Warning'
+
+                return
+            }
+
+            $script:ProjectFolder = $root
+            & $loadFiles $null
+        }
+    }.GetNewClosure())
+
+    $openFolderButton.Add_Click({
+        if (Test-QuizProject -Path $script:ProjectFolder) {
+            Start-Process `
+                -FilePath 'explorer.exe' `
+                -ArgumentList "`"$script:ProjectFolder`""
+        }
+    }.GetNewClosure())
+
+    $refreshButton.Add_Click({
+        $preferred = $null
+
+        if ($fileCombo.SelectedIndex -ge 0 -and
+            $fileCombo.SelectedIndex -lt $script:EditableFiles.Count) {
+            $preferred = $script:EditableFiles[$fileCombo.SelectedIndex].FullPath
+        }
+
+        & $loadFiles $preferred
+    }.GetNewClosure())
+
+    $fileCombo.Add_SelectedIndexChanged({
+        & $updateFileDetails
+    }.GetNewClosure())
+
+    $editButton.Add_Click({
+        if ($fileCombo.SelectedIndex -lt 0 -or
+            $fileCombo.SelectedIndex -ge $script:EditableFiles.Count) {
+            return
+        }
+
+        $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
+
+        try {
+            if ($script:Mode -eq 'Firebase + GitHub') {
+                $form.UseWaitCursor = $true
+                & $setStatus 'Preparing GitHub tools and repository...' 'Normal'
+                [System.Windows.Forms.Application]::DoEvents()
+
+                $script:GitTools = Ensure-GitTools
+                $script:GitHubUser = Ensure-GitHubLogin -GhExe $script:GitTools.Gh
+
+                $repository = Get-OrCloneFirebaseRepository `
+                    -CurrentProject $script:ProjectFolder `
+                    -Tools $script:GitTools
+
+                if ($repository -ine $script:ProjectFolder) {
+                    $script:ProjectFolder = $repository
+                    & $loadFiles $null
+
+                    $matchIndex = -1
+
+                    for ($index = 0; $index -lt $script:EditableFiles.Count; $index++) {
+                        if ($script:EditableFiles[$index].RelativePath -ieq $selected.RelativePath) {
+                            $matchIndex = $index
+                            break
+                        }
+                    }
+
+                    if ($matchIndex -ge 0) {
+                        $fileCombo.SelectedIndex = $matchIndex
+                        $selected = $script:EditableFiles[$matchIndex]
+                    }
+                    else {
+                        Show-EditorMessage `
+                            -Title 'Choose the file again' `
+                            -Message 'The Firebase repository was prepared. Choose the flashcard file again from the list.' `
+                            -Type 'Information'
+
+                        return
+                    }
+                }
+            }
+
+            $backupPath = $null
+
+            if ($backupCheck.Checked) {
+                $backupPath = Create-FileBackup `
+                    -ProjectFolder $script:ProjectFolder `
+                    -SelectedFile $selected `
+                    -Mode $script:Mode
+            }
+
+            Start-Process `
+                -FilePath 'notepad.exe' `
+                -ArgumentList "`"$($selected.FullPath)`""
+
+            $finished = Ask-OkCancel `
+                -Title 'Finish editing in Notepad' `
+                -Message @"
+Make the flashcard changes in Notepad and press Ctrl+S.
+
+After saving, return here and choose OK.
+Choose Cancel to stop without publishing.
 "@
 
-        $selectedFile = Select-FlashcardFile `
-            -ProjectFolder $repositoryFolder
+            if (-not $finished) {
+                & $setStatus 'Editing stopped. Any saved local changes were kept.' 'Warning'
+                return
+            }
 
-        if ([string]::IsNullOrWhiteSpace($selectedFile)) {
-            return
+            if ($script:Mode -eq 'Firebase + GitHub') {
+                Publish-SelectedFile `
+                    -Tools $script:GitTools `
+                    -RepositoryFolder $script:ProjectFolder `
+                    -SelectedFile $selected `
+                    -GitHubUser $script:GitHubUser
+
+                & $setStatus 'The Firebase/GitHub flashcard workflow finished.' 'Success'
+            }
+            else {
+                & $setStatus "Local flashcards saved. Backup: $backupPath" 'Success'
+
+                if (Ask-YesNo `
+                    -Title 'Open the local quiz?' `
+                    -Message 'Open index.html now to test the flashcard change?') {
+                    Start-Process `
+                        -FilePath (Join-Path $script:ProjectFolder 'index.html') `
+                        -ErrorAction SilentlyContinue
+                }
+            }
         }
+        catch {
+            & $setStatus $_.Exception.Message 'Error'
 
-        $finished = Open-FileForEditing `
-            -ProjectFolder $repositoryFolder `
-            -SelectedFile $selectedFile `
-            -BackupCategory 'firebase-flashcard-editor'
-
-        if (-not $finished) {
-            return
+            Show-EditorMessage `
+                -Title 'Could not finish the flashcard edit' `
+                -Message $_.Exception.Message `
+                -Type 'Error'
         }
+        finally {
+            $form.UseWaitCursor = $false
+        }
+    }.GetNewClosure())
 
-        Publish-File `
-            -GitExe $tools.Git `
-            -RepositoryFolder $repositoryFolder `
-            -SelectedFile $selectedFile `
-            -GitHubUser $githubUser
+    $form.Add_Shown({
+        & $findProject
+    }.GetNewClosure())
 
-        $editAnother = Ask-YesNo `
-            -Title 'Edit another Firebase flashcard file?' `
-            -Message 'Choose Yes to edit another file, or No to finish.'
-    }
+    [void]$form.ShowDialog()
+    $form.Dispose()
 }
 
 try {
-    Initialize-Ui
-    Clear-Host
-
-    Write-Host 'LINEAR ALGEBRA QUIZ - FLASHCARD EDITOR' -ForegroundColor Magenta
-    Write-Host 'VERSION 1 - LOCAL OR FIREBASE MODE' -ForegroundColor DarkCyan
-    Write-Host ''
-
-    $choice = Choose-Mode
-
-    if ($choice -eq [System.Windows.Forms.DialogResult]::Yes) {
-        Start-FirebaseEditor
-    }
-    elseif ($choice -eq [System.Windows.Forms.DialogResult]::No) {
-        Start-LocalEditor
-    }
-    else {
-        Write-Host 'Cancelled. Nothing was changed.' -ForegroundColor Yellow
-    }
-
-    Write-Host ''
-    Write-Host 'DONE' -ForegroundColor Green
+    Initialize-EditorUi
+    Start-FlashcardEditor
 }
 catch {
-    $message = $_.Exception.Message
-
-    Write-Host ''
-    Write-Host 'FLASHCARD EDITOR STOPPED' -ForegroundColor Red
-    Write-Host $message -ForegroundColor Red
-    Write-Host ''
-
     try {
-        Show-Message `
-            -Title 'Flashcard editor stopped' `
-            -Message $message `
+        Initialize-EditorUi
+
+        Show-EditorMessage `
+            -Title 'Flashcard editor could not start' `
+            -Message $_.Exception.Message `
             -Type 'Error'
     }
     catch {
-        # Keep the PowerShell error visible if Windows dialogs are unavailable.
+        Write-Host "Flashcard editor could not start: $($_.Exception.Message)" -ForegroundColor Red
+        [void](Read-Host 'Press Enter to close')
     }
 
-    [void](Read-Host 'Press Enter to close')
     exit 1
 }
