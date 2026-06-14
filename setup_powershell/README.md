@@ -302,6 +302,19 @@ GitHub Pages deployment can take a short time. Refresh the page after the deploy
 
 
 
+
+### A setup popup still reports a null-valued expression
+
+Older polished popup versions used Windows event handlers that could lose their textbox reference in Windows PowerShell 5.1.
+
+The current installers no longer use those event handlers for setup input windows. Confirm the installer displays:
+
+```text
+UI VERSION 5 - STABLE POPUPS WITHOUT EVENT HANDLERS
+```
+
+The new input windows use normal text boxes and standard **Continue** and **Cancel** buttons. Paste with **Ctrl+V**.
+
 <a id="null-valued-popup-error"></a>
 ### A popup says `You cannot call a method on a null-valued expression`
 

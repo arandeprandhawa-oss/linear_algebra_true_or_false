@@ -175,7 +175,7 @@ function Show-TextPopup {
     $ui = New-SetupWindow `
         -WindowTitle $Title `
         -Heading $Title `
-        -Description 'Paste or type the requested information below.' `
+        -Description 'Type or paste the requested information below.' `
         -Width 760 `
         -Height 405
 
@@ -191,39 +191,16 @@ function Show-TextPopup {
     $promptLabel.ForeColor = [System.Drawing.Color]::FromArgb(51, 65, 85)
     $content.Controls.Add($promptLabel)
 
-    $input = New-Object System.Windows.Forms.TextBox
-    $input.Text = $DefaultValue
-    $input.Location = New-Object System.Drawing.Point(26, 88)
-    $input.Size = New-Object System.Drawing.Size(558, 32)
-    $input.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-    $input.Font = New-Object System.Drawing.Font('Segoe UI', 11)
-    $content.Controls.Add($input)
-
-    $pasteButton = New-SetupButton -Text 'Paste'
-    $pasteButton.Location = New-Object System.Drawing.Point(594, 85)
-    $pasteButton.Size = New-Object System.Drawing.Size(122, 36)
-    $pasteButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
-    $pasteButton.Add_Click({
-        try {
-            if ([System.Windows.Forms.Clipboard]::ContainsText()) {
-                $input.Text = [System.Windows.Forms.Clipboard]::GetText().Trim()
-                $input.SelectionStart = $input.Text.Length
-                $input.Focus()
-            }
-        }
-        catch {
-            [System.Windows.Forms.MessageBox]::Show(
-                'Windows could not read the clipboard. You can still paste with Ctrl+V.',
-                'Clipboard unavailable',
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information
-            ) | Out-Null
-        }
-    }.GetNewClosure())
-    $content.Controls.Add($pasteButton)
+    $inputBox = New-Object System.Windows.Forms.TextBox
+    $inputBox.Text = $DefaultValue
+    $inputBox.Location = New-Object System.Drawing.Point(26, 88)
+    $inputBox.Size = New-Object System.Drawing.Size(690, 32)
+    $inputBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $inputBox.Font = New-Object System.Drawing.Font('Segoe UI', 11)
+    $content.Controls.Add($inputBox)
 
     $hint = New-Object System.Windows.Forms.Label
-    $hint.Text = 'Tip: Ctrl+V also works. The Continue button activates when a value is entered.'
+    $hint.Text = 'Click inside the box and press Ctrl+V to paste.'
     $hint.AutoSize = $false
     $hint.Location = New-Object System.Drawing.Point(27, 130)
     $hint.Size = New-Object System.Drawing.Size(690, 24)
@@ -249,25 +226,28 @@ function Show-TextPopup {
     $continueButton.Location = New-Object System.Drawing.Point(598, 191)
     $continueButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
     $continueButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $continueButton.Enabled = -not [string]::IsNullOrWhiteSpace($DefaultValue)
     $content.Controls.Add($continueButton)
-
-    $input.Add_TextChanged({
-        $continueButton.Enabled = -not [string]::IsNullOrWhiteSpace($input.Text)
-    }.GetNewClosure())
 
     $form.AcceptButton = $continueButton
     $form.CancelButton = $cancelButton
-    $form.Add_Shown({
-        $input.Focus()
-        $input.SelectionStart = $input.Text.Length
-    }.GetNewClosure())
+    $form.ActiveControl = $inputBox
 
     $result = $form.ShowDialog()
-    $value = $input.Text.Trim()
+    $value = $inputBox.Text.Trim()
     $form.Dispose()
 
     if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
+        return $null
+    }
+
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            'Please enter a value before continuing.',
+            $Title,
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Warning
+        ) | Out-Null
+
         return $null
     }
 
@@ -283,7 +263,7 @@ function Show-MultilinePopup {
     $ui = New-SetupWindow `
         -WindowTitle $Title `
         -Heading $Title `
-        -Description 'Paste the complete configuration block. It will be checked before setup continues.' `
+        -Description 'Paste the complete configuration block below.' `
         -Width 900 `
         -Height 760 `
         -Resizable
@@ -295,128 +275,51 @@ function Show-MultilinePopup {
     $promptLabel.Text = $Prompt
     $promptLabel.AutoSize = $false
     $promptLabel.Location = New-Object System.Drawing.Point(26, 18)
-    $promptLabel.Size = New-Object System.Drawing.Size(830, 62)
+    $promptLabel.Size = New-Object System.Drawing.Size(830, 72)
     $promptLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $promptLabel.ForeColor = [System.Drawing.Color]::FromArgb(51, 65, 85)
     $content.Controls.Add($promptLabel)
 
-    $pasteButton = New-SetupButton -Text 'Paste from clipboard'
-    $pasteButton.Location = New-Object System.Drawing.Point(26, 88)
-    $pasteButton.Size = New-Object System.Drawing.Size(158, 36)
-    $content.Controls.Add($pasteButton)
+    $hint = New-Object System.Windows.Forms.Label
+    $hint.Text = 'Click inside the large box and press Ctrl+V to paste the Firebase config.'
+    $hint.AutoSize = $false
+    $hint.Location = New-Object System.Drawing.Point(26, 94)
+    $hint.Size = New-Object System.Drawing.Size(830, 26)
+    $hint.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $hint.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
+    $content.Controls.Add($hint)
 
-    $clearButton = New-SetupButton -Text 'Clear'
-    $clearButton.Location = New-Object System.Drawing.Point(194, 88)
-    $clearButton.Size = New-Object System.Drawing.Size(90, 36)
-    $content.Controls.Add($clearButton)
-
-    $statusLabel = New-Object System.Windows.Forms.Label
-    $statusLabel.Text = 'Waiting for Firebase configuration...'
-    $statusLabel.AutoSize = $false
-    $statusLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
-    $statusLabel.Location = New-Object System.Drawing.Point(330, 88)
-    $statusLabel.Size = New-Object System.Drawing.Size(526, 36)
-    $statusLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-    $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-    $content.Controls.Add($statusLabel)
-
-    $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.Multiline = $true
-    $textBox.AcceptsReturn = $true
-    $textBox.AcceptsTab = $true
-    $textBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Both
-    $textBox.WordWrap = $false
-    $textBox.Font = New-Object System.Drawing.Font('Consolas', 10.5)
-    $textBox.Location = New-Object System.Drawing.Point(26, 136)
-    $textBox.Size = New-Object System.Drawing.Size(830, 400)
-    $textBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-    $textBox.BackColor = [System.Drawing.Color]::White
-    $content.Controls.Add($textBox)
+    $configBox = New-Object System.Windows.Forms.TextBox
+    $configBox.Multiline = $true
+    $configBox.AcceptsReturn = $true
+    $configBox.AcceptsTab = $true
+    $configBox.ScrollBars = [System.Windows.Forms.ScrollBars]::Both
+    $configBox.WordWrap = $false
+    $configBox.Font = New-Object System.Drawing.Font('Consolas', 10.5)
+    $configBox.Location = New-Object System.Drawing.Point(26, 128)
+    $configBox.Size = New-Object System.Drawing.Size(830, 430)
+    $configBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+    $configBox.BackColor = [System.Drawing.Color]::White
+    $content.Controls.Add($configBox)
 
     $cancelButton = New-SetupButton -Text 'Cancel'
-    $cancelButton.Location = New-Object System.Drawing.Point(606, 554)
+    $cancelButton.Location = New-Object System.Drawing.Point(606, 577)
     $cancelButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
     $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
     $content.Controls.Add($cancelButton)
 
     $continueButton = New-SetupButton -Text 'Use this config' -Primary
-    $continueButton.Location = New-Object System.Drawing.Point(738, 554)
+    $continueButton.Location = New-Object System.Drawing.Point(738, 577)
     $continueButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
     $continueButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $continueButton.Enabled = $false
     $content.Controls.Add($continueButton)
-
-    $updateValidation = {
-        $value = $textBox.Text
-
-        if ([string]::IsNullOrWhiteSpace($value)) {
-            $statusLabel.Text = 'Waiting for Firebase configuration...'
-            $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-            $continueButton.Enabled = $false
-            return
-        }
-
-        $requiredNames = @('apiKey', 'authDomain', 'projectId', 'messagingSenderId', 'appId')
-        $missing = @()
-
-        foreach ($name in $requiredNames) {
-            if ($value -notmatch ('(?im)\b' + [regex]::Escape($name) + '\s*:')) {
-                $missing += $name
-            }
-        }
-
-        if ($missing.Count -eq 0) {
-            $projectMatch = [regex]::Match($value, '(?im)\bprojectId\s*:\s*["'']([^"'']+)["'']')
-            if ($projectMatch.Success) {
-                $statusLabel.Text = "Ready - detected project: $($projectMatch.Groups[1].Value)"
-            }
-            else {
-                $statusLabel.Text = 'Ready - required Firebase fields detected'
-            }
-
-            $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(22, 163, 74)
-            $continueButton.Enabled = $true
-        }
-        else {
-            $statusLabel.Text = 'Missing: ' + ($missing -join ', ')
-            $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
-            $continueButton.Enabled = $false
-        }
-    }.GetNewClosure()
-
-    $textBox.Add_TextChanged($updateValidation)
-
-    $pasteButton.Add_Click({
-        try {
-            if ([System.Windows.Forms.Clipboard]::ContainsText()) {
-                $textBox.Text = [System.Windows.Forms.Clipboard]::GetText()
-                $textBox.SelectionStart = $textBox.Text.Length
-                $textBox.Focus()
-            }
-        }
-        catch {
-            [System.Windows.Forms.MessageBox]::Show(
-                'Windows could not read the clipboard. You can still paste with Ctrl+V.',
-                'Clipboard unavailable',
-                [System.Windows.Forms.MessageBoxButtons]::OK,
-                [System.Windows.Forms.MessageBoxIcon]::Information
-            ) | Out-Null
-        }
-    }.GetNewClosure())
-
-    $clearButton.Add_Click({
-        $textBox.Clear()
-        $textBox.Focus()
-    }.GetNewClosure())
 
     $form.AcceptButton = $continueButton
     $form.CancelButton = $cancelButton
-    $form.Add_Shown({
-        $textBox.Focus()
-    }.GetNewClosure())
+    $form.ActiveControl = $configBox
 
     $result = $form.ShowDialog()
-    $value = $textBox.Text
+    $value = $configBox.Text
     $form.Dispose()
 
     if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
@@ -432,131 +335,24 @@ function Show-FolderPopup {
         [string]$InitialFolder
     )
 
-    $ui = New-SetupWindow `
-        -WindowTitle $Title `
-        -Heading $Title `
-        -Description 'Choose where the local website folder will be stored on this computer.' `
-        -Width 800 `
-        -Height 430
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = $Title
+    $dialog.ShowNewFolderButton = $true
 
-    $form = $ui.Form
-    $content = $ui.Content
-
-    $label = New-Object System.Windows.Forms.Label
-    $label.Text = 'Installation location'
-    $label.AutoSize = $true
-    $label.Location = New-Object System.Drawing.Point(26, 24)
-    $label.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 10)
-    $label.ForeColor = [System.Drawing.Color]::FromArgb(30, 41, 59)
-    $content.Controls.Add($label)
-
-    $pathBox = New-Object System.Windows.Forms.TextBox
-    $pathBox.Text = $InitialFolder
-    $pathBox.Location = New-Object System.Drawing.Point(26, 54)
-    $pathBox.Size = New-Object System.Drawing.Size(590, 32)
-    $pathBox.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-    $pathBox.Font = New-Object System.Drawing.Font('Segoe UI', 10.5)
-    $content.Controls.Add($pathBox)
-
-    $browseButton = New-SetupButton -Text 'Browse...'
-    $browseButton.Location = New-Object System.Drawing.Point(630, 51)
-    $browseButton.Size = New-Object System.Drawing.Size(122, 36)
-    $browseButton.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
-    $content.Controls.Add($browseButton)
-
-    $statusLabel = New-Object System.Windows.Forms.Label
-    $statusLabel.AutoSize = $false
-    $statusLabel.Location = New-Object System.Drawing.Point(27, 96)
-    $statusLabel.Size = New-Object System.Drawing.Size(725, 27)
-    $statusLabel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-    $statusLabel.Font = New-Object System.Drawing.Font('Segoe UI', 8.8)
-    $content.Controls.Add($statusLabel)
-
-    $notePanel = New-Object System.Windows.Forms.Panel
-    $notePanel.Location = New-Object System.Drawing.Point(26, 134)
-    $notePanel.Size = New-Object System.Drawing.Size(726, 54)
-    $notePanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-    $notePanel.BackColor = [System.Drawing.Color]::FromArgb(239, 246, 255)
-    $content.Controls.Add($notePanel)
-
-    $note = New-Object System.Windows.Forms.Label
-    $note.Text = 'Local mode: the quiz stays on this computer. No GitHub repository or Firebase account is needed.'
-    $note.AutoSize = $false
-    $note.Location = New-Object System.Drawing.Point(14, 10)
-    $note.Size = New-Object System.Drawing.Size(695, 34)
-    $note.ForeColor = [System.Drawing.Color]::FromArgb(30, 64, 175)
-    $notePanel.Controls.Add($note)
-
-    $cancelButton = New-SetupButton -Text 'Cancel'
-    $cancelButton.Location = New-Object System.Drawing.Point(502, 207)
-    $cancelButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
-    $cancelButton.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $content.Controls.Add($cancelButton)
-
-    $continueButton = New-SetupButton -Text 'Use this folder' -Primary
-    $continueButton.Location = New-Object System.Drawing.Point(634, 207)
-    $continueButton.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
-    $continueButton.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $content.Controls.Add($continueButton)
-
-    $updateFolderState = {
-        $candidate = [Environment]::ExpandEnvironmentVariables($pathBox.Text.Trim())
-
-        if ([string]::IsNullOrWhiteSpace($candidate)) {
-            $statusLabel.Text = 'Choose or enter a folder.'
-            $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
-            $continueButton.Enabled = $false
-        }
-        elseif (Test-Path -LiteralPath $candidate -PathType Container) {
-            $statusLabel.Text = 'Folder found and ready.'
-            $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(22, 163, 74)
-            $continueButton.Enabled = $true
-        }
-        else {
-            $statusLabel.Text = 'This folder does not exist yet. Choose an existing parent folder.'
-            $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
-            $continueButton.Enabled = $false
-        }
-    }.GetNewClosure()
-
-    $pathBox.Add_TextChanged($updateFolderState)
-
-    $browseButton.Add_Click({
-        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-        $dialog.Description = 'Choose where to install the local Linear Algebra quiz'
-        $dialog.ShowNewFolderButton = $true
-
-        $candidate = [Environment]::ExpandEnvironmentVariables($pathBox.Text.Trim())
-        if (Test-Path -LiteralPath $candidate -PathType Container) {
-            $dialog.SelectedPath = $candidate
-        }
-
-        if ($dialog.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
-            $pathBox.Text = $dialog.SelectedPath
-            $pathBox.SelectionStart = $pathBox.Text.Length
-        }
-
-        $dialog.Dispose()
-    }.GetNewClosure())
-
-    & $updateFolderState
-
-    $form.AcceptButton = $continueButton
-    $form.CancelButton = $cancelButton
-    $form.Add_Shown({
-        $pathBox.Focus()
-        $pathBox.SelectionStart = $pathBox.Text.Length
-    }.GetNewClosure())
-
-    $result = $form.ShowDialog()
-    $value = [Environment]::ExpandEnvironmentVariables($pathBox.Text.Trim())
-    $form.Dispose()
-
-    if ($result -ne [System.Windows.Forms.DialogResult]::OK) {
-        return $null
+    if (-not [string]::IsNullOrWhiteSpace($InitialFolder) -and
+        (Test-Path -LiteralPath $InitialFolder -PathType Container)) {
+        $dialog.SelectedPath = $InitialFolder
     }
 
-    return $value
+    $result = $dialog.ShowDialog()
+    $selectedPath = $null
+
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+        $selectedPath = $dialog.SelectedPath
+    }
+
+    $dialog.Dispose()
+    return $selectedPath
 }
 
 function Show-NoticePopup {
@@ -906,7 +702,7 @@ start "" "%~dp0index.html"
 try {
     Clear-Host
     Write-Host 'LINEAR ALGEBRA QUIZ - LOCAL INSTALLER' -ForegroundColor Magenta
-    Write-Host 'UI VERSION 4 - WINDOWS EVENT HANDLER FIX' -ForegroundColor DarkCyan
+    Write-Host 'UI VERSION 5 - STABLE POPUPS WITHOUT EVENT HANDLERS
     Write-Host 'MODE: Local computer only - no GitHub and no Firebase' -ForegroundColor Magenta
     Write-Host 'Nothing needs to be installed except the website files themselves.'
 
