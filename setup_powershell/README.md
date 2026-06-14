@@ -6,6 +6,7 @@ This folder contains beginner-friendly Windows PowerShell tools for installing, 
 
 | File | Purpose |
 |---|---|
+| `setup.ps1` | Recommended beginner launcher. It finds the installers automatically and asks which version to run when both are present. |
 | `setup-new-repo-no-firebase.ps1` | Installs a local, solo-only copy of the website on the computer. No GitHub or Firebase account is required. |
 | `setup-new-repo-with-firebase.ps1` | Creates a local copy, connects it to a new GitHub repository, guides the Firebase setup, deploys Firestore rules, and prepares GitHub Pages. |
 | `edit-quiz-javascript.ps1` | Opens a visual editor that lets you choose a JavaScript file from a drop-down menu and open it in Notepad. |
@@ -20,6 +21,59 @@ This folder contains beginner-friendly Windows PowerShell tools for installing, 
 - A Google account only for the Firebase version
 
 You do **not** need to install Python, Node.js, npm, Git, GitHub CLI, or Firebase CLI manually. The setup scripts download only the tools they require.
+
+---
+
+
+## Recommended: run `setup.ps1`
+
+Use `setup.ps1` instead of choosing an installer manually.
+
+The launcher automatically:
+
+- Detects the current Windows user and real Downloads folder.
+- Looks beside `setup.ps1` and in Downloads for the installer files.
+- Starts the local installer automatically when only the local version is present.
+- Starts the Firebase installer automatically when only the Firebase version is present.
+- Shows a standard Windows choice popup when both installers are present.
+- Recognizes browser-renamed files such as `setup-new-repo-with-firebase (1).ps1`.
+
+### Step 1 — Download the toolkit
+
+Download and extract all toolkit files into Downloads, or keep all the `.ps1` files together in the same folder.
+
+At minimum, keep `setup.ps1` beside one or both of these files:
+
+```text
+setup-new-repo-no-firebase.ps1
+setup-new-repo-with-firebase.ps1
+```
+
+### Step 2 — Open PowerShell
+
+Open the Start menu, search for **PowerShell**, and open it.
+
+You do not need to change the permanent execution policy.
+
+### Step 3 — Run the launcher
+
+Paste this single command and press Enter:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup.ps1"
+```
+
+The launcher finds the current Windows username through `$env:USERPROFILE`.
+
+When both installers are present, the popup choices are:
+
+```text
+Yes    = Firebase + GitHub online version
+No     = Local-only version
+Cancel = Exit without making changes
+```
+
+If the toolkit was extracted into a subfolder instead of directly into Downloads, open that folder, right-click `setup.ps1`, and choose **Run with PowerShell**.
 
 ---
 
@@ -38,9 +92,9 @@ Use this option when the website should stay on the computer and does not need o
 - Does not ask for a GitHub link.
 - Does not require GitHub or Firebase login.
 
-### Run it
+### Run it directly
 
-Place `setup-new-repo-no-firebase.ps1` in Downloads, then open PowerShell and run:
+The recommended method is `setup.ps1`. To run this installer directly, place `setup-new-repo-no-firebase.ps1` in Downloads and run:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup-new-repo-no-firebase.ps1"
@@ -74,9 +128,9 @@ Use this option when the website needs a GitHub repository, GitHub Pages, Firest
 - Attempts to enable GitHub Pages.
 - Keeps a complete local copy in Downloads.
 
-### Run it
+### Run it directly
 
-Place `setup-new-repo-with-firebase.ps1` in Downloads, then run:
+The recommended method is `setup.ps1`. To run this installer directly, place `setup-new-repo-with-firebase.ps1` in Downloads and run:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\setup-new-repo-with-firebase.ps1"
@@ -213,6 +267,19 @@ Turn on **Also show HTML files**. The website may use inline JavaScript inside i
 
 GitHub Pages deployment can take a short time. Refresh the page after the deployment finishes.
 
+
+
+### A popup says `You cannot call a method on a null-valued expression`
+
+This was caused by an older Windows PowerShell 5.1 popup handler losing its reference to a textbox or button when the window opened.
+
+Replace the old scripts with the newest versions. The corrected updater displays:
+
+```text
+UI VERSION 6 - WINDOWS EVENT HANDLER FIX
+```
+
+This is a popup-code compatibility issue. It is not caused by the GitHub repository link or the user's GitHub account.
 
 ### A popup reports `System.Object[]` or `op_Subtraction`
 

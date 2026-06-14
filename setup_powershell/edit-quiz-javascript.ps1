@@ -488,7 +488,7 @@ function Start-JavaScriptEditor {
             'Error'   { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(185, 28, 28) }
             default   { $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(71, 85, 105) }
         }
-    }
+    }.GetNewClosure()
 
     $updateSelectedDetails = {
         if ($fileCombo.SelectedIndex -lt 0 -or $fileCombo.SelectedIndex -ge $script:EditableFiles.Count) {
@@ -500,7 +500,7 @@ function Start-JavaScriptEditor {
         $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
         $detailsText.Text = "Path: $($selected.RelativePath)`r`nType: $($selected.Extension)`r`nSize: $(Format-FileSize -Bytes $selected.SizeBytes)`r`nLast changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))"
         $openButton.Enabled = $true
-    }
+    }.GetNewClosure()
 
     $loadFiles = {
         param(
@@ -547,7 +547,7 @@ function Start-JavaScriptEditor {
 
         $fileCombo.SelectedIndex = $selectedIndex
         & $setStatus "Found $($script:EditableFiles.Count) editable file(s)." 'Success'
-    }
+    }.GetNewClosure()
 
     $useDroppedPath = {
         param([string]$DroppedPath)
@@ -587,7 +587,7 @@ function Start-JavaScriptEditor {
         }
 
         & $loadFiles $preferredFile
-    }
+    }.GetNewClosure()
 
     $dragEnterHandler = {
         param($sender, $eventArgs)
@@ -598,7 +598,7 @@ function Start-JavaScriptEditor {
         else {
             $eventArgs.Effect = [System.Windows.Forms.DragDropEffects]::None
         }
-    }
+    }.GetNewClosure()
 
     $dragDropHandler = {
         param($sender, $eventArgs)
@@ -607,7 +607,7 @@ function Start-JavaScriptEditor {
         if ($null -ne $paths -and $paths.Count -gt 0) {
             & $useDroppedPath $paths[0]
         }
-    }
+    }.GetNewClosure()
 
     $form.Add_DragEnter($dragEnterHandler)
     $form.Add_DragDrop($dragDropHandler)
@@ -620,7 +620,7 @@ function Start-JavaScriptEditor {
             $script:ProjectFolder = Find-ProjectRootFromPath -Path $selected
             & $loadFiles $null
         }
-    })
+    }.GetNewClosure())
 
     $openFolderButton.Add_Click({
         if ([string]::IsNullOrWhiteSpace($script:ProjectFolder) -or
@@ -633,11 +633,11 @@ function Start-JavaScriptEditor {
         }
 
         Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$script:ProjectFolder`""
-    })
+    }.GetNewClosure())
 
     $includeHtmlCheck.Add_CheckedChanged({
         & $loadFiles $null
-    })
+    }.GetNewClosure())
 
     $refreshButton.Add_Click({
         $preferred = $null
@@ -647,11 +647,11 @@ function Start-JavaScriptEditor {
         }
 
         & $loadFiles $preferred
-    })
+    }.GetNewClosure())
 
     $fileCombo.Add_SelectedIndexChanged({
         & $updateSelectedDetails
-    })
+    }.GetNewClosure())
 
     $openButton.Add_Click({
         if ($fileCombo.SelectedIndex -lt 0 -or
@@ -684,7 +684,7 @@ function Start-JavaScriptEditor {
                 -Message $_.Exception.Message `
                 -Type 'Error'
         }
-    })
+    }.GetNewClosure())
 
     $form.Add_Shown({
         if (-not [string]::IsNullOrWhiteSpace($script:ProjectFolder)) {
@@ -693,7 +693,7 @@ function Start-JavaScriptEditor {
         else {
             & $setStatus 'Drag a project folder here or use Choose project folder.' 'Normal'
         }
-    })
+    }.GetNewClosure())
 
     [void]$form.ShowDialog()
     $form.Dispose()

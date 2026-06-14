@@ -1,196 +1,224 @@
-# ===========================================================================
-# setup.ps1 - Linear Algebra True/False Flashcard Website Setup
-#
-# What this script does:
-#   1. Installs Git on your computer (if not already installed)
-#   2. Downloads your copy of this website to your Downloads folder
-#   3. Connects it to your Firebase project (for 1v1 multiplayer)
-#   4. Publishes your website to GitHub Pages
-#
-# HOW TO RUN:
-#   1. Open PowerShell (search "PowerShell" in the Start menu)
-#   2. Paste this line and press Enter:
-#        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-#   3. Then paste this line and press Enter:
-#        cd Downloads; .\setup.ps1
-# ===========================================================================
+#requires -Version 5.1
+<#
+Beginner-friendly launcher for the Linear Algebra True or False setup toolkit.
 
-# ---------------------------------------------------------------------------
-# WELCOME
-# ---------------------------------------------------------------------------
-Clear-Host
-Write-Host ""
-Write-Host "  =================================================" -ForegroundColor Cyan
-Write-Host "   Linear Algebra True/False - Website Setup"       -ForegroundColor Cyan
-Write-Host "  =================================================" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "  This script will set up your own copy of the"
-Write-Host "  flashcard website in about 5 minutes."
-Write-Host ""
-Write-Host "  You will need:"
-Write-Host "    - A GitHub account  (github.com/signup)"
-Write-Host "    - A Firebase account (firebase.google.com) -- for 1v1 mode"
-Write-Host ""
-$continue = Read-Host "  Press Enter to continue (or type Q to quit)"
-if($continue -match '^[Qq]'){ Write-Host "Bye!" -ForegroundColor Yellow; return }
+What it does:
+- Detects the current Windows user's real Downloads folder.
+- Looks beside this file and in Downloads for the two installer scripts.
+- If only one installer exists, it starts that installer automatically.
+- If both installers exist, it shows a standard Windows popup:
+    Yes    = Firebase + GitHub online version
+    No     = local-only version
+    Cancel = stop
+- Supports filenames such as "setup-new-repo-no-firebase (1).ps1".
+- Does not install anything by itself; it launches the selected installer.
+#>
 
-# ---------------------------------------------------------------------------
-# STEP 1: Check / install Git
-# ---------------------------------------------------------------------------
-Write-Host ""
-Write-Host "  [1/5] Checking for Git..." -ForegroundColor Cyan
+$ErrorActionPreference = 'Stop'
 
-if(-not(Get-Command git -ErrorAction SilentlyContinue)){
-    Write-Host "  Git is not installed. Installing now..." -ForegroundColor Yellow
-    if(-not(Get-Command winget -ErrorAction SilentlyContinue)){
-        Write-Host ""
-        Write-Host "  ERROR: winget not found." -ForegroundColor Red
-        Write-Host "  Please install 'App Installer' from the Microsoft Store" -ForegroundColor Red
-        Write-Host "  then run this script again." -ForegroundColor Red
-        return
+function Get-DownloadsFolder {
+    $knownFolderId = '{374DE290-123F-4565-9164-39C4925E467B}'
+    $registryPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
+
+    try {
+        $item = Get-ItemProperty `
+            -Path $registryPath `
+            -Name $knownFolderId `
+            -ErrorAction Stop
+
+        $downloads = [Environment]::ExpandEnvironmentVariables(
+            $item.$knownFolderId
+        )
     }
-    winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements
-    Write-Host ""
-    Write-Host "  Git installed! IMPORTANT: You must close this PowerShell" -ForegroundColor Green
-    Write-Host "  window and open a NEW one, then run setup.ps1 again." -ForegroundColor Yellow
-    return
-}
-Write-Host "  Git is installed. OK." -ForegroundColor Green
+    catch {
+        $userProfile = [Environment]::GetFolderPath('UserProfile')
 
-# ---------------------------------------------------------------------------
-# STEP 2: Get their GitHub repo URL
-# ---------------------------------------------------------------------------
-Write-Host ""
-Write-Host "  [2/5] Your GitHub Repository" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "  Before continuing, you need to fork this repo on GitHub."
-Write-Host "  A fork is your own personal copy of this website."
-Write-Host ""
-Write-Host "  To fork:"
-Write-Host "    1. Go to: https://github.com/arandeprandhawa-oss/linear_algebra_true_or_false"
-Write-Host "    2. Click the Fork button (top-right)"
-Write-Host "    3. Click Create Fork"
-Write-Host ""
-Write-Host "  Opening that page now..."
-Start-Process "https://github.com/arandeprandhawa-oss/linear_algebra_true_or_false"
-Write-Host ""
-Write-Host "  After forking, come back here."
-Write-Host "  Your fork URL will look like:"
-Write-Host "    https://github.com/YOUR-USERNAME/linear_algebra_true_or_false.git"
-Write-Host ""
-$repoUrl = Read-Host "  Paste your fork URL here (the .git link from the green Code button)"
-$repoUrl = $repoUrl.Trim()
-if(-not $repoUrl){
-    Write-Host "  No URL entered. Run the script again when ready." -ForegroundColor Yellow
-    return
-}
-
-# Extract username from URL for the live site URL later
-$username = ""
-if($repoUrl -match "github\.com/([^/]+)/"){
-    $username = $Matches[1]
-}
-
-# ---------------------------------------------------------------------------
-# STEP 3: Clone repo to Downloads
-# ---------------------------------------------------------------------------
-Write-Host ""
-Write-Host "  [3/5] Downloading your website files..." -ForegroundColor Cyan
-
-$destDir = "$env:USERPROFILE\Downloads\linear_algebra_true_or_false"
-if(Test-Path $destDir){
-    Write-Host "  Folder already exists. Updating..." -ForegroundColor Yellow
-    Set-Location $destDir
-    git pull
-} else {
-    git clone $repoUrl $destDir
-    Set-Location $destDir
-}
-Write-Host "  Downloaded to: $destDir" -ForegroundColor Green
-
-# ---------------------------------------------------------------------------
-# STEP 4: Firebase config (for 1v1 multiplayer)
-# ---------------------------------------------------------------------------
-Write-Host ""
-Write-Host "  [4/5] Firebase Setup (for 1v1 multiplayer)" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "  Firebase lets two people play against each other in real time."
-Write-Host "  If you only want Solo mode, you can skip this step."
-Write-Host ""
-Write-Host "  To get your Firebase config:"
-Write-Host "    1. Go to: https://console.firebase.google.com"
-Write-Host "    2. Create a project (any name)"
-Write-Host "    3. Add a Web App (the </> icon)"
-Write-Host "    4. Copy the firebaseConfig values"
-Write-Host "    5. Also enable Firestore Database (test mode)"
-Write-Host ""
-$doFirebase = Read-Host "  Do you have your Firebase config ready? (Y to enter it / N to skip)"
-
-if($doFirebase -match '^[Yy]'){
-    Write-Host ""
-    Write-Host "  Paste each value and press Enter. Leave blank to skip that field."
-    Write-Host ""
-    $apiKey           = (Read-Host "  apiKey").Trim()
-    $authDomain       = (Read-Host "  authDomain").Trim()
-    $projectId        = (Read-Host "  projectId").Trim()
-    $storageBucket    = (Read-Host "  storageBucket").Trim()
-    $messagingSenderId= (Read-Host "  messagingSenderId").Trim()
-    $appId            = (Read-Host "  appId").Trim()
-
-    if($apiKey){
-        $utf8 = [System.Text.UTF8Encoding]::new($false)
-        Get-ChildItem "$destDir\*.html" | ForEach-Object {
-            $c = Get-Content $_.FullName -Raw -Encoding UTF8
-            if($c -notmatch 'firebaseConfig'){ return }
-            if($apiKey)            { $c = $c -replace 'apiKey:\s*"[^"]*"',            "apiKey: `"$apiKey`"" }
-            if($authDomain)        { $c = $c -replace 'authDomain:\s*"[^"]*"',        "authDomain: `"$authDomain`"" }
-            if($projectId)         { $c = $c -replace 'projectId:\s*"[^"]*"',         "projectId: `"$projectId`"" }
-            if($storageBucket)     { $c = $c -replace 'storageBucket:\s*"[^"]*"',     "storageBucket: `"$storageBucket`"" }
-            if($messagingSenderId) { $c = $c -replace 'messagingSenderId:\s*"[^"]*"', "messagingSenderId: `"$messagingSenderId`"" }
-            if($appId)             { $c = $c -replace 'appId:\s*"[^"]*"',             "appId: `"$appId`"" }
-            [System.IO.File]::WriteAllText($_.FullName, $c, $utf8)
-            Write-Host "    Updated Firebase in $($_.Name)" -ForegroundColor DarkCyan
+        if ([string]::IsNullOrWhiteSpace($userProfile)) {
+            $userProfile = $env:USERPROFILE
         }
-        Write-Host "  Firebase config saved." -ForegroundColor Green
+
+        $downloads = Join-Path $userProfile 'Downloads'
     }
-} else {
-    Write-Host "  Skipped. You can run the Firebase section of this script later." -ForegroundColor Yellow
+
+    return $downloads
 }
 
-# ---------------------------------------------------------------------------
-# STEP 5: Push to GitHub + open Pages settings
-# ---------------------------------------------------------------------------
-Write-Host ""
-Write-Host "  [5/5] Publishing your website..." -ForegroundColor Cyan
+function Find-NewestInstaller {
+    param(
+        [string[]]$SearchFolders,
+        [string]$BaseName
+    )
 
-Set-Location $destDir
-git add -A
-git commit -m "initial setup: my own flashcard website"
-git push
+    $pattern = '^' +
+        [regex]::Escape($BaseName) +
+        '(?:\s*\(\d+\))?\.ps1$'
 
-Write-Host ""
-Write-Host "  =================================================" -ForegroundColor Green
-Write-Host "   Setup complete!" -ForegroundColor Green
-Write-Host "  =================================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "  FINAL STEP: Enable GitHub Pages (30 seconds)"
-Write-Host ""
-Write-Host "  Opening your repo settings now..."
-if($username){
-    $pagesUrl = "https://github.com/$username/linear_algebra_true_or_false/settings/pages"
-    Start-Process $pagesUrl
-    Write-Host ""
-    Write-Host "  In the browser:"
-    Write-Host "    1. Under 'Source' select: Deploy from a branch"
-    Write-Host "    2. Branch: main   Folder: / (root)"
-    Write-Host "    3. Click Save"
-    Write-Host ""
-    Write-Host "  Your live site will be ready in ~1 minute at:"
-    Write-Host "  https://$username.github.io/linear_algebra_true_or_false/" -ForegroundColor Cyan
-} else {
-    Write-Host "  Go to your repo Settings > Pages > Deploy from branch > main > Save"
+    $matches = @()
+
+    foreach ($folder in $SearchFolders | Select-Object -Unique) {
+        if ([string]::IsNullOrWhiteSpace($folder)) {
+            continue
+        }
+
+        if (-not (Test-Path -LiteralPath $folder -PathType Container)) {
+            continue
+        }
+
+        $matches += Get-ChildItem `
+            -LiteralPath $folder `
+            -File `
+            -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Name -match $pattern
+            }
+    }
+
+    return $matches |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
 }
-Write-Host ""
-Write-Host "  READ the README.md file in your Downloads folder"
-Write-Host "  for how to add your own cards." -ForegroundColor Yellow
-Write-Host ""
+
+function Show-ChoicePopup {
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.Application]::EnableVisualStyles()
+
+    $message = @'
+Both setup choices were found.
+
+Choose what you want to install:
+
+YES  = Firebase + GitHub online version
+NO   = Local-only version on this computer
+CANCEL = Stop without changing anything
+'@
+
+    return [System.Windows.Forms.MessageBox]::Show(
+        $message,
+        'Choose the Linear Algebra quiz setup',
+        [System.Windows.Forms.MessageBoxButtons]::YesNoCancel,
+        [System.Windows.Forms.MessageBoxIcon]::Question,
+        [System.Windows.Forms.MessageBoxDefaultButton]::Button2
+    )
+}
+
+function Show-ErrorPopup {
+    param([string]$Message)
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        [System.Windows.Forms.Application]::EnableVisualStyles()
+
+        [System.Windows.Forms.MessageBox]::Show(
+            $Message,
+            'Linear Algebra quiz setup',
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        ) | Out-Null
+    }
+    catch {
+        Write-Host $Message -ForegroundColor Red
+    }
+}
+
+try {
+    Clear-Host
+    Write-Host 'LINEAR ALGEBRA QUIZ - SETUP LAUNCHER' -ForegroundColor Magenta
+    Write-Host 'Automatically finding your installer...' -ForegroundColor Cyan
+    Write-Host ''
+
+    $downloads = Get-DownloadsFolder
+    $scriptFolder = $PSScriptRoot
+
+    if ([string]::IsNullOrWhiteSpace($scriptFolder)) {
+        $scriptFolder = (Get-Location).Path
+    }
+
+    $searchFolders = @(
+        $scriptFolder,
+        $downloads
+    )
+
+    $localInstaller = Find-NewestInstaller `
+        -SearchFolders $searchFolders `
+        -BaseName 'setup-new-repo-no-firebase'
+
+    $firebaseInstaller = Find-NewestInstaller `
+        -SearchFolders $searchFolders `
+        -BaseName 'setup-new-repo-with-firebase'
+
+    $selectedInstaller = $null
+    $selectedName = $null
+
+    if ($null -ne $localInstaller -and $null -ne $firebaseInstaller) {
+        $choice = Show-ChoicePopup
+
+        if ($choice -eq [System.Windows.Forms.DialogResult]::Yes) {
+            $selectedInstaller = $firebaseInstaller
+            $selectedName = 'Firebase + GitHub online setup'
+        }
+        elseif ($choice -eq [System.Windows.Forms.DialogResult]::No) {
+            $selectedInstaller = $localInstaller
+            $selectedName = 'local-only setup'
+        }
+        else {
+            Write-Host 'Setup cancelled. Nothing was changed.' -ForegroundColor Yellow
+            exit 0
+        }
+    }
+    elseif ($null -ne $firebaseInstaller) {
+        $selectedInstaller = $firebaseInstaller
+        $selectedName = 'Firebase + GitHub online setup'
+    }
+    elseif ($null -ne $localInstaller) {
+        $selectedInstaller = $localInstaller
+        $selectedName = 'local-only setup'
+    }
+    else {
+        $message = @"
+No installer scripts were found.
+
+Place setup.ps1 in the same folder as at least one of these files:
+
+- setup-new-repo-no-firebase.ps1
+- setup-new-repo-with-firebase.ps1
+
+The launcher also checked your Downloads folder:
+
+$downloads
+"@
+
+        Show-ErrorPopup -Message $message
+        throw 'No setup installer was found.'
+    }
+
+    Write-Host "Selected: $selectedName" -ForegroundColor Green
+    Write-Host "File:     $($selectedInstaller.FullName)" -ForegroundColor Green
+    Write-Host ''
+
+    try {
+        Unblock-File `
+            -LiteralPath $selectedInstaller.FullName `
+            -ErrorAction SilentlyContinue
+    }
+    catch {
+        # ExecutionPolicy Bypass is enough when Unblock-File is unavailable.
+    }
+
+    $installerFolder = Split-Path -Parent $selectedInstaller.FullName
+    Push-Location -LiteralPath $installerFolder
+
+    try {
+        & $selectedInstaller.FullName
+    }
+    finally {
+        Pop-Location
+    }
+}
+catch {
+    Write-Host ''
+    Write-Host 'SETUP LAUNCHER STOPPED' -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host ''
+    [void](Read-Host 'Press Enter to close')
+    exit 1
+}
