@@ -15,8 +15,10 @@ A web-based flashcard quiz for **MATH 2210 Applied Linear Algebra**. Practise th
 - [Tutorial 2 — Create your own online copy (GitHub + Firebase)](#tutorial-2-online)
 - [Tutorial 3 — Edit the quiz questions](#tutorial-3-edit-questions)
 - [Tutorial 4 — Edit the flashcard data](#tutorial-4-edit-flashcards)
-- [Tutorial 5 — Push your changes to GitHub](#tutorial-5-push)
-- [Tutorial 6 — Update the toolkit itself](#tutorial-6-update-toolkit)
+- [Tutorial 5 — Add a new unit](#tutorial-5-add-unit)
+- [Tutorial 6 — Adjust the timer and match length](#tutorial-6-timing)
+- [Tutorial 7 — Push your changes to GitHub](#tutorial-7-push)
+- [Tutorial 8 — Update the toolkit itself](#tutorial-8-update-toolkit)
 - [Project file layout](#project-file-layout)
 - [Safety features](#safety-features)
 - [Troubleshooting](#troubleshooting)
@@ -70,6 +72,8 @@ Everything lives in the **`setup_powershell`** folder. Each tool is a `.cmd` fil
 | **Setup Launcher** | If both installers are present, lets you pick local vs. online. |
 | **Edit Quiz JavaScript** | Visual editor to open and edit the quiz logic / question files. |
 | **Edit Flashcards** | Visual editor for the flashcard vocabulary data. |
+| **Add New Unit** | Creates a brand-new unit and wires it into the registry, pages, and tabs automatically. |
+| **Adjust Timing and Length** | UI to change the auto-advance timer and match-length options across all game pages. |
 | **Update Entire Project to GitHub** | Commits **every** change in the project and pushes it to GitHub. |
 | **Update GitHub Setup Toolkit** | Pushes only the `setup_powershell` toolkit files to GitHub. |
 
@@ -143,8 +147,43 @@ If the drop-down looks empty, turn on **Also show HTML files** — some logic li
 
 ---
 
-<a id="tutorial-5-push"></a>
-## Tutorial 5 — Push your changes to GitHub
+<a id="tutorial-5-add-unit"></a>
+## Tutorial 5 — Add a new unit
+
+This builds a whole new unit and connects it everywhere for you — no hand-editing of HTML or the registry.
+
+1. Double-click **Add New Unit**.
+2. The project is detected automatically. Fill in:
+   - **Unit label** (e.g. "Unit 5").
+   - **Topic / subtitle** (e.g. "Orthogonality & Least Squares").
+   - **Tab badge** (the small number on the tab).
+   - Optionally, pick an existing unit to **copy its questions** as a starting point.
+3. Click **Create unit**.
+
+It creates the unit's data file (`etapes/etapeN.js`), adds it to `registry.js`, creates the solo page (and the 1v1 page too, if you're on the online layout), and refreshes the unit tabs and navigation on every page. Then use **Edit Quiz JavaScript** to fill in the real questions.
+
+> It detects your layout automatically: a local (solo-only) install gets just a solo page; an online install gets both the 1v1 and solo pages.
+
+---
+
+<a id="tutorial-6-timing"></a>
+## Tutorial 6 — Adjust the timer and match length
+
+1. Double-click **Adjust Timing and Length**.
+2. With the project detected automatically, set:
+   - **Auto-advance timer** — how long the answer/explanation stays on screen before the next card (the countdown bar and the actual delay are kept in sync).
+   - **Default match length** — the highlighted choice on the length picker.
+   - **Match length choices** — the list of buttons (comma-separated numbers).
+3. Click **Apply to all pages**.
+
+It writes the changes to every game page and saves a backup under `backups\timing-editor` first. Refresh the site to see the effect.
+
+> These settings live on the 1v1 pages, so this tool applies to the **online** layout. A local (solo-only) install uses spaced repetition and has no fixed timer/length, so the tool will tell you there's nothing to change.
+
+---
+
+<a id="tutorial-7-push"></a>
+## Tutorial 7 — Push your changes to GitHub
 
 After editing anything locally, the changes are only on your computer until you push them.
 
@@ -152,21 +191,21 @@ After editing anything locally, the changes are only on your computer until you 
 2. Review the list of changed files it shows you.
 3. Confirm. It runs `git add -A`, makes one commit, and pushes to `main`.
 
-That single action publishes everything — edited questions, flashcards, pages, and any toolkit fixes. GitHub Pages redeploys automatically a moment later.
+That single action publishes everything — edited questions, flashcards, new units, timing changes, and any toolkit fixes. GitHub Pages redeploys automatically a moment later.
 
-> This tool does a normal push (no force-push), so it's safe to run any time you've made changes.
+> This tool does a normal push (no force-push), so it's safe to run any time you've made changes. If the folder isn't connected to GitHub yet (for example a fresh copy from the ZIP), it detects the project by its files and connects it for you automatically.
 
 ---
 
-<a id="tutorial-6-update-toolkit"></a>
-## Tutorial 6 — Update the toolkit itself
+<a id="tutorial-8-update-toolkit"></a>
+## Tutorial 8 — Update the toolkit itself
 
 If you only changed files inside `setup_powershell` and want to publish just those:
 
 1. Double-click **Update GitHub Setup Toolkit**.
 2. It stages, commits, and pushes only the toolkit folder to `main`.
 
-For most cases, **Update Entire Project to GitHub** (Tutorial 5) already covers this too.
+For most cases, **Update Entire Project to GitHub** (Tutorial 7) already covers this too.
 
 ---
 

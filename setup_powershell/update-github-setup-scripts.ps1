@@ -38,7 +38,11 @@ $ToolkitFiles = @(
     'update-entire-project-to-github.ps1',
     'Update Entire Project to GitHub.cmd',
     'update-github-setup-scripts.ps1',
-    'Update GitHub Setup Toolkit.cmd'
+    'Update GitHub Setup Toolkit.cmd',
+    'add-new-unit.ps1',
+    'Add New Unit.cmd',
+    'adjust-timing-and-length.ps1',
+    'Adjust Timing and Length.cmd'
 )
 
 function Write-Step {
