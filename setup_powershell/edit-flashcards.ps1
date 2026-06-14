@@ -1205,11 +1205,16 @@ Choose No to keep the saved change only on this computer.
 }
 
 function Start-FlashcardEditor {
-    $script:Mode = 'Local only'
-    $script:ProjectFolder = $null
-    $script:EditableFiles = @()
-    $script:GitTools = $null
-    $script:GitHubUser = $null
+    # One shared mutable object is captured by every UI closure.
+    # Do not use $script: state here: separate GetNewClosure() calls can receive
+    # separate script scopes and lose the selected-file information.
+    $state = [hashtable]::Synchronized(@{
+        Mode = 'Local only'
+        ProjectFolder = $null
+        EditableFiles = @()
+        GitTools = $null
+        GitHubUser = $null
+    })
 
     $form = New-Object System.Windows.Forms.Form
     $form.Text = 'Linear Algebra Quiz Flashcard Editor'
@@ -1510,7 +1515,7 @@ function Start-FlashcardEditor {
         $browseButton.Enabled = -not $Busy
         $modeCombo.Enabled = -not $Busy
         $refreshButton.Enabled = (-not $Busy) -and
-            (-not [string]::IsNullOrWhiteSpace($script:ProjectFolder))
+            (-not [string]::IsNullOrWhiteSpace($state.ProjectFolder))
         $form.UseWaitCursor = $Busy
     }.GetNewClosure()
 
@@ -1537,13 +1542,13 @@ function Start-FlashcardEditor {
         $selected = $null
 
         if ($fileCombo.SelectedIndex -ge 0 -and
-            $fileCombo.SelectedIndex -lt $script:EditableFiles.Count) {
-            $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
+            $fileCombo.SelectedIndex -lt $state.EditableFiles.Count) {
+            $selected = $state.EditableFiles[$fileCombo.SelectedIndex]
         }
         elseif ($null -ne $fileCombo.SelectedItem) {
             $selectedDisplay = [string]$fileCombo.SelectedItem
 
-            foreach ($candidate in $script:EditableFiles) {
+            foreach ($candidate in $state.EditableFiles) {
                 if ($candidate.Display -ieq $selectedDisplay) {
                     $selected = $candidate
                     break
@@ -1581,11 +1586,11 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
 
         try {
             $fileCombo.Items.Clear()
-            $script:EditableFiles = @()
+            $state.EditableFiles = @()
 
             if ([string]::IsNullOrWhiteSpace($ProjectPath) -or
                 (-not (Test-Path -LiteralPath $ProjectPath -PathType Container))) {
-                $script:ProjectFolder = $null
+                $state.ProjectFolder = $null
                 $projectPathBox.Text = ''
                 $foundText.Text = 'No project found yet.'
                 $detailsText.Text = 'Use Find automatically or Choose a different folder.'
@@ -1603,7 +1608,7 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
             }
 
             if (-not (Test-Path -LiteralPath (Join-Path $resolvedProject 'index.html') -PathType Leaf)) {
-                $script:ProjectFolder = $null
+                $state.ProjectFolder = $null
                 $projectPathBox.Text = ''
                 $foundText.Text = 'The selected folder is not the quiz root.'
                 $detailsText.Text = 'The main project folder must contain index.html.'
@@ -1614,7 +1619,7 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
                 return 0
             }
 
-            $script:ProjectFolder = $resolvedProject
+            $state.ProjectFolder = $resolvedProject
             $projectPathBox.Text = $resolvedProject
             $projectPathBox.SelectionStart = 0
             $projectPathBox.SelectionLength = 0
@@ -1622,7 +1627,7 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
             $openFolderButton.Enabled = $true
             $refreshButton.Enabled = $true
 
-            $rememberMode = if ($script:Mode -eq 'Firebase + GitHub') {
+            $rememberMode = if ($state.Mode -eq 'Firebase + GitHub') {
                 'firebase'
             }
             else {
@@ -1636,13 +1641,13 @@ Last changed: $($selected.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
             & $setStatus 'Loading the flashcard JavaScript files...' 'Normal'
 
             $loadedFiles = @(Get-FlashcardFiles -ProjectFolder $resolvedProject)
-            $script:EditableFiles = @($loadedFiles)
+            $state.EditableFiles = @($loadedFiles)
 
-            foreach ($editableFile in $script:EditableFiles) {
+            foreach ($editableFile in $state.EditableFiles) {
                 [void]$fileCombo.Items.Add([string]$editableFile.Display)
             }
 
-            if ($script:EditableFiles.Count -eq 0) {
+            if ($state.EditableFiles.Count -eq 0) {
                 $detailsText.Text = @"
 The project was found, but no JavaScript flashcard files were loaded.
 
@@ -1657,8 +1662,8 @@ $resolvedProject
             $selectedIndex = 0
 
             if (-not [string]::IsNullOrWhiteSpace($PreferredFile)) {
-                for ($index = 0; $index -lt $script:EditableFiles.Count; $index++) {
-                    if ($script:EditableFiles[$index].FullPath -ieq $PreferredFile) {
+                for ($index = 0; $index -lt $state.EditableFiles.Count; $index++) {
+                    if ($state.EditableFiles[$index].FullPath -ieq $PreferredFile) {
                         $selectedIndex = $index
                         break
                     }
@@ -1670,13 +1675,34 @@ $resolvedProject
             [System.Windows.Forms.Application]::DoEvents()
             & $updateFileDetails
 
-            if (-not $editButton.Enabled) {
-                throw 'The flashcard file was loaded, but the editor could not activate the Edit in Notepad button.'
+            # Activate the button directly from the shared state as a final
+            # safeguard against a delayed ComboBox selection event.
+            if ($fileCombo.SelectedIndex -ge 0 -and
+                $fileCombo.SelectedIndex -lt $state.EditableFiles.Count) {
+                $activeFile = $state.EditableFiles[$fileCombo.SelectedIndex]
+
+                if ($null -ne $activeFile -and
+                    -not [string]::IsNullOrWhiteSpace($activeFile.FullPath) -and
+                    (Test-Path -LiteralPath $activeFile.FullPath -PathType Leaf)) {
+                    $editButton.Tag = $activeFile.FullPath
+                    $editButton.Enabled = $true
+                    $detailsText.Text = @"
+Path: $($activeFile.RelativePath)
+Type: JavaScript ($($activeFile.Extension))
+Size: $(Format-FileSize -Bytes $activeFile.SizeBytes)
+Last changed: $($activeFile.LastWriteTime.ToString('yyyy-MM-dd h:mm tt'))
+"@
+                }
             }
 
-            & $setStatus "Project loaded successfully. $($script:EditableFiles.Count) JavaScript flashcard file(s) are ready." 'Success'
+            if (-not $editButton.Enabled) {
+                & $setStatus 'The files were found, but no valid JavaScript file is selected yet. Choose one from the drop-down menu.' 'Warning'
+            }
+            else {
+                & $setStatus "Project loaded successfully. $($state.EditableFiles.Count) JavaScript flashcard file(s) are ready." 'Success'
+            }
 
-            return $script:EditableFiles.Count
+            return $state.EditableFiles.Count
         }
         finally {
             $fileCombo.Refresh()
@@ -1695,7 +1721,7 @@ $resolvedProject
         & $setStatus 'Searching Documents, Desktop, Downloads, OneDrive, the editor folder, and remembered locations...' 'Normal'
 
         try {
-            $modeKey = if ($script:Mode -eq 'Firebase + GitHub') {
+            $modeKey = if ($state.Mode -eq 'Firebase + GitHub') {
                 'firebase'
             }
             else {
@@ -1754,9 +1780,9 @@ $resolvedProject
     }.GetNewClosure()
 
     $modeCombo.Add_SelectedIndexChanged({
-        $script:Mode = [string]$modeCombo.SelectedItem
+        $state.Mode = [string]$modeCombo.SelectedItem
 
-        $backupHelp.Text = if ($script:Mode -eq 'Firebase + GitHub') {
+        $backupHelp.Text = if ($state.Mode -eq 'Firebase + GitHub') {
             "Backups are created inside:`r`nbackups\firebase-flashcard-editor"
         }
         else {
@@ -1771,7 +1797,7 @@ $resolvedProject
     }.GetNewClosure())
 
     $browseButton.Add_Click({
-        $selectedFolder = Show-ProjectFolderDialog -InitialFolder $script:ProjectFolder
+        $selectedFolder = Show-ProjectFolderDialog -InitialFolder $state.ProjectFolder
 
         if (-not [string]::IsNullOrWhiteSpace($selectedFolder)) {
             [void](& $loadFiles $selectedFolder $null)
@@ -1779,11 +1805,11 @@ $resolvedProject
     }.GetNewClosure())
 
     $openFolderButton.Add_Click({
-        if (-not [string]::IsNullOrWhiteSpace($script:ProjectFolder) -and
-            (Test-Path -LiteralPath $script:ProjectFolder -PathType Container)) {
+        if (-not [string]::IsNullOrWhiteSpace($state.ProjectFolder) -and
+            (Test-Path -LiteralPath $state.ProjectFolder -PathType Container)) {
             Start-Process `
                 -FilePath 'explorer.exe' `
-                -ArgumentList "`"$script:ProjectFolder`""
+                -ArgumentList "`"$state.ProjectFolder`""
         }
     }.GetNewClosure())
 
@@ -1791,11 +1817,11 @@ $resolvedProject
         $preferred = $null
 
         if ($fileCombo.SelectedIndex -ge 0 -and
-            $fileCombo.SelectedIndex -lt $script:EditableFiles.Count) {
-            $preferred = $script:EditableFiles[$fileCombo.SelectedIndex].FullPath
+            $fileCombo.SelectedIndex -lt $state.EditableFiles.Count) {
+            $preferred = $state.EditableFiles[$fileCombo.SelectedIndex].FullPath
         }
 
-        [void](& $loadFiles $script:ProjectFolder $preferred)
+        [void](& $loadFiles $state.ProjectFolder $preferred)
     }.GetNewClosure())
 
     $fileCombo.Add_SelectedIndexChanged({
@@ -1806,14 +1832,27 @@ $resolvedProject
         $selected = $null
 
         if ($fileCombo.SelectedIndex -ge 0 -and
-            $fileCombo.SelectedIndex -lt $script:EditableFiles.Count) {
-            $selected = $script:EditableFiles[$fileCombo.SelectedIndex]
+            $fileCombo.SelectedIndex -lt $state.EditableFiles.Count) {
+            $selected = $state.EditableFiles[$fileCombo.SelectedIndex]
         }
         elseif ($null -ne $fileCombo.SelectedItem) {
             $selectedDisplay = [string]$fileCombo.SelectedItem
 
-            foreach ($candidate in $script:EditableFiles) {
+            foreach ($candidate in $state.EditableFiles) {
                 if ($candidate.Display -ieq $selectedDisplay) {
+                    $selected = $candidate
+                    break
+                }
+            }
+        }
+
+        if ($null -eq $selected -and
+            $null -ne $editButton.Tag -and
+            -not [string]::IsNullOrWhiteSpace([string]$editButton.Tag)) {
+            $taggedPath = [string]$editButton.Tag
+
+            foreach ($candidate in $state.EditableFiles) {
+                if ($candidate.FullPath -ieq $taggedPath) {
                     $selected = $candidate
                     break
                 }
@@ -1835,25 +1874,25 @@ $resolvedProject
         try {
             & $setStatus "Opening $($selected.RelativePath) in Notepad..." 'Normal'
             [System.Windows.Forms.Application]::DoEvents()
-            if ($script:Mode -eq 'Firebase + GitHub') {
+            if ($state.Mode -eq 'Firebase + GitHub') {
                 & $setBusy $true
                 & $setStatus 'Preparing GitHub tools and repository...' 'Normal'
 
-                $script:GitTools = Ensure-GitTools
-                $script:GitHubUser = Ensure-GitHubLogin -GhExe $script:GitTools.Gh
+                $state.GitTools = Ensure-GitTools
+                $state.GitHubUser = Ensure-GitHubLogin -GhExe $state.GitTools.Gh
 
                 $repository = Get-OrCloneFirebaseRepository `
-                    -CurrentProject $script:ProjectFolder `
-                    -Tools $script:GitTools
+                    -CurrentProject $state.ProjectFolder `
+                    -Tools $state.GitTools
 
-                if ($repository -ine $script:ProjectFolder) {
+                if ($repository -ine $state.ProjectFolder) {
                     $oldRelativePath = $selected.RelativePath
                     [void](& $loadFiles $repository $null)
 
                     $matchIndex = -1
 
-                    for ($index = 0; $index -lt $script:EditableFiles.Count; $index++) {
-                        if ($script:EditableFiles[$index].RelativePath -ieq $oldRelativePath) {
+                    for ($index = 0; $index -lt $state.EditableFiles.Count; $index++) {
+                        if ($state.EditableFiles[$index].RelativePath -ieq $oldRelativePath) {
                             $matchIndex = $index
                             break
                         }
@@ -1869,7 +1908,7 @@ $resolvedProject
                     }
 
                     $fileCombo.SelectedIndex = $matchIndex
-                    $selected = $script:EditableFiles[$matchIndex]
+                    $selected = $state.EditableFiles[$matchIndex]
                 }
             }
 
@@ -1877,9 +1916,9 @@ $resolvedProject
 
             if ($backupCheck.Checked) {
                 $backupPath = Create-FileBackup `
-                    -ProjectFolder $script:ProjectFolder `
+                    -ProjectFolder $state.ProjectFolder `
                     -SelectedFile $selected `
-                    -Mode $script:Mode
+                    -Mode $state.Mode
             }
 
             $notepadPath = Join-Path $env:SystemRoot 'System32\notepad.exe'
@@ -1913,12 +1952,12 @@ Choose Cancel to stop without publishing.
                 return
             }
 
-            if ($script:Mode -eq 'Firebase + GitHub') {
+            if ($state.Mode -eq 'Firebase + GitHub') {
                 Publish-SelectedFile `
-                    -Tools $script:GitTools `
-                    -RepositoryFolder $script:ProjectFolder `
+                    -Tools $state.GitTools `
+                    -RepositoryFolder $state.ProjectFolder `
                     -SelectedFile $selected `
-                    -GitHubUser $script:GitHubUser
+                    -GitHubUser $state.GitHubUser
 
                 & $setStatus 'The Firebase/GitHub flashcard workflow finished.' 'Success'
             }
@@ -1929,7 +1968,7 @@ Choose Cancel to stop without publishing.
                     -Title 'Open the local quiz?' `
                     -Message 'Open index.html now to test the flashcard change?') {
                     Start-Process `
-                        -FilePath (Join-Path $script:ProjectFolder 'index.html') `
+                        -FilePath (Join-Path $state.ProjectFolder 'index.html') `
                         -ErrorAction SilentlyContinue
                 }
             }

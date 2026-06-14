@@ -404,7 +404,7 @@ try {
     Clear-Host
 
     Write-Host 'LINEAR ALGEBRA QUIZ - COMPLETE TOOLKIT UPDATE' -ForegroundColor Magenta
-    Write-Host 'VERSION 10 - REPAIRED CMD LAUNCHERS AND FULL PROJECT UPDATER' -ForegroundColor DarkCyan
+    Write-Host 'VERSION 11 - SHARED FLASHCARD EDITOR STATE FIX' -ForegroundColor DarkCyan
     Write-Host ''
     Write-Host "Repository: $RepositoryWebUrl" -ForegroundColor White
 
@@ -544,7 +544,7 @@ try {
                 '-C', $workingFolder,
                 'commit',
                 '-m',
-                'Repair all CMD launchers and add full-project updater'
+                'Fix shared flashcard editor selection state'
             ) `
             -FailureMessage 'Git could not create the toolkit commit.')
 
