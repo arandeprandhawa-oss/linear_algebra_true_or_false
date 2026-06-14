@@ -19,16 +19,18 @@ service cloud.firestore {
       function validCategory(c) {
         return c in [
           'all',
+          'bonus12',
+          'bonus23',
+          'chapter1',
+          'chapter2',
+          'chapter3',
           'determinants',
           'eigenvalues',
-          'independence',
           'inverses',
           'lu',
           'markov',
           'matrices',
-          'span',
           'subspaces',
-          'systems',
           'transformations'
         ];
       }
